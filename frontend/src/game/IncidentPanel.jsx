@@ -1,4 +1,4 @@
-import { Radio, Clock3, ChevronRight, SlidersHorizontal, Plus, CheckCheck, X, MapPin } from 'lucide-react';
+import { Radio, Clock3, ChevronRight, SlidersHorizontal, Plus, CheckCheck, X, MapPin, HeartPulse, Shield } from 'lucide-react';
 import { useState } from 'react';
 import { SERVICE, ServiceIcon, STATUS, duration, money } from './common';
 export const IncidentPanel = ({ game, selected, onSelect, onCall, act, busy, onClose }) => {
@@ -12,6 +12,7 @@ export const IncidentPanel = ({ game, selected, onSelect, onCall, act, busy, onC
       <div className="incident-top"><span className={`priority p${inc.priority}`} data-testid={`priority-${inc.number}`}>P{inc.priority} · {inc.priority === 1 ? 'CRÍTICA' : inc.priority === 2 ? 'URGENTE' : 'MODERADA'}</span><span className="incident-number">#{inc.number}</span></div>
       <h3 data-testid={`incident-title-${inc.number}`}><span className="service-icon"><ServiceIcon service={inc.service} size={18} /></span>{inc.title}</h3>
       <p className="incident-address" data-testid={`incident-address-${inc.number}`}><MapPin size={12} />{inc.address}</p>
+      <div className="incident-impact"><span>{inc.difficulty || 'Média'}</span>{inc.casualties > 0 && <span><HeartPulse size={11} />{inc.casualties} ferido{inc.casualties !== 1 ? 's' : ''}</span>}{inc.detainees > 0 && <span><Shield size={11} />{inc.detainees} detido{inc.detainees !== 1 ? 's' : ''}</span>}</div>
       <div className="incident-meta"><span className={`incident-state ${inc.status}`} data-testid={`incident-status-${inc.number}`}><i />{STATUS[inc.status]}</span><span className={`incident-timer ${inc.deadline - game.elapsed <= 60 ? 'critical' : inc.deadline - game.elapsed <= 120 ? 'warning' : ''}`} data-testid={`incident-timer-${inc.number}`}><Clock3 size={12} />{duration(inc.deadline - game.elapsed)}</span></div>
       <div className="incident-bottom"><div className="required-mini">{Object.entries(inc.needs).map(([s, n]) => <span key={s} style={{ color: SERVICE[s].color }}><ServiceIcon service={s} size={13} />{n}</span>)}{!!inc.required_vehicle_types?.length && <span className="special-requirement" title="Requer veículo especializado">ESP</span>}</div><span>{money(inc.reward)} <ChevronRight size={13} /></span></div>
     </button>)}{!list.length && filter !== 'priority' && <div className="empty-state" data-testid="incidents-empty"><CheckCheck size={30} /><strong>Setor tranquilo</strong><p>Sem ocorrências neste momento.</p></div>}</div>
