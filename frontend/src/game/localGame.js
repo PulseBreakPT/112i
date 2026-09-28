@@ -88,7 +88,7 @@ export const WORLD = {
     {id:'madeira',name:'Madeira',bounds:[[-17.3,32.6],[-16.25,33.15]]},
     {id:'azores',name:'Açores',bounds:[[-31.4,36.85],[-24.8,39.8]]},
   ],
-  routing:{provider:'Estimativa local / OpenStreetMap',live_traffic:false,notice:'Estimativas locais sem trânsito em direto.'},
+  routing:{provider:'OSRM / OpenStreetMap',live_traffic:false,notice:'Percursos reais pela rede rodoviária, sem trânsito em direto.'},
 };
 
 const uid = () => globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -125,6 +125,45 @@ export function estimateRoute(originId,destinationId,conditions=null){
   const duration=Math.max(45,Math.round(distance/13.5*conditionsFactor(conditions)));
   const coordinates=Array.from({length:7},(_,i)=>{const t=i/6; const bend=Math.sin(Math.PI*t)*0.0012; return [a.lng+(b.lng-a.lng)*t+bend,a.lat+(b.lat-a.lat)*t+bend*.35];});
   return {coordinates,times:coordinates.map((_,i)=>duration*i/6),distance,duration,source:'Estimativa local'};
+}
+const roadRouteCache = new Map();
+const routeTimes = (coordinates,duration) => {
+  if(coordinates.length < 2) return [0];
+  const lengths=coordinates.slice(1).map((point,index)=>distanceMeters(
+    {lng:coordinates[index][0],lat:coordinates[index][1]},
+    {lng:point[0],lat:point[1]},
+  ));
+  const total=lengths.reduce((sum,value)=>sum+value,0)||1;
+  let covered=0;
+  return [0,...lengths.map(length=>{covered+=length;return duration*covered/total;})];
+};
+const reverseRoute = plan => {
+  const coordinates=[...plan.coordinates].reverse();
+  return {...plan,coordinates,times:routeTimes(coordinates,plan.duration)};
+};
+export async function fetchRoadRoute(originId,destinationId,conditions=null){
+  const a=POINTS[originId],b=POINTS[destinationId];
+  if(!a||!b) throw new Error('Localização desconhecida.');
+  const key=`${originId}:${destinationId}`;
+  let road=roadRouteCache.get(key);
+  if(!road){
+    const controller=new AbortController();
+    const timeout=setTimeout(()=>controller.abort(),12000);
+    try{
+      const coordinates=`${a.lng},${a.lat};${b.lng},${b.lat}`;
+      const response=await fetch(`https://router.project-osrm.org/route/v1/driving/${coordinates}?overview=full&geometries=geojson&steps=false`,{headers:{Accept:'application/json'},signal:controller.signal});
+      if(!response.ok)throw new Error(`Serviço rodoviário indisponível (${response.status}).`);
+      const payload=await response.json(),route=payload?.routes?.[0];
+      if(payload?.code!=='Ok'||!route?.geometry?.coordinates?.length)throw new Error('Não existe um percurso rodoviário entre estes locais.');
+      road={coordinates:route.geometry.coordinates,distance:Math.round(route.distance),duration:Math.max(1,Math.round(route.duration))};
+      roadRouteCache.set(key,road);
+    }catch(error){
+      if(error?.name==='AbortError')throw new Error('O cálculo do percurso rodoviário demorou demasiado. Tenta novamente.');
+      throw new Error(error?.message||'Não foi possível calcular o percurso rodoviário. Tenta novamente.');
+    }finally{clearTimeout(timeout);}
+  }
+  const duration=Math.max(1,Math.round(road.duration*conditionsFactor(conditions)));
+  return {...road,duration,times:routeTimes(road.coordinates,duration),source:'OSRM / OpenStreetMap'};
 }
 const makeBase=(service,point)=>({...point,id:uid(),service,node:point.id,name:`${SERVICES[service].name} · ${point.name}`,level:1,capacity:2,staff_capacity:14,personnel:service==='fire'?10:6,extensions:[],specialization:'general'});
 const assignedPersonnel=(g,baseId)=>g.units.filter(u=>u.base_id===baseId).reduce((sum,u)=>sum+(u.crew_assigned||0),0);
@@ -181,7 +220,11 @@ const locate=unit=>{
   const span=times[i+1]-times[i], t=span?Math.max(0,Math.min(1,(elapsed-times[i])/span)):1;
   unit.lng=points[i][0]+(points[i+1][0]-points[i][0])*t; unit.lat=points[i][1]+(points[i+1][1]-points[i][1])*t; unit.x=unit.lng;unit.y=unit.lat;
 };
-const returnToBase=(g,unit)=>{const base=g.bases.find(b=>b.id===unit.base_id);unit.incident_id=null;startRoute(unit,estimateRoute(unit.node,base.node,g.conditions),'returning',base.node);};
+const returnToBase=(g,unit)=>{
+  const base=g.bases.find(b=>b.id===unit.base_id);unit.incident_id=null;
+  if(unit.road_return_plan){const plan=unit.road_return_plan;unit.road_return_plan=null;startRoute(unit,plan,'returning',base.node);return;}
+  unit.status='available';unit.node=base.node;unit.lng=base.lng;unit.lat=base.lat;unit.x=base.lng;unit.y=base.lat;unit.route=[];unit.route_times=[];
+};
 const createAftercare=(g,incident)=>{
   if(incident.false_alarm)return;
   const hospitals=g.facilities.filter(f=>f.type==='hospital'&&facilityOccupancy(g,f)<f.capacity);
@@ -208,12 +251,18 @@ const resolveIncident=(g,incident,success)=>{
   g.incidents=g.incidents.filter(i=>i.id!==incident.id);
 };
 const operationalUnit=unit=>['available','patrol'].includes(unit.status);
-const mobilize=(g,incident,units)=>{
+const mobilize=(g,incident,units,routes={})=>{
   requireValue(units.length&&units.every(operationalUnit),'Não existem meios disponíveis para este despacho.');
   requireValue(units.every(unit=>unit.land===incident.land),'Sem ligação rodoviária para esta ocorrência.');
-  units.forEach(unit=>{const plan=estimateRoute(unit.node,incident.node,g.conditions);startRoute(unit,plan,'enroute',incident.node);unit.incident_id=incident.id;if(!incident.assigned.includes(unit.id))incident.assigned.push(unit.id);});
-  incident.status='enroute';incident.deadline=Math.max(incident.deadline,g.elapsed+Math.max(...units.map(unit=>unit.travel_total))+180);log(g,`${units.length} unidade(s) mobilizada(s). Estimativa local ativa.`);
+  units.forEach(unit=>{const plan=routes[unit.id];requireValue(plan?.coordinates?.length>1&&plan?.times?.length===plan.coordinates.length,'Percurso rodoviário não preparado. Tenta despachar novamente.');unit.road_return_plan=reverseRoute(plan);startRoute(unit,plan,'enroute',incident.node);unit.incident_id=incident.id;if(!incident.assigned.includes(unit.id))incident.assigned.push(unit.id);});
+  incident.status='enroute';incident.deadline=Math.max(incident.deadline,g.elapsed+Math.max(...units.map(unit=>unit.travel_total))+180);log(g,`${units.length} unidade(s) mobilizada(s) pela rede rodoviária.`);
 };
+export function selectArrUnitIds(g,incidentId,arrId){
+  const inc=g.incidents.find(i=>i.id===incidentId),arr=g.arrs.find(item=>item.id===arrId);requireValue(inc&&arr,'Ocorrência ou regulamento inválido.');
+  const pool=g.units.filter(unit=>operationalUnit(unit)&&unit.land===inc.land),chosen=[];
+  for(const [service,need] of Object.entries(inc.needs)){const already=g.units.filter(unit=>unit.incident_id===inc.id&&unit.service===service).length;const count=Math.min(Math.max(0,need-already),arr.resources[service]||0);const specific=(inc.required_vehicle_types||[]).map(type=>pool.find(unit=>unit.service===service&&unit.vehicle_type===type&&!chosen.includes(unit))).filter(Boolean);specific.slice(0,count).forEach(unit=>chosen.push(unit));pool.filter(unit=>unit.service===service&&!chosen.includes(unit)).slice(0,Math.max(0,count-specific.length)).forEach(unit=>chosen.push(unit));}
+  requireValue(chosen.length,'O RAR não encontrou meios compatíveis disponíveis.');return chosen.map(unit=>unit.id);
+}
 export function tickGame(input,seconds){
   const g=clone(input), dt=seconds*g.speed;if(!dt)return g;g.elapsed+=dt;
   if(g.elapsed-(g.conditions?.updated_at||0)>=180){g.conditions=freshConditions(g.elapsed);log(g,`Condições atualizadas: ${g.conditions.weather_label.toLowerCase()}, ${g.conditions.traffic_label.toLowerCase()}${g.conditions.roadworks?' e obras na rede viária':''}.`);}
@@ -261,12 +310,9 @@ export function applyAction(input,kind,data={}){
   if(kind==='reset')return newGame();
   if(kind==='speed'){requireValue([0,1,2,5].includes(data.speed),'Velocidade inválida.');g.speed=data.speed;}
   else if(kind==='answer'){const inc=g.incidents.find(i=>i.id===data.incident_id);requireValue(inc&&!inc.call_answered,'Chamada já encerrada.');requireValue(Number.isInteger(data.choice)&&data.choice>=0&&data.choice<3,'Escolha inválida.');const s=SCENARIOS[inc.scenario],correct=data.choice===s.correct;inc.call_answered=true;inc.call_result={correct,feedback:correct?s.feedback:'Orientação insegura. A central corrigiu a indicação. Prioriza a segurança do interlocutor.',xp:correct?25:0};g.xp+=correct?25:0;g.trust=Math.min(100,Math.max(0,g.trust+(correct?1:-3)));inc.deadline+=correct?60:-45;g.level=1+Math.floor(g.xp/200);log(g,`Chamada #${inc.number} triada.${correct?' +25 XP':' Orientação corrigida.'}`,correct?'success':'alert');}
-  else if(kind==='dispatch'){const inc=g.incidents.find(i=>i.id===data.incident_id);requireValue(inc,'Ocorrência já encerrada.');const ids=data.unit_ids||[],units=g.units.filter(u=>ids.includes(u.id));requireValue(ids.length&&units.length===new Set(ids).size,'Seleciona unidades disponíveis.');for(const service of new Set(units.map(u=>u.service))){const allocated=g.units.filter(u=>u.service===service&&u.incident_id===inc.id).length;requireValue(allocated+units.filter(u=>u.service===service).length<=(inc.needs[service]||0),'Envia apenas os meios necessários.');}mobilize(g,inc,units);}
+  else if(kind==='dispatch'){const inc=g.incidents.find(i=>i.id===data.incident_id);requireValue(inc,'Ocorrência já encerrada.');const ids=data.unit_ids||[],units=g.units.filter(u=>ids.includes(u.id));requireValue(ids.length&&units.length===new Set(ids).size,'Seleciona unidades disponíveis.');for(const service of new Set(units.map(u=>u.service))){const allocated=g.units.filter(u=>u.service===service&&u.incident_id===inc.id).length;requireValue(allocated+units.filter(u=>u.service===service).length<=(inc.needs[service]||0),'Envia apenas os meios necessários.');}mobilize(g,inc,units,data.routes);}
   else if(kind==='dispatch_arr'){
-    const inc=g.incidents.find(i=>i.id===data.incident_id),arr=g.arrs.find(item=>item.id===data.arr_id);requireValue(inc&&arr,'Ocorrência ou regulamento inválido.');
-    const pool=g.units.filter(unit=>operationalUnit(unit)&&unit.land===inc.land);const chosen=[];
-    for(const [service,need] of Object.entries(inc.needs)){const already=g.units.filter(unit=>unit.incident_id===inc.id&&unit.service===service).length;const count=Math.min(Math.max(0,need-already),arr.resources[service]||0);const specific=(inc.required_vehicle_types||[]).map(type=>pool.find(unit=>unit.service===service&&unit.vehicle_type===type&&!chosen.includes(unit))).filter(Boolean);specific.slice(0,count).forEach(unit=>chosen.push(unit));pool.filter(unit=>unit.service===service&&!chosen.includes(unit)).slice(0,Math.max(0,count-specific.length)).forEach(unit=>chosen.push(unit));}
-    requireValue(chosen.length,'O RAR não encontrou meios compatíveis disponíveis.');mobilize(g,inc,chosen);
+    const inc=g.incidents.find(i=>i.id===data.incident_id),ids=selectArrUnitIds(g,data.incident_id,data.arr_id),chosen=g.units.filter(unit=>ids.includes(unit.id));mobilize(g,inc,chosen,data.routes);
   }
   else if(kind==='buy_vehicle'){
     const base=g.bases.find(b=>b.id===data.base_id);requireValue(base,'Base inválida.');
