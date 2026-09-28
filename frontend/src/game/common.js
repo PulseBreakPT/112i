@@ -1,8 +1,8 @@
 import { Flame, HeartPulse, Shield } from 'lucide-react';
 export const SERVICE = {
-  fire: { name: 'Bombeiros', short: 'BOMBEIROS', color: '#f17465', icon: Flame },
-  medical: { name: 'Emergência médica', short: 'INEM', color: '#efbd58', icon: HeartPulse },
-  police: { name: 'Polícia', short: 'PSP', color: '#739cf3', icon: Shield },
+  fire: { name: 'Bombeiros', short: 'BOMBEIROS', color: '#f58080', icon: Flame },
+  medical: { name: 'Emergência médica', short: 'INEM', color: '#f0c75e', icon: HeartPulse },
+  police: { name: 'Polícia', short: 'PSP', color: '#82adf4', icon: Shield },
 };
 export const money = n => new Intl.NumberFormat('pt-PT', { maximumFractionDigits: 0 }).format(n) + ' €';
 export const clock = elapsed => { const total = 14 * 3600 + 32 * 60 + Math.floor(elapsed); return [Math.floor(total / 3600) % 24, Math.floor(total / 60) % 60, total % 60].map(n => String(n).padStart(2, '0')).join(':'); };

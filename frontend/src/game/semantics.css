@@ -1,0 +1,83 @@
+/* Semantic accents: neutral surfaces and silver primary controls remain unchanged. */
+:root {
+  --status-success: #79d9a3;
+  --status-warning: #edbb69;
+  --status-active: #83b3f5;
+  --status-danger: #f38989;
+  --status-cancelled: #a1a1aa;
+}
+/* Services use color and their existing distinct icons together. */
+.incident-tabs button[data-service] { --service-color: #cfcfcf; }
+.incident-tabs button[data-service="fire"] { --service-color: #f58080; }
+.incident-tabs button[data-service="medical"] { --service-color: #f0c75e; }
+.incident-tabs button[data-service="police"] { --service-color: #82adf4; }
+.incident-tabs button[data-service]:not([data-service="all"]):before { content: ''; display: inline-block; width: 4px; height: 4px; border-radius: 50%; background: var(--service-color); margin-right: 5px; vertical-align: middle; }
+.incident-tabs button[data-service]:not([data-service="all"]).selected { color: var(--service-color); border-color: color-mix(in srgb, var(--service-color) 40%, #242424); background: color-mix(in srgb, var(--service-color) 10%, #181818); }
+.service-icon { color: var(--service-color); }
+.requirements>div>span, .base-service-label { border-color: color-mix(in srgb, var(--service-color) 33%, #242424); background: color-mix(in srgb, var(--service-color) 8%, #181818); }
+.requirements>div>span>svg:last-child:not(:first-child) { color: var(--status-success); }
+.unit-icon { border-color: color-mix(in srgb, currentColor 30%, #262626); background: color-mix(in srgb, currentColor 8%, #1c1c1c); }
+.vehicle-art { filter: none; }
+.p1 { color: var(--status-danger); background: #f3898915; border-color: #f3898952; }
+.p2 { color: var(--status-warning); background: #edbb6914; border-color: #edbb6947; }
+.p3 { color: var(--status-active); background: #83b3f511; border-color: #83b3f540; }
+/* Pending and active are distinct from successful completion. */
+.incident-state.waiting, .queue-label [data-testid="waiting-count"], .state-label.waiting { color: var(--status-warning); }
+.incident-state.enroute, .incident-state.onscene, .fleet-status.enroute, .fleet-status.onscene, .fleet-status.returning, .state-label.enroute, .state-label.onscene, .state-label.returning { color: var(--status-active); }
+.incident-state i, .fleet-status>i { background: currentColor; }
+.incident-state.onscene { color: var(--status-active); }
+.incident-state.onscene i, .fleet-status.onscene i { box-shadow: 0 0 0 2px #83b3f526; }
+.fleet-status.available, .unit-ready, .operational-tag { color: var(--status-success); }
+.operational-tag i, .fleet-status.available i { background: var(--status-success); }
+.assigned-units .state-label { font-size: 8px; }
+.resolution-progress i { background: linear-gradient(90deg, #4d80c7, var(--status-active)); }
+.positive, .state-label.completed, .state-label.success, .incident-state.completed, .fleet-status.completed { color: var(--status-success); }
+.negative, .state-label.failed, .state-label.negative, .incident-state.failed, .fleet-status.failed { color: var(--status-danger); }
+.state-label.cancelled, .incident-state.cancelled, .fleet-status.cancelled { color: var(--status-cancelled); }
+.state-label.cancelled:before { content: '—'; margin-right: 4px; }
+.incident-timer.critical { color: var(--status-danger)!important; }
+.incident-timer.warning { color: var(--status-warning)!important; }
+/* Small status accents, not green panels or green primary buttons. */
+.shift-summary [data-testid="shift-completed"], .shift-summary .earnings, .dispatch-reward small { color: var(--status-success); }
+.shift-summary strong small { color: #888; }
+[data-testid="snapshot-active"] { color: var(--status-active); }
+[data-testid="snapshot-ready"] { color: var(--status-success); }
+[data-testid="city-trust"][data-tone="positive"] { color: var(--status-success); }
+[data-testid="city-trust"][data-tone="warning"] { color: var(--status-warning); }
+[data-testid="city-trust"][data-tone="negative"] { color: var(--status-danger); }
+.operator-badge small:before, .status-footer [data-testid="autosave-status"] .live-dot { background: var(--status-success); }
+.status-footer [data-testid="connection-status"]>svg { color: var(--status-success); }
+.status-footer .connection-error { color: var(--status-danger)!important; }
+.status-footer .connection-error>svg { color: var(--status-danger); }
+.call-mini>svg:first-child, .incoming-call small, .incoming-call>svg { color: var(--status-warning); }
+.incoming-icon { color: var(--status-warning); border: 1px solid #edbb6945; background: #edbb6916; }
+.incoming-call { border-color: #edbb6952; }
+.incoming-call:hover { border-color: #edbb6999; }
+.paused-label { color: var(--status-warning); border-color: #edbb6960; }
+.call-result.correct { background: #79d9a30a; border-color: #79d9a351; }
+.call-result.correct>svg, .call-result.correct strong, .call-result.correct b { color: var(--status-success); }
+.call-result.incorrect { background: #f389890a; border-color: #f3898959; }
+.call-result.incorrect>svg, .call-result.incorrect strong { color: var(--status-danger); }
+.call-result p { color: #b3b3b3; }
+.danger-button { color: var(--status-danger)!important; border-color: #f3898966!important; background: #f3898910!important; }
+.danger-button:hover { background: #f3898922!important; }
+.danger-setting>svg, .danger-setting h3 { color: var(--status-danger); }
+.report-metric[data-metric="completed"]>svg, .report-metric[data-metric="earnings"]>svg, [data-testid="report-completed"], [data-testid="report-earnings"] { color: var(--status-success); }
+.report-metric[data-metric="xp"]>svg { color: var(--status-active); }
+.report-metric[data-tone="positive"]>svg, .report-metric[data-tone="positive"]>strong { color: var(--status-success); }
+.report-metric[data-tone="warning"]>svg, .report-metric[data-tone="warning"]>strong { color: var(--status-warning); }
+.report-metric[data-tone="negative"]>svg, .report-metric[data-tone="negative"]>strong { color: var(--status-danger); }
+.history-row .history-result { display: inline-flex; align-items: center; gap: 4px; font-size: inherit; }
+.history-row .history-result>svg { width: 11px; height: 11px; }
+.milestones>div.unlocked>svg, .milestones>div.unlocked>span { color: var(--status-success); }
+.radio-log .success { color: var(--status-success); }
+.radio-log .alert { color: var(--status-warning); }
+.radio-log .error, .radio-log .negative { color: var(--status-danger); }
+.log-dot.info { background: var(--status-active); }
+.log-dot.alert { background: var(--status-warning); }
+.log-dot.success { background: var(--status-success); }
+.log-dot.error, .log-dot.negative { background: var(--status-danger); }
+[data-sonner-toast][data-type="success"] { border-color: #79d9a360!important; }
+[data-sonner-toast][data-type="error"] { border-color: #f3898980!important; }
+[data-sonner-toast][data-type="success"] [data-icon] { color: var(--status-success); }
+[data-sonner-toast][data-type="error"] [data-icon] { color: var(--status-danger); }

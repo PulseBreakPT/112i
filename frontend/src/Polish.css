@@ -1,0 +1,55 @@
+/* Final visual finish: restrained silver materials, quiet depth, precise symbols. */
+.polished-terrain { filter: none; }
+.district-labels text { paint-order: stroke; stroke: #1b1b1b; stroke-width: 3px; stroke-linejoin: round; font-family: 'Barlow',sans-serif; }
+.district-labels text[font-family="Georgia"] { font-family: Georgia,serif; stroke-width: 2px; }
+.map-clickable .incident-core { transition: fill .2s,stroke-width .2s; }
+.map-clickable:hover .incident-core,.map-clickable:focus-visible .incident-core { stroke-width: 2.3; }
+.map-clickable .pin-shadow { filter: drop-shadow(0 3px 4px #0009); }
+.map-clickable .pin-caption { font-family: var(--mono); paint-order: stroke; stroke: #111; stroke-width: 2px; letter-spacing: .4px; }
+.marker-orbit { animation: orbit-breathe 3s ease-in-out infinite; }
+@keyframes orbit-breathe { 50% { opacity: .18; } }
+.map-base { opacity: .9; transition: opacity .2s; }
+.map-base:hover { opacity: 1; }
+.minimal-shell .map-section:after { box-shadow: inset 0 0 150px #0003; background: linear-gradient(180deg,#08080880,transparent 14%,transparent 83%,#08080855); }
+.minimal-brand>span { letter-spacing: -.6px; }
+.minimal-brand>svg { color: #c6c6c6; }
+.minimal-readout { text-shadow: 0 1px 4px #000,0 0 15px #0008; }
+.menu-launcher>button { border-color: #ffffff30; background: linear-gradient(125deg,#292929df,#111111db); box-shadow: 0 3px 15px #0005,inset 0 1px #ffffff07; transition: background .18s,border-color .18s,transform .18s; }
+.menu-launcher>button:active { transform: translateY(1px); }
+.game-menu,.hud-options { background: linear-gradient(140deg,#272727f5,#131313fa); border-color: #ffffff38; box-shadow: 0 20px 70px #0009,inset 0 1px #ffffff09; }
+.game-menu-heading { color: #a5a5a5; letter-spacing: 1.3px; }
+.menu-operations>button { transition: background .18s,color .18s; }
+.menu-operations>button:hover,.minimal-shell .game-menu .rail-link:hover { background: linear-gradient(90deg,#ffffff0d,#ffffff03); }
+.minimal-shell .game-menu .rail-link.active { background: linear-gradient(110deg,#ffffff13,#ffffff05); border-color: #ffffff25; box-shadow: inset 2px 0 #cfcfcf; }
+.minimal-shell .incoming-call { background: linear-gradient(125deg,#27231cdf,#171717e8); border-color: #b89d6159; }
+.minimal-shell .incoming-call:hover { border-color: #c8ac7088; background: #30291fe8; }
+.minimal-shell .map-zoom,.minimal-shell .map-layer-button { background: #141414ce; border-color: #ffffff29; backdrop-filter: blur(12px); }
+.layer-menu { border-color: #ffffff35; background: linear-gradient(140deg,#282828f7,#151515fa); box-shadow: 0 15px 50px #0008; }
+.layer-service-key { border-top: 1px solid #ffffff18; padding-top: 12px; display: flex; flex-direction: column; gap: 9px; }
+.layer-service-key>span { display: flex; align-items: center; gap: 8px; font-size: 10px; color: #aaa; }
+.tactical-drawer>.incident-panel,.tactical-drawer>.dispatch-panel { border-color: #ffffff37; box-shadow: 0 15px 60px #0008,inset 0 1px #ffffff07; }
+.panel-heading { background: linear-gradient(135deg,#252525,#181818); }
+.panel-heading h2 { letter-spacing: -.15px; }
+.incident-card { background: linear-gradient(120deg,#202020,#181818); border-color: #ffffff19; box-shadow: 0 3px 8px #0002; }
+.incident-card.selected { border-color: #ffffff6b; background: linear-gradient(125deg,#2e2e2e,#212121); box-shadow: inset 2px 0 #d2d2d2,0 5px 15px #0003; }
+.incident-card:hover { border-color: #ffffff40; background: #252525; }
+.incident-card h3 { letter-spacing: -.2px; }
+.incident-number { color: #989898; }
+.dispatch-detail>h2 { letter-spacing: -.6px; }
+.unit-choice.selected { border-color: #ffffff55; background: linear-gradient(100deg,#343434,#242424); }
+.dispatch-button:not(:disabled),.primary-button { background: linear-gradient(125deg,#fafafa 0%,#dedede 55%,#c1c1c1 100%)!important; border-color: #f2f2f2!important; box-shadow: inset 0 1px #fff,0 4px 12px #0005; }
+.dispatch-button:not(:disabled):hover,.primary-button:hover { background: #f7f7f7!important; box-shadow: 0 0 22px #ffffff12,inset 0 1px #fff; }
+.game-workspace { border-color: #ffffff35; box-shadow: 0 25px 110px #000a,inset 0 1px #ffffff06; }
+.workspace-bar { background: linear-gradient(115deg,#2a2a2a,#1b1b1b); }
+.game-workspace .page-heading h1 { font-weight: 500; letter-spacing: -1px; }
+.base-card,.vehicle-card { border-color: #ffffff24; box-shadow: inset 0 1px #ffffff05,0 7px 20px #0003; background: linear-gradient(130deg,#202020,#161616); }
+.base-card:hover,.vehicle-card:hover { border-color: #ffffff50; box-shadow: 0 10px 28px #0005; }
+.base-illustration { background: radial-gradient(ellipse at 50% 65%,#ffffff0a,transparent 68%),repeating-linear-gradient(0deg,transparent,transparent 23px,#ffffff04 23px,#ffffff04 24px),repeating-linear-gradient(90deg,transparent,transparent 23px,#ffffff04 23px,#ffffff04 24px),#1d1d1d; }
+.base-illustration>svg { border-color: #ffffff35; background: linear-gradient(130deg,#3a3a3a,#222); box-shadow: 0 12px 32px #0007,inset 0 1px #ffffff0c; }
+.vehicle-art { filter: saturate(.82); }
+.report-metric { background: radial-gradient(ellipse at 15% 0,#ffffff07,transparent 70%),linear-gradient(140deg,#242424,#171717); border-color: #ffffff24; }
+.settings-section { background: linear-gradient(135deg,#1b1b1b,#151515); border-color: #ffffff20; }
+.game-modal { background: radial-gradient(ellipse at 15% 0,#ffffff06,transparent 60%),linear-gradient(135deg,#242424,#171717)!important; border-color: #ffffff39!important; box-shadow: 0 30px 120px #000b,inset 0 1px #ffffff09!important; }
+.call-choices>button { background: linear-gradient(115deg,#292929,#222); border-color: #ffffff28; }
+.call-choices>button:hover { border-color: #ffffff6b; background: #343434; }
+@media(prefers-reduced-motion:reduce) { .marker-orbit { animation: none; } }
