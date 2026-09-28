@@ -1,0 +1,531 @@
+/* NEXO 112 · Clarity
+   Final presentation layer: quiet map, readable instruments, meaningful colour.
+   Gameplay, cartography and persistence are intentionally unchanged. */
+:root {
+  --ui-surface: #16191f;
+  --ui-raised: #20242c;
+  --ui-inset: #101318;
+  --ui-line: #373e48;
+  --ui-text: #f5f7fa;
+  --ui-secondary: #c7cdd6;
+  --ui-muted: #a8b1bf;
+  --status-danger: #ffa19a;
+  --status-warning: #f8ca78;
+  --status-active: #9cc5ff;
+  --status-success: #8ae2b5;
+  --status-cancelled: #b0b7c2;
+  --panel-radius: 14px;
+}
+.minimal-shell {
+  --muted: var(--ui-muted);
+  --text: var(--ui-text);
+  --workspace-top: 96px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+.minimal-shell :is(button, a, summary, input, select):focus-visible,
+.game-modal :is(button, a, input, select):focus-visible {
+  outline: 2px solid #c3daff;
+  outline-offset: 3px;
+}
+.minimal-shell :is(button, a, summary) { touch-action: manipulation; }
+.minimal-shell svg { flex-shrink: 0; }
+.minimal-shell :is(button, input, select, article, section, details) { min-width: 0; }
+.minimal-shell :is(h1, h2, h3, p, strong), .game-modal :is(h2, p) { overflow-wrap: anywhere; }
+.minimal-shell button:disabled, .game-modal button:disabled { opacity: 1; cursor: not-allowed; }
+.minimal-shell :is(.primary-button, .outline-button):disabled,
+.game-modal :is(.primary-button, .outline-button):disabled {
+  background: #292e37 !important;
+  color: #acb5c2 !important;
+  border-color: #424a56 !important;
+  box-shadow: none;
+}
+.minimal-shell .icon-btn { color: var(--ui-secondary); width: 40px; height: 40px; border-radius: 8px; }
+.minimal-shell .icon-btn:hover { color: #fff; background: #ffffff0d; }
+.minimal-shell .icon-btn.active { background: #f8ca7815; border-color: #f8ca784d; color: var(--status-warning); }
+
+/* Two compact instrument islands. No permanent panels or extra map furniture. */
+.minimal-shell .minimal-hud { top: 20px; left: 24px; right: 24px; height: 56px; gap: 16px; align-items: stretch; }
+.minimal-brand, .minimal-readout {
+  background: #12161cf5;
+  border: 1px solid #69758570;
+  border-radius: 12px;
+  box-shadow: 0 6px 22px #0005, inset 0 1px #ffffff08;
+  backdrop-filter: blur(18px);
+  text-shadow: none;
+}
+.minimal-shell .minimal-brand { padding: 0 16px; gap: 10px; align-items: center; color: #fff; }
+.minimal-shell .minimal-brand > svg { color: #f2f4f7; width: 21px; height: 21px; stroke-width: 1.8; }
+.minimal-shell .minimal-brand > span { font: 650 24px/1 'Barlow', sans-serif; letter-spacing: -.65px; white-space: nowrap; }
+.minimal-shell .minimal-brand > span > span { color: #cbd2dd; font-weight: 500; margin-left: 4px; }
+.minimal-shell .minimal-readout { padding: 6px 9px 6px 18px; gap: 12px; align-items: center; }
+.hud-stat { display: flex; flex-direction: column; justify-content: center; gap: 3px; min-width: 0; }
+.hud-stat > small { font: 500 11px/1.2 'Barlow', sans-serif; color: var(--ui-muted); }
+.minimal-shell .minimal-budget { font: 500 15px/1.2 var(--mono); letter-spacing: -.4px; color: var(--ui-text); white-space: nowrap; }
+.hud-time { border-left: 1px solid var(--ui-line); padding-left: 16px; margin-left: 5px; }
+.hud-time b { font: 500 15px/1.2 var(--mono); color: var(--ui-text); font-variant-numeric: tabular-nums; }
+.hud-time[data-paused="true"] > small { color: var(--status-warning); }
+.minimal-shell .minimal-readout > .icon-btn { width: 40px; height: 40px; margin: 0; }
+.minimal-shell .minimal-readout > .icon-btn svg { width: 17px; height: 17px; }
+.minimal-shell .minimal-options-toggle { min-height: 40px; padding: 7px 10px; gap: 8px; border-radius: 8px; color: #d4dbe5; font: 500 12px var(--mono); }
+.minimal-shell .minimal-options-toggle:hover, .minimal-shell .minimal-options-toggle.active { background: #2a303a; border-color: #4d5765; }
+.minimal-shell .hud-options {
+  top: 53px; width: 320px; max-width: calc(100vw - 24px); padding: 20px;
+  background: #171b22; color: var(--ui-secondary); border: 1px solid #525e6e;
+  border-radius: 14px; box-shadow: 0 16px 60px #0007;
+}
+.minimal-shell .hud-options-heading { font: 600 11px/1.4 'Barlow', sans-serif; letter-spacing: 1.2px; color: #d5dbe4; padding-bottom: 15px; border-color: var(--ui-line); }
+.minimal-shell .option-line { gap: 16px; padding: 12px 0; font-size: 13px; align-items: flex-start; }
+.minimal-shell .option-line > strong { font: 500 13px/1.5 'Barlow', sans-serif; color: var(--ui-text); text-align: right; max-width: 63%; }
+.minimal-shell .option-line > span:first-child { color: var(--ui-secondary); }
+.minimal-shell .hud-options .speed-group { padding: 3px; background: #101318; border-color: var(--ui-line); }
+.minimal-shell .hud-options .speed-group > button { width: 39px; height: 34px; font-size: 12px; color: #c5cdd9; }
+.minimal-shell .hud-options .speed-group > button.chosen { color: #101318; background: #e4eaf2; }
+.minimal-shell .hud-options .xp-track { width: 100%; height: 4px; margin: 0 0 4px; background: #343c49; }
+.minimal-shell .hud-options .xp-track i { background: var(--status-active); }
+.minimal-shell .option-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding-top: 14px; margin-top: 6px; border-top: 1px solid var(--ui-line); }
+.minimal-shell .option-actions > button { justify-content: center; min-height: 42px; gap: 7px; padding: 8px; font-size: 12px; border: 1px solid #46505d; background: #222832; border-radius: 8px; color: #e6ebf2; }
+.minimal-shell .option-actions > button:hover { background: #313946; }
+.minimal-shell .connection-notice { top: 66px; color: var(--status-danger); background: #261c20; border-color: #a66562; font-size: 13px; }
+
+/* Menus remain optional; the queue shortcut communicates severity, not decoration. */
+.minimal-shell .menu-launcher { left: 24px; bottom: 30px; gap: 10px; }
+.minimal-shell .menu-launcher > button { min-height: 46px; padding: 10px 15px; gap: 9px; color: #f1f4f8; font-size: 13px; font-weight: 500; border: 1px solid #5e69797a; border-radius: 10px; background: #14181ff5; box-shadow: 0 6px 22px #0005; }
+.minimal-shell .menu-launcher > button:hover, .minimal-shell .menu-launcher > button[aria-expanded="true"] { background: #282f39; border-color: #9aa6b7; }
+.minimal-shell .quick-incidents { --queue-color: var(--status-active); }
+.minimal-shell .quick-incidents[data-tone="danger"] { --queue-color: var(--status-danger); }
+.minimal-shell .quick-incidents[data-tone="warning"] { --queue-color: var(--status-warning); }
+.minimal-shell .quick-incidents[data-tone="success"] { --queue-color: var(--status-success); }
+.minimal-shell .quick-incidents > svg { color: var(--queue-color); }
+.minimal-shell .quick-incidents > .quick-incidents-label { color: #eef2f7; font: 500 13px 'Barlow', sans-serif; }
+.queue-count { display: grid; place-items: center; min-width: 26px; height: 24px; padding: 0 6px; border: 1px solid color-mix(in srgb, var(--queue-color) 42%, transparent); border-radius: 6px; background: color-mix(in srgb, var(--queue-color) 12%, #171b22); color: var(--queue-color); font: 500 12px var(--mono); }
+.minimal-shell .game-menu { left: 24px; bottom: 88px; width: 294px; max-height: calc(100dvh - 184px); padding: 10px; background: #171b22; border: 1px solid #505b6b; border-radius: 14px; box-shadow: 0 18px 60px #0007; }
+.minimal-shell .game-menu-heading { padding: 4px 8px 11px; font: 600 10px/1.5 'Barlow', sans-serif; letter-spacing: 1px; color: #c3cbd7; border-color: var(--ui-line); }
+.minimal-shell .menu-operations > button { min-height: 48px; gap: 11px; padding: 10px 12px; font-size: 14px; color: var(--ui-text); }
+.minimal-shell .menu-operations > button > :is(b, small) { font-size: 12px; white-space: nowrap; }
+.minimal-shell .menu-operations > button > b { padding: 2px 7px; border-radius: 5px; background: #9cc5ff15; }
+.minimal-shell .game-menu .rail-link { height: 44px; min-height: 44px; color: var(--ui-secondary); }
+.minimal-shell .game-menu .rail-link span, .minimal-shell .game-menu .rail-bottom > .icon-btn:after { font-size: 14px; }
+.minimal-shell .game-menu .rail-link.active { color: #fff; border-color: #4b5667; background: #29313d; box-shadow: inset 2px 0 #d7e2f2; }
+.minimal-shell .game-menu .rail-bottom > .icon-btn { height: 44px; color: var(--ui-secondary); }
+
+/* Shared tactical surfaces: spacious enough to read, small enough to leave the map. */
+.minimal-shell .tactical-drawer { top: 94px; bottom: 94px; width: 392px; max-width: calc(100% - 48px); }
+.minimal-shell .incidents-drawer { left: 24px; }
+.minimal-shell .dispatch-drawer { right: 24px; width: 416px; }
+.minimal-shell .tactical-drawer > :is(.incident-panel, .dispatch-panel) { border: 1px solid #536071; background: var(--ui-surface); box-shadow: 0 16px 55px #0006; backdrop-filter: none; }
+.minimal-shell .tactical-drawer .panel-heading { min-height: 64px; padding: 0 18px; background: #1e232c; border-color: var(--ui-line); }
+.minimal-shell .tactical-drawer .panel-heading h2 { font-size: 17px; font-weight: 600; letter-spacing: -.15px; gap: 10px; color: #f6f8fc; }
+.minimal-shell .panel-heading h2 > svg { color: #d0d9e6; }
+.minimal-shell .panel-heading-actions > .icon-btn { width: 40px; height: 40px; }
+.minimal-shell .count-badge { height: 25px; padding: 0 7px; font: 500 11px var(--mono); color: #e2e9f2; background: #303846; border: 1px solid #515e70; }
+.minimal-shell .subtle { color: var(--ui-muted); font-size: 12px; }
+.minimal-shell .tactical-drawer .incident-tabs { margin: 14px 14px 0; padding: 4px; gap: 3px; background: #0f1217; border-color: #343d49; border-radius: 9px; }
+.minimal-shell .tactical-drawer .incident-tabs > button { font-size: 12px; font-weight: 500; min-height: 36px; height: auto; padding: 6px; color: #bbc3ce; border-radius: 6px; }
+.minimal-shell .incident-tabs > button.selected { color: #fff; border-color: #586477; background: #2d3542; box-shadow: none; }
+.minimal-shell .incident-tabs > button[data-service]:not([data-service="all"]):before { width: 5px; height: 5px; }
+.minimal-shell .incident-tabs > button[data-service]:not([data-service="all"]).selected { color: var(--service-color); background: color-mix(in srgb, var(--service-color) 13%, #15191f); border-color: color-mix(in srgb, var(--service-color) 48%, #15191f); }
+.minimal-shell .queue-label { padding: 9px 18px; gap: 12px; align-items: center; font-size: 12px; letter-spacing: 0; }
+.minimal-shell .queue-pending { display: inline-flex; align-items: center; gap: 7px; font: 500 12px 'Barlow', sans-serif; color: var(--ui-muted); }
+.queue-pending i { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.minimal-shell .queue-pending.has-waiting { color: var(--status-warning); }
+.queue-sort { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; font: 500 12px 'Barlow', sans-serif; color: #c5cdd9; padding: 4px 6px; border-radius: 5px; }
+.queue-sort:hover { color: #fff; background: #ffffff0a; }
+.minimal-shell .incidents-scroll { padding: 0 14px 4px; scrollbar-width: thin; scrollbar-color: #667285 transparent; }
+.minimal-shell .tactical-drawer .incident-card { padding: 16px; margin-bottom: 11px; border-color: #3b4553; border-radius: 10px; background: #1c2129; box-shadow: none; }
+.minimal-shell .incident-card:hover { background: #252c36; border-color: #748297; }
+.minimal-shell .incident-card.selected { background: #252d39; border-color: #b0bdcf; box-shadow: inset 3px 0 #d4dfed; }
+.minimal-shell .incident-top { gap: 10px; margin-bottom: 13px; }
+.minimal-shell .priority { font: 600 10px/1.35 var(--mono); letter-spacing: .15px; padding: 5px 7px; border-radius: 5px; }
+.minimal-shell .p1 { color: var(--status-danger); background: #ffa19a12; border-color: #ffa19a60; }
+.minimal-shell .p2 { color: var(--status-warning); background: #f8ca7812; border-color: #f8ca7857; }
+.minimal-shell .p3 { color: var(--status-active); background: #9cc5ff12; border-color: #9cc5ff50; }
+.minimal-shell .tactical-drawer .incident-card h3 { font-size: 17px; line-height: 1.35; font-weight: 600; gap: 10px; color: #f7f9fc; }
+.minimal-shell .tactical-drawer .incident-address { font-size: 13px; line-height: 1.5; color: #bac3d0; margin: 9px 0 13px; align-items: flex-start; gap: 6px; }
+.minimal-shell .incident-address svg { margin-top: 3px; }
+.minimal-shell .incident-timer { display: inline-flex; align-items: center; gap: 6px; color: #e7edf6; font: 500 13px var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.minimal-shell .incident-timer.critical, .dispatch-deadline.critical b { color: var(--status-danger); }
+.minimal-shell .incident-timer.warning, .dispatch-deadline.warning b { color: var(--status-warning); }
+.minimal-shell .tactical-drawer .incident-meta { font-size: 12px; gap: 9px; }
+.minimal-shell .incident-meta > .incident-number { color: #b4bdca; font: 11px var(--mono); }
+.minimal-shell .incident-state { display: inline-flex; align-items: center; gap: 6px; width: fit-content; padding: 4px 7px; font: 500 11px/1.4 'Barlow', sans-serif; border-radius: 5px; color: var(--status-cancelled); background: #ffffff06; border: 1px solid #ffffff16; }
+.minimal-shell .incident-state.waiting { color: var(--status-warning); background: #f8ca780c; border-color: #f8ca7835; }
+.minimal-shell .incident-state:is(.enroute, .onscene) { color: var(--status-active); background: #9cc5ff0c; border-color: #9cc5ff35; }
+.minimal-shell .incident-state i { width: 5px; height: 5px; }
+.minimal-shell .incident-bottom { border-color: #3b4350; margin-top: 14px; padding-top: 12px; }
+.minimal-shell .required-mini { gap: 6px; flex-wrap: wrap; }
+.minimal-shell .required-mini > span, .service-tag { --chip-color: #c5cdd9; display: inline-flex; align-items: center; gap: 5px; padding: 5px 7px; border-radius: 5px; font: 500 10px/1.4 'Barlow', sans-serif; color: var(--chip-color); background: color-mix(in srgb, var(--chip-color) 9%, #191e25); border: 1px solid color-mix(in srgb, var(--chip-color) 32%, #191e25); }
+.minimal-shell .required-mini b { font: 600 11px var(--mono); }
+.minimal-shell .special-requirement { font-size: 10px !important; }
+.incident-secondary { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; }
+.minimal-shell .incident-impact { margin: 0; gap: 5px; }
+.minimal-shell .incident-impact > span { padding: 0; border: 0; text-transform: none; font: 11px/1.5 'Barlow', sans-serif; color: #b1bbc9; }
+.incident-reward { display: inline-flex; align-items: center; gap: 4px; color: #b8c1ce; font: 10px var(--mono); white-space: nowrap; }
+.minimal-shell .incident-impact > span[data-tone="warning"], .minimal-shell .mission-facts > span[data-tone="warning"] { color: var(--status-warning); }
+.minimal-shell .incident-impact > span[data-tone="active"], .minimal-shell .mission-facts > span[data-tone="active"] { color: var(--status-active); }
+.minimal-shell .tactical-drawer .new-incident { min-height: 42px; margin: 10px 14px 14px; font-size: 13px; color: #d2dae6; background: #202630; border: 1px solid #505d6f; border-radius: 8px; }
+.minimal-shell .new-incident:disabled { color: #aeb8c6; background: #1b2028; border-color: #3a4451; border-style: dashed; }
+.minimal-shell .tactical-drawer .shift-summary { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 13px 18px; background: #12161d; border-color: var(--ui-line); }
+.minimal-shell .shift-summary > span { font: 500 10px/1.4 'Barlow', sans-serif; color: #aeb8c7; letter-spacing: .7px; }
+.minimal-shell .shift-summary > div { gap: 22px; margin: 0; }
+.minimal-shell .tactical-drawer .shift-summary strong { font: 500 16px/1.35 var(--mono); color: #e5ecf5; }
+.minimal-shell .shift-summary strong.earnings { color: var(--status-success); }
+.minimal-shell .tactical-drawer .shift-summary strong small { color: #aeb8c7; font: 11px 'Barlow', sans-serif; margin-top: 2px; }
+.minimal-shell .empty-state { color: var(--ui-muted); padding: 32px 20px; gap: 12px; }
+.minimal-shell .empty-state > svg { color: #bbc8d9; opacity: 1; }
+.minimal-shell .empty-state strong { color: #e9eef6; font-size: 17px; }
+.minimal-shell .empty-state p { font-size: 13px; color: var(--ui-secondary); }
+
+/* Dispatch: urgency -> resources -> action. Optional briefing stays below the task. */
+.minimal-shell .tactical-drawer .dispatch-detail { padding: 20px; border-color: var(--ui-line); }
+.minimal-shell .detail-eyebrow { margin-bottom: 13px; gap: 8px; letter-spacing: 0; }
+.minimal-shell .tactical-drawer .dispatch-detail > h2 { font: 600 25px/1.25 'Barlow', sans-serif; letter-spacing: -.55px; color: #f8faff; }
+.minimal-shell .location-link { font-size: 13px; line-height: 1.5; gap: 6px; color: #c2ccda; min-height: 34px; text-align: left; margin-top: 8px; }
+.minimal-shell .location-link:hover { color: #fff; }
+.dispatch-situation { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; padding-top: 15px; border-top: 1px solid #384250; }
+.dispatch-deadline { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0; }
+.dispatch-deadline small { color: var(--ui-muted); font: 11px 'Barlow', sans-serif; }
+.dispatch-deadline b { display: flex; align-items: center; gap: 6px; color: #ecf1f8; font: 500 17px var(--mono); font-variant-numeric: tabular-nums; }
+.minimal-shell .call-mini { min-height: 52px; padding: 10px 12px; margin-top: 17px; gap: 10px; font-size: 14px; color: #ffe0a9; background: #f8ca780d; border-color: #f8ca785c; border-radius: 8px; text-align: left; }
+.call-mini > span { display: flex; flex-direction: column; gap: 3px; }
+.call-mini small { font-size: 11px; font-weight: 400; color: #dbc294; }
+.minimal-shell .call-mini:hover { background: #f8ca781b; border-color: #f8ca7885; }
+.minimal-shell .tactical-drawer .requirements { padding: 18px 20px; background: #13171d; border-color: var(--ui-line); }
+.minimal-shell :is(.requirements h3, .units-heading h3, .assigned-units h3, .specialized-requirements h3) { font: 600 12px/1.5 'Barlow', sans-serif; color: #d4dce8; letter-spacing: .5px; text-transform: uppercase; }
+.minimal-shell .tactical-drawer .requirements > div > span { padding: 7px 9px; font: 500 11px/1.4 'Barlow', sans-serif; gap: 6px; border-radius: 6px; }
+.minimal-shell .requirements b { font: 600 13px var(--mono); }
+.minimal-shell .requirements .requirement-ready { border-color: #8ae2b559; }
+.minimal-shell .specialized-requirements { padding: 15px 20px; border-color: var(--ui-line); }
+.minimal-shell .specialized-requirements span { font-size: 12px; border-radius: 5px; padding: 6px 8px; }
+.minimal-shell .units-heading { padding: 18px 20px 12px; }
+.minimal-shell .units-heading > span { font: 11px var(--mono); color: var(--status-success); background: #8ae2b50c; border-color: #8ae2b53d; padding: 3px 6px; }
+.minimal-shell .route-estimate-action { min-height: 38px; margin: 0 20px 9px; padding: 8px 10px; font-size: 12px; border-color: #455367; color: #c9ddfa; border-radius: 6px; background: #9cc5ff07; }
+.minimal-shell .route-estimate-action:hover:not(:disabled) { border-color: #8bacdb; background: #9cc5ff12; }
+.minimal-shell .route-estimate-action:disabled { color: #aab6c6; border-color: #3a4453; background: #1b2028; }
+.minimal-shell .units-scroll { padding: 0 13px 16px; }
+.minimal-shell .tactical-drawer .unit-choice { gap: 10px; padding: 12px 9px; margin-top: 5px; border: 1px solid #343e4c; border-radius: 8px; background: #1b212a; }
+.minimal-shell .unit-choice:not(:disabled):hover { border-color: #8c9cb3; background: #283241; }
+.minimal-shell .unit-choice.selected { border-color: #c5d6ee; background: #2d3848; box-shadow: inset 2px 0 #dce8fa; }
+.minimal-shell .unit-choice:disabled { opacity: 1; background: #171c23; border-color: #303946; }
+.minimal-shell .unit-icon { width: 38px; height: 38px; border-radius: 8px; }
+.minimal-shell .tactical-drawer .unit-choice-text > strong { font: 600 13px/1.5 var(--mono); color: #eef3fa; }
+.minimal-shell .tactical-drawer .unit-choice-text > small { font: 12px/1.4 'Barlow', sans-serif; color: #b5c0d0; margin-top: 3px; }
+.minimal-shell .unit-choice-right { max-width: 107px; flex-shrink: 0; gap: 8px; }
+.minimal-shell .tactical-drawer .unit-ready { font: 500 11px/1.3 'Barlow', sans-serif; text-align: right; color: var(--status-success); }
+.minimal-shell .unit-ready[data-unavailable="true"] { color: #b1bccb; }
+.minimal-shell .checkbox { width: 19px; height: 19px; border-color: #718299; border-radius: 5px; }
+.minimal-shell .checkbox.checked { background: #e2edfd; color: #151e2a; border-color: #e2edfd; }
+.minimal-shell .unit-choice .unit-road-eta { font-size: 11px; color: #c8dffe; }
+.minimal-shell .assigned-units { padding: 17px 20px; background: #9cc5ff05; border-color: var(--ui-line); }
+.minimal-shell .assigned-units > div:not(.resolution-progress) { display: grid; grid-template-columns: 18px 1fr auto; gap: 5px 8px; padding: 9px 0; font-size: 12px; }
+.minimal-shell .assigned-units > div > .route-distance { color: #bec9d8; font-size: 11px; margin: 0; }
+.minimal-shell .assigned-units .state-label { grid-column: 2 / -1; justify-self: start; margin: 0; font: 12px 'Barlow', sans-serif; color: var(--status-active); }
+.minimal-shell .assigned-units .state-label.broken { color: var(--status-danger); }
+.minimal-shell .assigned-units .state-label.resting { color: var(--status-warning); }
+.minimal-shell .dispatch-foldout { padding: 0 20px; border: 0; border-top: 1px solid var(--ui-line); }
+.dispatch-foldout > summary { display: flex; align-items: center; gap: 9px; min-height: 49px; padding: 10px 0; cursor: pointer; list-style: none; font-size: 13px; font-weight: 500; color: #c6d0de; }
+.dispatch-foldout > summary::-webkit-details-marker { display: none; }
+.dispatch-foldout > summary > svg:last-child { margin-left: auto; transition: transform .15s; }
+.dispatch-foldout[open] > summary > svg:last-child { transform: rotate(180deg); }
+.dispatch-foldout[open] { padding-bottom: 16px; }
+.minimal-shell .arr-dispatch > div { display: grid; grid-template-columns: 1fr; gap: 7px; }
+.minimal-shell .arr-dispatch button { min-width: 0; padding: 10px 12px; border-color: #455266; background: #212935; border-radius: 7px; }
+.minimal-shell .arr-dispatch button strong { font-size: 13px; color: #e3ebf8; }
+.minimal-shell .arr-dispatch button small { color: #b6c2d3; font-size: 11px; line-height: 1.5; }
+.minimal-shell .arr-dispatch button:disabled { opacity: 1; background: #171c24; border-color: #333e4d; }
+.minimal-shell .arr-dispatch button:disabled strong { color: #aebacb; }
+.mission-briefing > p { font-size: 13px; line-height: 1.7; color: #c5cedc; }
+.minimal-shell .mission-facts > span { font: 12px/1.4 'Barlow', sans-serif; color: #bec9d8; padding: 5px 7px; border-color: #3b4655; border-radius: 5px; background: #1a212b; }
+.minimal-shell .dispatch-reward { font-size: 12px; color: #bec8d8; border-top: 1px solid #343f4e; padding-top: 13px; }
+.minimal-shell .dispatch-reward b { font-size: 12px; color: #e6edf9; }
+.minimal-shell .dispatch-reward small { font-size: 11px; color: var(--status-success); }
+.minimal-shell .route-estimate-note { margin: 14px 0 0; color: #aeb9ca; font-size: 11px; line-height: 1.65; }
+.minimal-shell .dispatch-content > .route-estimate-error { margin: 10px 20px; color: var(--status-danger); }
+.minimal-shell .tactical-drawer .dispatch-bottom { padding: 15px 18px 18px; background: #11161e; border-color: #49576b; box-shadow: 0 -8px 20px #0002; }
+.minimal-shell .tactical-drawer .dispatch-bottom > div { font: 12px/1.5 'Barlow', sans-serif; color: #d2dcec; gap: 10px; margin-bottom: 11px; flex-wrap: wrap; }
+.minimal-shell .dispatch-bottom > div > .dispatch-selection-state { font: 11px/1.4 'Barlow', sans-serif; color: #b3bfd0; }
+.minimal-shell .dispatch-selection-state[data-ready="true"] { color: var(--status-success); }
+.minimal-shell .tactical-drawer .dispatch-button { height: 48px !important; font-size: 14px !important; border-radius: 9px !important; gap: 10px; }
+.minimal-shell .dispatch-button > svg { margin: 0; }
+.minimal-shell .dispatch-button > svg:last-child { margin-left: auto; }
+.minimal-shell .dispatch-button:disabled { opacity: 1 !important; background: #2c3542 !important; color: #bac6d8 !important; border-color: #536177 !important; }
+
+/* Map controls stay compact without disappearing into the cartography. */
+.minimal-shell .map-layer-wrap { top: 96px; right: 24px; }
+.minimal-shell .map-layer-button { opacity: 1; width: 42px; height: 42px; justify-content: center; padding: 10px; background: #141a22f5; border-color: #697b9290; border-radius: 9px; color: #e4ecf8; }
+.minimal-shell .map-zoom { right: 24px; bottom: 110px; opacity: 1; padding: 3px; background: #141a22f5; border-color: #697b9290; border-radius: 10px; }
+.minimal-shell .map-zoom .icon-btn { width: 34px; height: 36px; color: #d9e5f5; }
+.minimal-shell .map-zoom .icon-btn > svg { width: 17px; height: 17px; }
+.minimal-shell.panel-dispatch .map-layer-wrap, .minimal-shell.panel-dispatch .map-zoom { right: 458px; }
+.minimal-shell .map-bottom { right: 24px; bottom: 30px; }
+.minimal-shell .incoming-call { min-height: 46px; padding: 10px 14px; gap: 10px; background: #231e16f7; border: 1px solid #c69d5999; border-radius: 10px; color: #fff0d2; }
+.minimal-shell .incoming-call strong { font-size: 13px; font-weight: 600; }
+.minimal-shell .incoming-icon > svg { width: 18px; height: 18px; }
+.minimal-shell .incoming-call:hover { background: #35291b; }
+.minimal-shell .paused-label { right: 24px; bottom: 250px; font-size: 10px; padding: 8px 10px; letter-spacing: .4px; color: var(--status-warning); background: #191e26f7; border-color: #a98c58; }
+.minimal-shell .layer-menu { top: 51px; width: 246px; padding: 18px; gap: 11px; background: #181e27; border-color: #57667c; border-radius: 12px; }
+.minimal-shell .geo-menu-caption, .minimal-shell .geo-style-control > span { color: #b9c6d8; font-size: 10px; letter-spacing: .8px; }
+.minimal-shell .geo-regions-menu > button { font-size: 14px; min-height: 39px; color: #e5edf9; }
+.minimal-shell .geo-regions-menu > small { font-size: 12px; color: #b4c1d3; }
+.minimal-shell .geo-regions-menu > label { font-size: 13px; }
+.minimal-shell .geo-style-control button { font-size: 12px; min-height: 36px; color: #bfcde1; }
+.minimal-shell .geo-style-control button.active { color: #fff; background: #36455a; }
+.minimal-shell .geo-incident-number { font-size: 12px; font-weight: 600; }
+.minimal-shell .geo-vehicle-label { font-size: 10px; color: #f6f8ff; background: #101824f5; }
+.minimal-shell .geo-map-loading, .minimal-shell .geo-map-error { top: 98px; font-size: 13px; color: #d8e4f5; background: #1b2430f7; }
+.minimal-shell .geo-map-error button { min-height: 36px; font-size: 13px; }
+
+/* Workspaces: comfortably readable utility text, quieter ornaments. */
+.minimal-shell .game-workspace { top: 94px; bottom: 94px; border-color: #5a677a; background: #12171e; border-radius: 16px; }
+.minimal-shell .workspace-bar { min-height: 56px; padding: 0 24px; background: #1e2631; border-color: #3c485a; }
+.minimal-shell .workspace-breadcrumb { font-size: 10px; color: #b9c6d8; letter-spacing: .5px; }
+.minimal-shell .workspace-breadcrumb strong { color: #ecf3ff; }
+.minimal-shell .workspace-close { font-size: 13px; min-height: 42px; color: #d4e0f1; }
+.minimal-shell .workspace-close kbd { color: #bccbdf; font-size: 10px; border-color: #64748b; }
+.minimal-shell .game-workspace .management-page { padding: 30px 32px 40px; background: #141920; }
+.minimal-shell .game-workspace .page-heading h1 { font-size: 34px; font-weight: 600; color: #f2f6fc; letter-spacing: -.75px; }
+.minimal-shell .game-workspace .page-heading p { font-size: 14px; color: #bfcada; }
+.minimal-shell .game-workspace .page-eyebrow { font: 600 11px/1.5 'Barlow', sans-serif; letter-spacing: 1.15px; color: #b5c2d4; }
+.minimal-shell .game-workspace .section-line { gap: 12px; flex-wrap: wrap; }
+.minimal-shell .game-workspace .section-line h2 { font-size: 18px; font-weight: 500; color: #ebf0f9; }
+.minimal-shell .game-workspace .section-line > span { font: 500 10px/1.5 'Barlow', sans-serif; color: #aebacd; letter-spacing: .6px; }
+.minimal-shell :is(.base-card, .vehicle-card, .facility-card, .report-metric, .career-rank, .settings-section) { background: #1c232d; border-color: #414e60; box-shadow: none; border-radius: 12px; }
+.minimal-shell .base-card:hover, .minimal-shell .vehicle-card:hover { border-color: #7b8da7; transform: none; box-shadow: none; }
+.minimal-shell .base-service-label { font: 600 11px 'Barlow', sans-serif; color: var(--service-color); }
+.minimal-shell .operational-tag { font: 500 10px/1.5 'Barlow', sans-serif; color: var(--status-success); letter-spacing: .5px; }
+.minimal-shell .game-workspace .base-info h3, .minimal-shell .game-workspace .vehicle-card h3 { font-size: 19px; line-height: 1.3; color: #f0f5fd; }
+.minimal-shell :is(.base-info p, .vehicle-card p, .base-capacity) { font-size: 13px; color: #bac7da; line-height: 1.55; }
+.minimal-shell .base-capacity strong { font-size: 12px; color: #e2eaf7; }
+.minimal-shell .developed-base .staff-line { font-size: 12px; color: #bac7da; grid-template-columns: auto 1fr auto; }
+.minimal-shell .developed-base .staff-line small { grid-column: 2 / -1; text-align: right; font-size: 11px; color: #acbbcf; }
+.minimal-shell .base-actions { grid-template-columns: 1fr; }
+.minimal-shell .base-actions button { font-size: 12px; min-height: 40px; color: #d9e4f5; background: #252f3d; border-color: #4c5d75; border-radius: 7px; }
+.minimal-shell .base-actions button:disabled { color: #acb9cb; background: #1b232e; border-color: #37475d; }
+.minimal-shell .base-development label { grid-template-columns: 1fr; gap: 7px; font-size: 10px; color: #b9c6d9; }
+.minimal-shell .base-development select { font-size: 13px; min-height: 38px; border-color: #4c5d75; }
+.minimal-shell .development-label { font-size: 10px; color: #b9c6d9; }
+.minimal-shell .extension-list { grid-template-columns: 1fr; }
+.minimal-shell .extension-list button { min-height: 46px; gap: 10px; padding: 8px 10px; border-radius: 6px; color: #c5d2e5; background: #1b2532; border-color: #415269; }
+.minimal-shell .extension-list button span { font-size: 12px; line-height: 1.4; }
+.minimal-shell .extension-list button small { font: 10px/1.5 'Barlow', sans-serif; color: #adbcd1; }
+.minimal-shell .extension-list button.active { color: var(--status-success); border-color: #8ae2b54d; background: #8ae2b508; }
+.minimal-shell .extension-list button.installed:not(.active) { color: var(--status-warning); border-color: #f8ca784d; }
+.minimal-shell .extension-list button:disabled { color: #b0bed2; background: #1b222d; border-color: #3a475b; }
+.minimal-shell .extension-list button.active small { color: var(--status-success); }
+.minimal-shell .progression-ribbon { border-color: #45546a; border-radius: 10px; overflow: hidden; background: #45546a; }
+.minimal-shell .progression-ribbon > div { background: #202936; }
+.minimal-shell .progression-ribbon span { font: 500 11px/1.5 'Barlow', sans-serif; color: #b4c5dc; letter-spacing: .3px; }
+.minimal-shell .progression-ribbon strong { font-size: 15px; color: #edf4ff; }
+.minimal-shell .vehicle-category { font-size: 12px; }
+.minimal-shell .vehicle-category > span { font: 500 10px 'Barlow', sans-serif; color: #c1cfe1; border-color: #546781; }
+.minimal-shell .game-workspace .vehicle-price strong { font-size: 19px; color: #f0f5ff; }
+.minimal-shell .fleet-table { border-color: #43536b; border-radius: 10px; }
+.minimal-shell .fleet-row { background: #1b2431; font-size: 13px; padding: 16px; border-color: #37475e; color: #c2d0e4; }
+.minimal-shell .fleet-row > span:first-child strong { font-size: 12px; color: #edf4ff; }
+.minimal-shell .fleet-row > span:last-child { font-size: 12px; color: #b8c9e0; }
+.minimal-shell .fleet-row.fleet-table-header { font-size: 11px !important; color: #c2d1e6; background: #28364a; }
+.minimal-shell .fleet-table-header > span:last-child { font-size: 11px; }
+.minimal-shell :is(.fleet-status, .case-status) { display: inline-flex; align-items: center; gap: 6px; width: fit-content; padding: 4px 7px; border: 1px solid currentColor; border-radius: 5px; font: 500 11px/1.4 'Barlow', sans-serif; background: #ffffff04; }
+.minimal-shell .fleet-status.available { color: var(--status-success); }
+.minimal-shell .fleet-status:is(.enroute, .onscene, .patrol, .transporting, .returning) { color: var(--status-active); }
+.minimal-shell .fleet-status:is(.uncrewed, .resting) { color: var(--status-warning); }
+.minimal-shell .fleet-status.broken { color: var(--status-danger); }
+.minimal-shell .game-workspace :is(.expansion-strip, .specialist-strip) { border-color: #455873; background: #202c3d; }
+.minimal-shell .game-workspace :is(.expansion-strip, .specialist-strip) h3 { font-size: 16px; color: #edf4ff; }
+.minimal-shell .game-workspace :is(.expansion-strip, .specialist-strip) p { font-size: 13px; line-height: 1.6; color: #bfcee4; }
+.minimal-shell :is(.primary-button, .outline-button, .danger-button) { min-height: 42px; font-size: 13px !important; }
+.minimal-shell .outline-button { background: #26364c !important; border-color: #657d9d !important; color: #e3eeff !important; }
+.minimal-shell .outline-button:hover:not(:disabled) { background: #354967 !important; }
+.minimal-shell .game-workspace .report-metric span { font-size: 13px; color: #c2d1e6; }
+.minimal-shell .game-workspace .report-metric strong { font-size: 26px; }
+.minimal-shell .report-live { font-size: 11px; color: #c7d6eb; }
+.minimal-shell .report-empty { background: #17202d; color: #b7c8df; border-color: #4b5f7a; }
+.minimal-shell .report-empty p { font-size: 13px; }
+.minimal-shell .game-workspace .history-row strong { font-size: 14px; line-height: 1.4; color: #e7f0fd; }
+.minimal-shell .game-workspace .history-row small { font-size: 12px; color: #b4c6e0; }
+.minimal-shell .game-workspace .history-row > b { font-size: 12px; }
+.minimal-shell .career-rank > span { font-size: 11px; color: #bfcee3; }
+.minimal-shell .career-rank p { font-size: 12px; color: #bfcee3; line-height: 1.6; }
+.minimal-shell .milestones :is(p, strong) { color: #bdcce1; font-size: 13px; }
+.minimal-shell .milestones > div > span { color: #b5c7e0; font-size: 11px; }
+.minimal-shell .full-logs { background: #151d29; border-color: #3f526e; }
+.minimal-shell .full-logs > div { color: #c4d3e8; font-size: 13px; align-items: flex-start; }
+.minimal-shell .full-logs time { color: #b1c4df; font-size: 11px; padding-top: 2px; }
+.minimal-shell .full-logs .log-dot { margin-top: 7px; }
+.minimal-shell .game-workspace .settings-section > h2 { color: #edf4ff; font-size: 19px; }
+.minimal-shell .game-workspace .setting-row h3 { color: #e4efff; font-size: 15px; }
+.minimal-shell .game-workspace .setting-row p { color: #bccde5; font-size: 13px; line-height: 1.65; }
+.minimal-shell .settings-note, .minimal-shell .settings-note p { font-size: 12px; line-height: 1.7; color: #b4c8e3; }
+.minimal-shell .setting-row [role="switch"] { border: 1px solid #7086a7; background: #35445c; }
+.minimal-shell .setting-row [role="switch"][data-state="checked"] { background: #8ae2b5; }
+
+/* Support screens share the same size floor; no 6–9px operational labels. */
+.minimal-shell .operations-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-radius: 9px; border-color: #495c77; background: #151e2b; overflow: visible; }
+.minimal-shell .operations-tabs button { min-width: 0; font-size: 13px; min-height: 44px; padding: 8px; color: #bfcee3; }
+.minimal-shell .operations-tabs button.active { color: #edf5ff; background: #304563; border-color: #6a84a7; }
+.minimal-shell .operations-summary { border-radius: 10px; overflow: hidden; border-color: #4b607e; background: #4b607e; }
+.minimal-shell .operations-summary > div { background: #202b3b; }
+.minimal-shell .operations-summary span { color: #c1d0e6; font-size: 13px; }
+.minimal-shell :is(.facility-grid, .qualification-grid) { grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); }
+.minimal-shell .facility-card-top { color: #c5d5ed; font: 500 11px/1.5 'Barlow', sans-serif; }
+.minimal-shell .facility-card-top b { color: #b7c9e3; }
+.minimal-shell .facility-card h3 { font-size: 18px; color: #edf5ff; }
+.minimal-shell .facility-card > p, .minimal-shell .facility-meter { color: #b9cce7; font-size: 13px; }
+.minimal-shell .facility-meter strong { color: #ecf4ff; font-size: 12px; }
+.minimal-shell .facility-card > button { min-height: 42px; color: #d8e7fc; font-size: 13px; border-color: #526a8b; background: #26374e; border-radius: 7px; }
+.minimal-shell .facility-card > button:disabled { background: #202b3b; color: #b4c7e1; }
+.minimal-shell .operations-empty { border-color: #4b6181; border-radius: 10px; color: #bfcee5; padding: 20px; }
+.minimal-shell .operations-empty strong { color: #e0ecff; font-size: 15px; }
+.minimal-shell .operations-empty p { color: #b7cbe8; font-size: 13px; line-height: 1.6; }
+.minimal-shell .case-list article { border-color: #4a5f7d; border-radius: 9px; background: #1e2939; }
+.minimal-shell .case-list strong { font-size: 14px; color: #e4eeff; }
+.minimal-shell .case-list small { font-size: 12px; color: #b6c9e5; white-space: normal; line-height: 1.5; }
+.minimal-shell .case-action select, .minimal-shell .training-console select, .minimal-shell .training-console input, .minimal-shell .arr-builder input { min-height: 42px; font-size: 13px; width: 100%; color: #e1edff; border-color: #607899; background: #192334; border-radius: 6px; }
+.minimal-shell .case-action button { min-height: 42px; font-size: 12px; }
+.minimal-shell .training-console, .minimal-shell .arr-builder { border-color: #4e6482; background: #1d2839; border-radius: 10px; }
+.minimal-shell .training-console label, .minimal-shell .arr-builder label { font-size: 11px; color: #c4d4ec; line-height: 1.5; }
+.minimal-shell .training-console p, .minimal-shell .section-copy { font-size: 13px; color: #bccde6; line-height: 1.6; }
+.minimal-shell :is(.training-list, .qualification-grid, .patrol-list, .arr-list) article { border-radius: 9px; background: #1e2b3e; border-color: #4b6284; }
+.minimal-shell :is(.training-list, .qualification-grid, .patrol-list, .arr-list) strong { font-size: 13px; line-height: 1.5; color: #e0edff; }
+.minimal-shell :is(.training-list, .qualification-grid, .patrol-list, .arr-list) small { font-size: 12px; line-height: 1.5; color: #b7cbe9; }
+.minimal-shell .patrol-list button { min-height: 40px; font-size: 12px; padding: 6px 9px; color: #d0e1fa; border-color: #607da3; background: #253750; border-radius: 6px; }
+.minimal-shell .arr-list article > button { width: 40px; height: 40px; color: #c0d5f2; }
+
+/* Portalled dialogs need their own scope. */
+.game-modal { background: #1b222d !important; border-color: #63728a !important; color: #f0f5ff !important; padding: 28px !important; }
+.game-modal h2 { font-size: 27px !important; font-weight: 600; }
+.game-modal [id$="description"] { color: #c3d0e3; font-size: 14px; }
+.game-modal .modal-eyebrow, .game-modal .caller small, .game-modal .call-choices h3, .game-modal .help-steps small { font: 500 11px/1.5 'Barlow', sans-serif; color: #bccce4; letter-spacing: .6px; }
+.game-modal .caller p { font-size: 17px; color: #f0f5fd; line-height: 1.65; }
+.game-modal .call-choices > button { font-size: 14px; color: #e4eeff; background: #263246; border-color: #526784; padding: 15px; }
+.game-modal .call-choices > button:hover { background: #344967; border-color: #a6bbd9; }
+.game-modal .call-choices > button > span { font-size: 12px; color: #c0d3ef; border-color: #6982a5; }
+.game-modal .call-result p, .game-modal .help-steps p { font-size: 14px; line-height: 1.65; color: #c4d4ed; }
+.game-modal .simulation-disclaimer { font-size: 12px; color: #aebfda; line-height: 1.6; }
+.game-modal .field-label { font-size: 14px; color: #d6e3f9; }
+.game-modal .field-label select { font-size: 14px; background: #192334; color: #e3eeff; border-color: #637b9d; }
+.game-modal .purchase-total { font-size: 13px; color: #c6d8f2; gap: 10px; flex-wrap: wrap; }
+.game-modal :is(.primary-button, .outline-button, .danger-button) { min-height: 44px; font-size: 14px !important; }
+.game-modal > button.absolute { opacity: 1; width: 32px; height: 32px; display: grid; place-items: center; color: #e4eeff; background: #2c3b51; border-radius: 6px; }
+
+/* Stable semantic colours win over generic typography, including disabled states. */
+.minimal-shell [data-testid="city-trust"][data-tone="positive"],
+.minimal-shell .report-metric:is([data-metric="completed"], [data-metric="earnings"], [data-tone="positive"]) > strong { color: var(--status-success); }
+.minimal-shell [data-testid="city-trust"][data-tone="warning"],
+.minimal-shell .report-metric[data-tone="warning"] > strong { color: var(--status-warning); }
+.minimal-shell [data-testid="city-trust"][data-tone="negative"],
+.minimal-shell .report-metric[data-tone="negative"] > strong { color: var(--status-danger); }
+.minimal-shell .report-metric[data-metric="xp"] > strong { color: var(--status-active); }
+.minimal-shell .minimal-brand, .hud-time, .hud-options-wrap { flex-shrink: 0; }
+.minimal-shell .minimal-readout { min-width: 0; }
+.minimal-shell .hud-budget { min-width: 0; }
+.minimal-shell .minimal-budget { overflow: hidden; text-overflow: ellipsis; }
+.minimal-shell .hud-options .option-line:first-of-type { align-items: center; }
+
+@media (max-width: 1100px) {
+  .minimal-shell .game-workspace .management-page { padding: 25px; }
+  .minimal-shell .training-console { grid-template-columns: 1fr 1fr; }
+  .minimal-shell .training-console > div { grid-column: 1 / -1; }
+}
+@media (max-width: 800px) {
+  .minimal-shell .minimal-hud { left: 16px; right: 16px; top: 16px; }
+  .minimal-shell .tactical-drawer, .minimal-shell .dispatch-drawer { top: 88px; bottom: 90px; left: 16px; right: 16px; width: auto; max-width: 416px; }
+  .minimal-shell .dispatch-drawer { left: auto; width: calc(100% - 32px); }
+  .minimal-shell .game-workspace { top: 88px; bottom: 90px; left: 16px; right: 16px; }
+  .minimal-shell .operations-tabs { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 600px) {
+  .minimal-shell .minimal-hud { top: max(12px, env(safe-area-inset-top)); left: 12px; right: 12px; height: 54px; gap: 7px; }
+  .minimal-shell .minimal-brand { padding: 0 10px; gap: 6px; border-radius: 10px; }
+  .minimal-shell .minimal-brand > svg { width: 16px; height: 16px; }
+  .minimal-shell .minimal-brand > span { font-size: 20px; letter-spacing: -.65px; }
+  .minimal-shell .minimal-brand > span > span { margin-left: 2px; }
+  .minimal-shell .minimal-readout { padding: 5px 5px 5px 10px; gap: 5px; border-radius: 10px; }
+  .hud-stat { gap: 3px; }
+  .hud-stat > small { font-size: 10px; }
+  .minimal-shell .minimal-budget, .hud-time b { font-size: 12px; letter-spacing: -.4px; }
+  .hud-time { padding-left: 8px; margin-left: 3px; }
+  .minimal-shell .minimal-readout > .icon-btn { width: 34px; height: 40px; }
+  .minimal-shell .minimal-options-toggle { min-height: 40px; padding: 6px; width: 32px; justify-content: center; }
+  .minimal-shell .minimal-options-toggle > span { display: none; }
+  .minimal-shell .minimal-options-toggle > svg { width: 17px; }
+  .minimal-shell .hud-options { top: 54px; right: -5px; width: 320px; max-height: calc(100dvh - 105px); overflow: auto; }
+  .minimal-shell .menu-launcher { bottom: max(30px, calc(env(safe-area-inset-bottom) + 12px)); left: 12px; gap: 7px; }
+  .minimal-shell .menu-launcher > button { min-height: 44px; padding: 9px 10px; gap: 7px; font-size: 12px; }
+  .minimal-shell .quick-incidents > .quick-incidents-label { font-size: 12px; }
+  .queue-count { min-width: 23px; font-size: 11px; padding: 0 4px; }
+  .minimal-shell .game-menu { left: 12px; bottom: max(86px, calc(env(safe-area-inset-bottom) + 68px)); width: 290px; max-width: calc(100% - 24px); max-height: calc(100dvh - 168px); }
+  .minimal-shell .tactical-drawer, .minimal-shell .dispatch-drawer { top: max(80px, calc(env(safe-area-inset-top) + 68px)); bottom: max(86px, calc(env(safe-area-inset-bottom) + 68px)); left: 12px; right: 12px; width: auto; max-width: none; }
+  .minimal-shell .tactical-drawer .panel-heading { min-height: 58px; padding: 0 15px; }
+  .minimal-shell .tactical-drawer .panel-heading h2 { font-size: 17px; }
+  .minimal-shell .tactical-drawer .incident-tabs { margin: 12px 12px 0; }
+  .minimal-shell .tactical-drawer .incident-tabs > button { font-size: 12px; padding: 6px 4px; }
+  .minimal-shell .queue-label { padding: 7px 15px; }
+  .minimal-shell .incidents-scroll { padding: 0 12px 4px; }
+  .minimal-shell .tactical-drawer .incident-card { padding: 14px; }
+  .minimal-shell .tactical-drawer .incident-card h3 { font-size: 17px; }
+  .minimal-shell .tactical-drawer .incident-address { font-size: 13px; }
+  .minimal-shell .tactical-drawer .shift-summary { padding: 12px 15px; gap: 12px; }
+  .minimal-shell .shift-summary > div { gap: 17px; }
+  .minimal-shell .tactical-drawer .dispatch-detail { padding: 18px; }
+  .minimal-shell .tactical-drawer .dispatch-detail > h2 { font-size: 24px; }
+  .minimal-shell .tactical-drawer .requirements { padding: 17px 18px; }
+  .minimal-shell .tactical-drawer .unit-choice-text > strong { font-size: 12px; }
+  .minimal-shell .unit-choice-right { max-width: 91px; }
+  .minimal-shell .unit-icon { width: 33px; height: 35px; }
+  .minimal-shell .tactical-drawer .dispatch-bottom { padding: 13px 15px 15px; }
+  .minimal-shell .tactical-drawer .dispatch-bottom > div { font-size: 12px; }
+  .minimal-shell .map-layer-wrap { top: 84px; right: 13px; }
+  .minimal-shell .map-zoom { right: 13px; bottom: 102px; }
+  .minimal-shell .map-bottom { right: 12px; bottom: max(30px, calc(env(safe-area-inset-bottom) + 12px)); }
+  .minimal-shell .incoming-call { min-height: 44px; padding: 9px 11px; gap: 7px; }
+  .minimal-shell .incoming-call strong { font-size: 12px; }
+  .minimal-shell .incoming-call > svg { display: none; }
+  .minimal-shell .paused-label { right: 13px; bottom: 236px; font-size: 10px; padding: 7px 9px; }
+  .minimal-shell .layer-menu { max-width: calc(100vw - 26px); }
+  .minimal-shell .geo-map-loading, .minimal-shell .geo-map-error { top: 144px; }
+  .minimal-shell .game-workspace { top: max(80px, calc(env(safe-area-inset-top) + 68px)); bottom: max(86px, calc(env(safe-area-inset-bottom) + 68px)); left: 12px; right: 12px; border-radius: 12px; }
+  .minimal-shell .workspace-bar { min-height: 53px; padding: 0 14px; gap: 10px; }
+  .minimal-shell .workspace-breadcrumb { font-size: 10px; letter-spacing: 0; gap: 7px; min-width: 0; }
+  .minimal-shell .workspace-breadcrumb > span { display: none; }
+  .minimal-shell .workspace-close { font-size: 12px; flex-shrink: 0; padding: 8px 0; gap: 7px; }
+  .minimal-shell .workspace-close > span { display: none; }
+  .minimal-shell .workspace-close > svg { width: 21px; height: 21px; }
+  .minimal-shell .game-workspace .management-page { padding: 24px 17px 30px; }
+  .minimal-shell .game-workspace .page-heading h1 { font-size: 29px; }
+  .minimal-shell .game-workspace .page-heading p { font-size: 14px; }
+  .minimal-shell .game-workspace .page-eyebrow { font-size: 11px; letter-spacing: .75px; }
+  .minimal-shell .game-workspace .section-line h2 { font-size: 17px; }
+  .minimal-shell .game-workspace .section-line > span { font-size: 10px; }
+  .minimal-shell .game-workspace .base-info, .minimal-shell .game-workspace .vehicle-card { padding: 18px; }
+  .minimal-shell .game-workspace .report-metric { padding: 16px 12px; }
+  .minimal-shell .game-workspace .report-metric span { font-size: 12px; }
+  .minimal-shell .game-workspace .report-metric strong { font-size: 21px; }
+  .minimal-shell .game-workspace .history-row { flex-wrap: wrap; }
+  .minimal-shell .game-workspace .history-row > b { margin-left: 47px; }
+  .minimal-shell .case-action { grid-template-columns: 1fr; }
+  .minimal-shell .case-status { grid-column: 2; justify-self: start; }
+  .minimal-shell .training-console, .minimal-shell .arr-builder { grid-template-columns: minmax(0, 1fr); }
+  .minimal-shell .setting-row { gap: 12px; }
+  .minimal-shell .setting-row > div { min-width: 130px; }
+  .minimal-shell .setting-row > button:not([role="switch"]) { margin-left: 33px; }
+  .game-modal { padding: 22px !important; max-height: calc(100dvh - 28px); }
+  .game-modal h2 { font-size: 25px !important; }
+  .game-modal .caller p { font-size: 16px; }
+  .game-modal .call-choices > button { padding: 13px; font-size: 14px; }
+}
+@media (max-width: 370px) {
+  .minimal-shell .minimal-brand > svg { display: none; }
+  .minimal-shell .minimal-brand { padding: 0 8px; }
+  .minimal-shell .minimal-brand > span { font-size: 19px; }
+  .minimal-shell .minimal-readout { padding-left: 7px; gap: 3px; }
+  .minimal-shell .quick-incidents > .quick-incidents-label { display: none; }
+  .minimal-shell .dispatch-selection-state { display: none; }
+}
+@media (max-height: 650px) {
+  .minimal-shell .shift-summary { display: none; }
+  .minimal-shell .game-menu { max-height: calc(100dvh - 177px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .minimal-shell *, .minimal-shell *::before, .minimal-shell *::after { animation: none !important; transition: none !important; }
+}

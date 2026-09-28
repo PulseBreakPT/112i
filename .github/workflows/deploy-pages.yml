@@ -25,7 +25,7 @@ jobs:
         working-directory: frontend
     env:
       CI: "false"
-      REACT_APP_BACKEND_URL: ${{ vars.REACT_APP_BACKEND_URL || 'https://sss-tier-redesign.preview.emergentagent.com' }}
+      REACT_APP_BACKEND_URL: ${{ vars.REACT_APP_BACKEND_URL || 'https://minimal-contrast-hub.preview.emergentagent.com' }}
     steps:
       - name: Obter código
         uses: actions/checkout@v4

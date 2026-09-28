@@ -9,7 +9,7 @@ import requests
 from datetime import datetime
 
 # Load backend URL from frontend .env
-BACKEND_URL = "https://8147c801-7851-450c-b78c-be8c511c9cf2.preview.emergentagent.com/api"
+BACKEND_URL = "https://minimal-contrast-hub.preview.emergentagent.com/api"
 MAP_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty"
 
 # Test results tracking

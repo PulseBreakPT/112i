@@ -1,22 +1,47 @@
 import { Radio, Clock3, ChevronRight, SlidersHorizontal, Plus, CheckCheck, X, MapPin, HeartPulse, Shield } from 'lucide-react';
 import { useState } from 'react';
 import { SERVICE, ServiceIcon, STATUS, duration, money } from './common';
-export const IncidentPanel = ({ game, selected, onSelect, onCall, act, busy, onClose }) => {
+
+export const IncidentPanel = ({ game, selected, onSelect, act, busy, onClose }) => {
   const [filter, setFilter] = useState('all');
-  const list = game.incidents.filter(i => filter === 'all' || i.service === filter);
-  return <section className="incident-panel">
-    <div className="panel-heading"><h2><Radio size={17} /> Ocorrências <span data-testid="incident-count" className="count-badge">{game.incidents.length}/{game.progression?.mission_cap || 3}</span></h2><div className="panel-heading-actions"><button className="icon-btn" title="Ordenar por prioridade" aria-label="Ordenar por prioridade" data-testid="sort-priority" onClick={() => setFilter(filter === 'priority' ? 'all' : 'priority')}><SlidersHorizontal size={15} /></button>{onClose && <button className="icon-btn" aria-label="Recolher ocorrências" title="Recolher ocorrências" data-testid="close-incidents" onClick={onClose}><X size={17} /></button>}</div></div>
-    <div className="incident-tabs">{[['all', 'Todas'], ['fire', 'Bombeiros'], ['medical', 'INEM'], ['police', 'PSP']].map(([key, name]) => <button key={key} data-service={key} data-testid={`filter-${key}`} onClick={() => setFilter(key)} className={filter === key ? 'selected' : ''}>{name}</button>)}</div>
-    <div className="queue-label"><span>FILA DE DESPACHO</span><span data-testid="waiting-count">{game.incidents.filter(i => i.status === 'waiting').length} pendentes</span></div>
-    <div className="incidents-scroll">{(filter === 'priority' ? [...game.incidents].sort((a, b) => a.priority - b.priority) : list).map(inc => <button className={`incident-card ${selected === inc.id ? 'selected' : ''}`} key={inc.id} data-testid={`incident-${inc.number}`} onClick={() => onSelect(inc.id)} style={{ '--service-color': SERVICE[inc.service].color }}>
-      <div className="incident-top"><span className={`priority p${inc.priority}`} data-testid={`priority-${inc.number}`}>P{inc.priority} · {inc.priority === 1 ? 'CRÍTICA' : inc.priority === 2 ? 'URGENTE' : 'MODERADA'}</span><span className="incident-number">#{inc.number}</span></div>
-      <h3 data-testid={`incident-title-${inc.number}`}><span className="service-icon"><ServiceIcon service={inc.service} size={18} /></span>{inc.title}</h3>
-      <p className="incident-address" data-testid={`incident-address-${inc.number}`}><MapPin size={12} />{inc.address}</p>
-      <div className="incident-impact"><span>{inc.difficulty || 'Média'}</span>{inc.casualties > 0 && <span><HeartPulse size={11} />{inc.casualties} ferido{inc.casualties !== 1 ? 's' : ''}</span>}{inc.detainees > 0 && <span><Shield size={11} />{inc.detainees} detido{inc.detainees !== 1 ? 's' : ''}</span>}</div>
-      <div className="incident-meta"><span className={`incident-state ${inc.status}`} data-testid={`incident-status-${inc.number}`}><i />{STATUS[inc.status]}</span><span className={`incident-timer ${inc.deadline - game.elapsed <= 60 ? 'critical' : inc.deadline - game.elapsed <= 120 ? 'warning' : ''}`} data-testid={`incident-timer-${inc.number}`}><Clock3 size={12} />{duration(inc.deadline - game.elapsed)}</span></div>
-      <div className="incident-bottom"><div className="required-mini">{Object.entries(inc.needs).map(([s, n]) => <span key={s} style={{ color: SERVICE[s].color }}><ServiceIcon service={s} size={13} />{n}</span>)}{!!inc.required_vehicle_types?.length && <span className="special-requirement" title="Requer veículo especializado">ESP</span>}</div><span>{money(inc.reward)} <ChevronRight size={13} /></span></div>
-    </button>)}{!list.length && filter !== 'priority' && <div className="empty-state" data-testid="incidents-empty"><CheckCheck size={30} /><strong>Setor tranquilo</strong><p>Sem ocorrências neste momento.</p></div>}</div>
-    <button className="new-incident" data-testid="new-incident-button" disabled={busy || game.incidents.length >= (game.progression?.mission_cap || 3)} onClick={() => act('new_incident')}><Plus size={15} /> Receber ocorrência</button>
-    <div className="shift-summary"><span><CheckCheck size={16} /> ESTE TURNO</span><div><strong data-testid="shift-completed">{game.completed}<small>resolvidas</small></strong><strong className="earnings" data-testid="shift-earnings">+{money(game.earned)}<small>receitas</small></strong></div></div>
+  const [priorityFirst, setPriorityFirst] = useState(true);
+  const list = game.incidents.filter(item => filter === 'all' || item.service === filter);
+  const ordered = [...list].sort((a, b) => priorityFirst ? a.priority - b.priority || a.deadline - b.deadline : b.number - a.number);
+  const waiting = game.incidents.filter(item => item.status === 'waiting').length;
+  const atCapacity = game.incidents.length >= (game.progression?.mission_cap || 3);
+
+  return <section className="incident-panel" aria-label="Fila de ocorrências">
+    <div className="panel-heading">
+      <h2><Radio size={18} /> Ocorrências <span data-testid="incident-count" className="count-badge">{game.incidents.length}/{game.progression?.mission_cap || 3}</span></h2>
+      <div className="panel-heading-actions">{onClose && <button className="icon-btn" aria-label="Recolher ocorrências" title="Recolher ocorrências" data-testid="close-incidents" onClick={onClose}><X size={18} /></button>}</div>
+    </div>
+    <div className="incident-tabs" aria-label="Filtrar por serviço">
+      {[['all', 'Todas'], ['fire', 'Bombeiros'], ['medical', 'INEM'], ['police', 'PSP']].map(([key, name]) => <button key={key} data-service={key} data-testid={`filter-${key}`} aria-pressed={filter === key} onClick={() => setFilter(key)} className={filter === key ? 'selected' : ''}>{name}</button>)}
+    </div>
+    <div className="queue-label">
+      <span className={`queue-pending ${waiting ? 'has-waiting' : ''}`} data-testid="waiting-count"><i />{waiting} {waiting === 1 ? 'pendente' : 'pendentes'}</span>
+      <button className="queue-sort" title={priorityFirst ? 'Mudar para mais recentes' : 'Ordenar por prioridade'} aria-label="Ordenar por prioridade" aria-pressed={priorityFirst} data-testid="sort-priority" onClick={() => setPriorityFirst(value => !value)}><SlidersHorizontal size={13} />{priorityFirst ? 'Prioridade' : 'Mais recentes'}</button>
+    </div>
+    <div className="incidents-scroll">
+      {ordered.map(inc => {
+        const remaining = inc.deadline - game.elapsed;
+        return <button className={`incident-card ${selected === inc.id ? 'selected' : ''}`} key={inc.id} data-priority={inc.priority} data-testid={`incident-${inc.number}`} onClick={() => onSelect(inc.id)} style={{ '--service-color': SERVICE[inc.service].color }}>
+          <div className="incident-top">
+            <span className={`priority p${inc.priority}`} data-testid={`priority-${inc.number}`}>P{inc.priority} · {inc.priority === 1 ? 'CRÍTICA' : inc.priority === 2 ? 'URGENTE' : 'MODERADA'}</span>
+            <span className={`incident-timer ${remaining <= 60 ? 'critical' : remaining <= 120 ? 'warning' : ''}`} data-testid={`incident-timer-${inc.number}`} aria-label={`Tempo restante: ${duration(remaining)}`}><Clock3 size={13} />{duration(remaining)}</span>
+          </div>
+          <h3 data-testid={`incident-title-${inc.number}`}><span className="service-icon"><ServiceIcon service={inc.service} size={20} /></span>{inc.title}</h3>
+          <p className="incident-address" data-testid={`incident-address-${inc.number}`}><MapPin size={13} />{inc.address}</p>
+          <div className="incident-meta"><span className={`incident-state ${inc.status}`} data-testid={`incident-status-${inc.number}`}><i />{STATUS[inc.status] || inc.status}</span><span className="incident-number">#{inc.number}</span></div>
+          <div className="incident-bottom">
+            <div className="required-mini" aria-label="Meios necessários">{Object.entries(inc.needs).map(([service, count]) => <span key={service} title={`${count} ${SERVICE[service].name}`} style={{ '--chip-color': SERVICE[service].color }}><ServiceIcon service={service} size={13} /><b>{count}</b><span>{service === 'fire' ? 'BOMB.' : SERVICE[service].short}</span></span>)}{!!inc.required_vehicle_types?.length && <span className="special-requirement" title="Requer veículo especializado">ESP</span>}</div>
+          </div>
+          <div className="incident-secondary"><div className="incident-impact"><span>{inc.difficulty || 'Média'}</span>{inc.casualties > 0 && <span data-tone="warning"><HeartPulse size={12} />{inc.casualties} ferido{inc.casualties !== 1 ? 's' : ''}</span>}{inc.detainees > 0 && <span data-tone="active"><Shield size={12} />{inc.detainees} detido{inc.detainees !== 1 ? 's' : ''}</span>}</div><span className="incident-reward">{money(inc.reward)}<ChevronRight size={14} /></span></div>
+        </button>;
+      })}
+      {!ordered.length && <div className="empty-state" data-testid="incidents-empty"><CheckCheck size={30} /><strong>{game.incidents.length ? 'Sem ocorrências deste serviço' : 'Setor tranquilo'}</strong><p>{game.incidents.length ? 'Seleciona Todas para consultar a fila completa.' : 'A central está pronta para a próxima chamada.'}</p></div>}
+    </div>
+    <button className="new-incident" data-testid="new-incident-button" disabled={busy || atCapacity} onClick={() => act('new_incident')}><Plus size={16} />{atCapacity ? 'Limite de ocorrências atingido' : 'Receber ocorrência'}</button>
+    <div className="shift-summary"><span><CheckCheck size={15} /> ESTE TURNO</span><div><strong data-testid="shift-completed">{game.completed}<small>resolvidas</small></strong><strong className="earnings" data-testid="shift-earnings">+{money(game.earned)}<small>receitas</small></strong></div></div>
   </section>;
 };

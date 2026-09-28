@@ -17,12 +17,12 @@ export function GameHUD({ game, act, sound, setSound, onSave, error }) {
   return <header className="minimal-hud" aria-label="Painel de comando">
     <Link to="/" className="minimal-brand" data-testid="brand-home" aria-label="NEXO 112 — voltar ao mapa"><Radio size={18} /><span data-testid="game-brand">NEXO<span>112</span></span></Link>
     <div className="minimal-readout">
-      <span className="minimal-budget" data-testid="user-budget-display" title="Orçamento">{money(game.money)}</span>
-      <b data-testid="game-clock">{clock(game.elapsed).slice(0, 5)}</b>
+      <div className="hud-stat hud-budget"><small>Orçamento</small><span className="minimal-budget" data-testid="user-budget-display" title={money(game.money)}>{money(game.money)}</span></div>
+      <div className="hud-stat hud-time" data-paused={!game.speed}><small>{game.speed ? 'Turno' : 'Em pausa'}</small><b data-testid="game-clock">{clock(game.elapsed).slice(0, 5)}</b></div>
       <IconButton icon={game.speed ? Pause : Play} label={game.speed ? 'Pausar simulação' : 'Retomar simulação'} testId="game-speed-pause" active={!game.speed} onClick={() => act('speed', { speed: game.speed ? 0 : 1 })} />
       <div className="hud-options-wrap" ref={options}>
-        <button className={`minimal-options-toggle ${optionsOpen ? 'active' : ''}`} aria-label="Controlos e recursos do turno" aria-expanded={optionsOpen} data-testid="hud-options-toggle" onClick={() => setOptionsOpen(!optionsOpen)}><SlidersHorizontal size={16} /><span>{game.speed}×</span></button>
-        {optionsOpen && <div className="hud-options" data-testid="hud-options" onKeyDown={event => { if (event.key === 'Escape') { event.stopPropagation(); setOptionsOpen(false); } }}>
+        <button className={`minimal-options-toggle ${optionsOpen ? 'active' : ''}`} aria-label="Controlos e recursos do turno" aria-expanded={optionsOpen} aria-controls="hud-options" data-testid="hud-options-toggle" onClick={() => setOptionsOpen(!optionsOpen)}><SlidersHorizontal size={17} /><span>{game.speed ? `${game.speed}×` : 'Ⅱ'}</span></button>
+        {optionsOpen && <div className="hud-options" id="hud-options" data-testid="hud-options" onKeyDown={event => { if (event.key === 'Escape') { event.stopPropagation(); setOptionsOpen(false); options.current?.querySelector('button')?.focus(); } }}>
           <div className="hud-options-heading">CONTROLOS DO TURNO</div>
           <div className="option-line"><span>Velocidade</span><div className="speed-group">{[1, 2, 5].map(n => <button key={n} aria-label={`Velocidade ${n} vezes`} aria-pressed={game.speed === n} data-testid={`game-speed-${n}x`} className={game.speed === n ? 'chosen' : ''} onClick={() => act('speed', { speed: n })}>{n}×</button>)}</div></div>
           <div className="option-line"><span>Operador · Nível {game.level}</span><strong data-testid="user-level-badge">{rank}</strong></div>

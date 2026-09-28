@@ -21,6 +21,7 @@ import './game/semantics.css';
 import './Immersive.css';
 import './Minimal.css';
 import './Polish.css';
+import './Clarity.css';
 
 function GameApp() {
   const { game, world, error, busy, act, retry } = useGame();
@@ -77,6 +78,8 @@ function GameApp() {
 
   if (!game || !world) return <div className="loading-screen" data-testid="loading-screen"><Radio size={40} /><h1>NEXO<span>112</span></h1>{error ? <><p data-testid="loading-error">{error}</p><button data-testid="retry-connection" className="primary-button" onClick={retry}>Voltar a ligar</button></> : <><LoaderCircle className="spinner" size={20} /><p>A estabelecer ligação à central…</p></>}</div>;
   const incident = game.incidents.find(i => i.id === selected);
+  const waitingIncidents = game.incidents.filter(item => item.status === 'waiting');
+  const queueTone = waitingIncidents.some(item => item.priority === 1) ? 'danger' : waitingIncidents.length ? 'warning' : game.incidents.length ? 'active' : 'success';
   const workspaceName = { '/bases': 'Rede de bases', '/frota': 'Frota de emergência', '/operacoes': 'Operações e apoio', '/relatorios': 'Relatório do turno', '/definicoes': 'Definições' }[location.pathname] || 'Setor não encontrado';
 
   return <div className={`app-shell immersive-shell minimal-shell dark ${isCentral ? 'central-open' : 'workspace-open'} ${panel && isCentral ? `panel-open panel-${panel}` : ''}`}>
@@ -86,7 +89,7 @@ function GameApp() {
     <GameHUD game={game} act={act} sound={sound} setSound={setSound} onSave={save} error={error} />
     <div className="menu-launcher">
       <button className={menuOpen ? 'active' : ''} data-testid="game-menu-toggle" aria-label={menuOpen ? 'Fechar menu do jogo' : 'Abrir menu do jogo'} aria-expanded={menuOpen} aria-controls="game-menu" onClick={() => { setMenuOpen(value => !value); setPanel(null); }}>{menuOpen ? <X size={17} /> : <Menu size={17} />}<span>Menu</span></button>
-      {isCentral && <button className="quick-incidents" data-testid="quick-incidents" aria-label={`${game.incidents.length} ocorrências — abrir fila`} aria-expanded={panel === 'incidents'} onClick={() => openPanel(panel === 'incidents' ? null : 'incidents')}><Radio size={16} /><span>{game.incidents.length}</span></button>}
+      {isCentral && <button className="quick-incidents" data-tone={queueTone} data-testid="quick-incidents" aria-label={`${game.incidents.length} ocorrências, ${waitingIncidents.length} a aguardar despacho — abrir fila`} aria-expanded={panel === 'incidents'} aria-controls="incident-drawer" onClick={() => openPanel(panel === 'incidents' ? null : 'incidents')}><Radio size={17} /><span className="quick-incidents-label">Ocorrências</span><b className="queue-count">{game.incidents.length}</b></button>}
     </div>
     {menuOpen && <>
       <button className="menu-dismiss" aria-label="Fechar menu" data-testid="menu-dismiss" onClick={() => setMenuOpen(false)} />
@@ -106,7 +109,7 @@ function GameApp() {
     </> : <>
       <div className="workspace-shade" aria-hidden="true" />
       <section className="game-workspace" aria-label={workspaceName} data-testid="game-workspace">
-        <div className="workspace-bar"><div className="workspace-breadcrumb"><PanelsTopLeft size={14} /><span>COMANDO</span><span>/</span><strong>{workspaceName.toUpperCase()}</strong></div><button className="workspace-close" data-testid="workspace-close" onClick={() => navigate('/')}><span>Voltar ao mapa</span><kbd>ESC</kbd><X size={17} /></button></div>
+        <div className="workspace-bar"><div className="workspace-breadcrumb"><PanelsTopLeft size={14} /><span>COMANDO</span><span>/</span><strong>{workspaceName.toUpperCase()}</strong></div><button className="workspace-close" aria-label="Voltar ao mapa" data-testid="workspace-close" onClick={() => navigate('/')}><span>Voltar ao mapa</span><kbd>ESC</kbd><X size={17} /></button></div>
         <Routes>
           <Route path="/bases" element={<Management key="bases" game={game} world={world} act={act} busy={busy} mode="bases" />} />
           <Route path="/frota" element={<Management key="fleet" game={game} world={world} act={act} busy={busy} mode="fleet" />} />
