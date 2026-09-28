@@ -1,4 +1,4 @@
-name: Publicar no GitHub Pages
+name: Publicar NEXO 112 no GitHub Pages
 
 on:
   push:
