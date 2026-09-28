@@ -1,3 +1,5 @@
+import { NEW_VEHICLES, NEW_MISSION_DEFINITIONS } from './expansionContent';
+
 export const EXTENSIONS = {
   fire: [
     { id: 'aerial', name: 'Meios aéreos e altura', cost: 7000, level: 2 },
@@ -42,16 +44,19 @@ export const VEHICLE_CATALOG = {
     { id: 'ladder', name: 'Auto-Escada', level: 2, price: 8500, crew: 3, extension: 'aerial' },
     { id: 'wildfire-unit', name: 'VLCI', level: 2, price: 7000, crew: 5, extension: 'wildfire' },
     { id: 'hazmat-unit', name: 'Matérias Perigosas', level: 3, price: 11000, crew: 4, extension: 'hazmat', training: 'hazmat' },
+    ...NEW_VEHICLES.fire,
   ],
   medical: [
     { id: 'ambulance', name: 'ABSC', level: 1, price: 4000, crew: 2 },
     { id: 'vmer', name: 'VMER', level: 2, price: 9000, crew: 2, extension: 'advanced-care', training: 'advanced-care' },
     { id: 'mass-casualty-unit', name: 'Posto Médico Avançado', level: 4, price: 14000, crew: 6, extension: 'mass-casualty', training: 'triage' },
+    ...NEW_VEHICLES.medical,
   ],
   police: [
     { id: 'patrol', name: 'Carro-patrulha', level: 1, price: 3000, crew: 2 },
     { id: 'canine-unit', name: 'Unidade Cinotécnica', level: 2, price: 6500, crew: 2, extension: 'canine', training: 'canine' },
     { id: 'riot-unit', name: 'Ordem Pública', level: 2, price: 8500, crew: 6, extension: 'public-order', training: 'public-order' },
+    ...NEW_VEHICLES.police,
   ],
 };
 
@@ -79,6 +84,7 @@ export const MISSION_DEFINITIONS = [
   { scenario: 8, name: 'Derrame químico industrial', min: { fire: 4, medical: 2, police: 1 }, extension: ['hazmat'], vehicle: ['hazmat-unit'], poi: 'industrial', specialization: 'industrial', weight: 3 },
   { scenario: 9, name: 'Busca de pessoa desaparecida', min: { police: 3 }, extension: ['canine'], vehicle: ['canine-unit'], poi: 'forest', specialization: 'criminal', weight: 5 },
   { scenario: 10, name: 'Incidente com múltiplas vítimas', min: { medical: 4, fire: 2, police: 2 }, extension: ['mass-casualty'], vehicle: ['mass-casualty-unit'], weight: 2 },
+  ...NEW_MISSION_DEFINITIONS,
 ];
 
 export function buildingCounts(game) {
