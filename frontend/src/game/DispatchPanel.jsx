@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import axios from 'axios';
+import { estimateRoute } from './localGame';
 import { ArrowUpRight, Check, MapPin, Radio, Send, PhoneIncoming, Crosshair, X } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { SERVICE, ServiceIcon, STATUS, money, duration } from './common';
@@ -17,15 +17,14 @@ export const DispatchPanel = ({ game, incident, act, busy, onCall, onFocus, onCl
     const request = ++estimateRequest.current;
     setEstimating(true);
     const origins = [...new Set(available.filter(u => needed(u.service) && u.land === incident.land).map(u => u.node))];
-    const routes = await Promise.all(origins.map(async node => {
-      try {
-        const { data } = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/api/road-routes/${encodeURIComponent(node)}/${encodeURIComponent(incident.node)}`, { timeout: 90000 });
-        return [node, data];
-      } catch (error) {
-        return [node, { error: error.response?.data?.detail || 'Estimativa indisponível. Tenta novamente.' }];
-      }
-    }));
-    if (request === estimateRequest.current) { setEstimates(Object.fromEntries(routes)); setEstimating(false); }
+    const routes = origins.map(node => {
+      try { return [node, estimateRoute(node, incident.node)]; }
+      catch (error) { return [node, { error: error?.message || 'Estimativa indisponível.' }]; }
+    });
+    if (request === estimateRequest.current) {
+      setEstimates(Object.fromEntries(routes));
+      setEstimating(false);
+    }
   };
   return <aside className="dispatch-panel">
     <div className="panel-heading"><h2><Crosshair size={17} /> Despacho</h2><div className="panel-heading-actions"><span className="subtle">{incident ? `#${incident.number}` : '—'}</span>{onClose && <button className="icon-btn" aria-label="Recolher despacho" title="Recolher despacho" data-testid="close-dispatch" onClick={onClose}><X size={17} /></button>}</div></div>
