@@ -126,7 +126,7 @@ export function weightedMission(game) {
 export function progressionSnapshot(game, services) {
   const eligible = eligibleMissions(game);
   return {
-    mission_cap: missionCap(game),
+    mission_cap: Math.max(missionCap(game), game.incidents?.length || 0),
     unlocked_missions: eligible.map(item => item.scenario),
     next_building_costs: Object.fromEntries(Object.entries(services).map(([id, service]) => [id, nextBuildingCost(game, id, service.base_price)])),
     building_counts: buildingCounts(game),
