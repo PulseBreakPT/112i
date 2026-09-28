@@ -23,7 +23,10 @@ export default function Management({ game, world, act, busy, mode }) {
   const assigned = base => game.units.filter(unit => unit.base_id === base.id).reduce((sum, unit) => sum + (unit.crew_assigned || 0), 0);
   const capacity = base => base.capacity || 2;
   const unitCount = base => game.units.filter(unit => unit.base_id === base.id).length;
-  const availableBases = useMemo(() => purchase ? game.bases.filter(base => base.service === purchase.service) : [], [game.bases, purchase]);
+  const availableBases = useMemo(() => {
+    if (!purchase || !selectedVehicle) return [];
+    return game.bases.filter(base => base.service === purchase.service && (base.level || 1) >= selectedVehicle.level && (!selectedVehicle.extension || installed(base, selectedVehicle.extension)?.active));
+  }, [game.bases, purchase, selectedVehicle]);
 
   const run = async (kind, data, success) => {
     const next = await act(kind, data);
