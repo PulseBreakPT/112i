@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { BrowserRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { Radio, LoaderCircle, X, Menu, PanelsTopLeft } from 'lucide-react';
 import { Toaster, toast } from './components/ui/sonner';
 import { useGame } from './game/useGame';
@@ -121,4 +121,4 @@ function GameApp() {
     <Toaster theme="dark" position="top-center" richColors />
   </div>;
 }
-export default function App() { return <BrowserRouter><GameApp /></BrowserRouter>; }
+export default function App() { return <HashRouter><GameApp /></HashRouter>; }
