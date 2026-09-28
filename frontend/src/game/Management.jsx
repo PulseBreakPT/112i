@@ -25,7 +25,7 @@ export default function Management({ game, world, act, busy, mode }) {
   const unitCount = base => game.units.filter(unit => unit.base_id === base.id).length;
   const availableBases = useMemo(() => {
     if (!purchase || !selectedVehicle) return [];
-    return game.bases.filter(base => base.service === purchase.service && (base.level || 1) >= selectedVehicle.level && (!selectedVehicle.extension || installed(base, selectedVehicle.extension)?.active));
+    return game.bases.filter(base => base.service === purchase.service && (base.level || 1) >= selectedVehicle.level && (!selectedVehicle.extension || installed(base, selectedVehicle.extension)?.active) && (!selectedVehicle.training || (base.qualifications?.[selectedVehicle.training] || 0) >= selectedVehicle.crew));
   }, [game.bases, purchase, selectedVehicle]);
 
   const run = async (kind, data, success) => {
@@ -93,11 +93,11 @@ export default function Management({ game, world, act, busy, mode }) {
       <div className="section-line"><h2>Catálogo de unidades</h2><span>VEÍCULOS E TRIPULAÇÕES</span></div>
       <div className="vehicle-grid expanded-catalog">{Object.entries(world.vehicle_catalog).flatMap(([serviceId, vehicles]) => vehicles.map((vehicle, vehicleIndex) => {
         const extensionName = vehicle.extension && (world.extensions[serviceId] || []).find(extension => extension.id === vehicle.extension)?.name;
-        const eligible = game.bases.some(base => base.service === serviceId && (base.level || 1) >= vehicle.level && (!vehicle.extension || installed(base, vehicle.extension)?.active));
+        const eligible = game.bases.some(base => base.service === serviceId && (base.level || 1) >= vehicle.level && (!vehicle.extension || installed(base, vehicle.extension)?.active) && (!vehicle.training || (base.qualifications?.[vehicle.training] || 0) >= vehicle.crew));
         return <article key={vehicle.id} className="vehicle-card" data-testid={vehicleIndex === 0 ? `vehicle-shop-${serviceId}` : `vehicle-shop-${vehicle.id}`} style={{ '--service-color': SERVICE[serviceId].color }}>
           <div className="vehicle-category"><ServiceIcon service={serviceId} size={17} />{SERVICE[serviceId].short}<span>{vehicle.level > 1 ? 'ESPECIALIZADO' : 'STANDARD'}</span></div>
           <VehicleArt service={serviceId} /><h3>{vehicle.name}</h3>
-          <p>{vehicle.crew} elementos · Base nível {vehicle.level}{extensionName ? ` · ${extensionName}` : ''}</p>
+          <p>{vehicle.crew} elementos · Base nível {vehicle.level}{extensionName ? ` · ${extensionName}` : ''}{vehicle.training ? ' · Formação obrigatória' : ''}</p>
           <div className="vehicle-price"><strong>{money(vehicle.price)}</strong><Button className="outline-button" data-testid={vehicleIndex === 0 ? `buy-vehicle-${serviceId}` : `buy-special-${serviceId}-${vehicle.id}`} onClick={() => openPurchase(serviceId, vehicle)} disabled={!eligible || game.money < vehicle.price}><Plus size={15} /> {eligible ? 'Adquirir' : 'Bloqueado'}</Button></div>
         </article>;
       }))}</div>
