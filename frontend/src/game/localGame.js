@@ -118,14 +118,6 @@ const distanceMeters = (a,b) => {
   const q=Math.sin(dLat/2)**2+Math.cos(rad(a.lat))*Math.cos(rad(b.lat))*Math.sin(dLng/2)**2;
   return 2*R*Math.asin(Math.sqrt(q));
 };
-export function estimateRoute(originId,destinationId,conditions=null){
-  const a=POINTS[originId], b=POINTS[destinationId];
-  if(!a||!b) throw new Error('Localização desconhecida.');
-  const distance=Math.max(600,Math.round(distanceMeters(a,b)*1.28));
-  const duration=Math.max(45,Math.round(distance/13.5*conditionsFactor(conditions)));
-  const coordinates=Array.from({length:7},(_,i)=>{const t=i/6; const bend=Math.sin(Math.PI*t)*0.0012; return [a.lng+(b.lng-a.lng)*t+bend,a.lat+(b.lat-a.lat)*t+bend*.35];});
-  return {coordinates,times:coordinates.map((_,i)=>duration*i/6),distance,duration,source:'Estimativa local'};
-}
 const roadRouteCache = new Map();
 const routeTimes = (coordinates,duration) => {
   if(coordinates.length < 2) return [0];
