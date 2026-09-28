@@ -101,7 +101,7 @@ function GameApp() {
         <IncidentPanel game={game} selected={selected} onSelect={selectIncident} onCall={call} act={act} busy={busy} onClose={() => setPanel(null)} />
       </div>}
       {panel === 'dispatch' && <div className="tactical-drawer dispatch-drawer" id="dispatch-drawer" data-testid="dispatch-drawer">
-        <DispatchPanel game={game} incident={incident} act={act} busy={busy} onCall={call} onFocus={focusIncident} onClose={() => setPanel(null)} />
+        <DispatchPanel game={game} world={world} incident={incident} act={act} busy={busy} onCall={call} onFocus={focusIncident} onClose={() => setPanel(null)} />
       </div>}
     </> : <>
       <div className="workspace-shade" aria-hidden="true" />
