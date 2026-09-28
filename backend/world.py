@@ -4,11 +4,20 @@ import networkx as nx
 def river_y(x):
     return 790 - x * .23 + 58 * math.sin(x / 185)
 
+WORLD_WIDTH = 2720
+WORLD_HEIGHT = 2000
+GRID_COLUMNS = 33
+GRID_ROWS = 24
+BLOCK_SIZE = 80
+ORIGIN_X, ORIGIN_Y = 60, 55
+AVENUE_COLUMNS = [4, 9, 14, 19, 24, 29]
+AVENUE_ROWS = [3, 6, 10, 14, 18, 22]
+
 NODES = {}
 GRAPH = nx.Graph()
-for row in range(12):
-    for col in range(17):
-        x, y = 60 + col * 80, 55 + row * 80
+for row in range(GRID_ROWS):
+    for col in range(GRID_COLUMNS):
+        x, y = ORIGIN_X + col * BLOCK_SIZE, ORIGIN_Y + row * BLOCK_SIZE
         if abs(y - river_y(x)) > 48:
             key = f'{col}-{row}'
             NODES[key] = {'id': key, 'x': x, 'y': y, 'col': col, 'row': row}
@@ -18,11 +27,11 @@ for key, node in NODES.items():
     col, row = node['col'], node['row']
     right = f'{col + 1}-{row}'
     if right in NODES:
-        GRAPH.add_edge(key, right, weight=80, major=row in [3, 6, 10])
+        GRAPH.add_edge(key, right, weight=BLOCK_SIZE, major=row in AVENUE_ROWS)
     below = f'{col}-{row + 1}'
     if below in NODES:
-        GRAPH.add_edge(key, below, weight=80, major=col in [4, 9, 14])
-    elif col in [4, 9, 14]:
+        GRAPH.add_edge(key, below, weight=BLOCK_SIZE, major=col in AVENUE_COLUMNS)
+    elif col in AVENUE_COLUMNS:
         for step in [2, 3]:
             target = f'{col}-{row + step}'
             if target in NODES:
