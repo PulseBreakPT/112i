@@ -72,12 +72,12 @@ export const MISSION_DEFINITIONS = [
   { scenario: 1, name: 'Pessoa inconsciente', min: { medical: 1 }, weight: 12 },
   { scenario: 2, name: 'Assalto a estabelecimento', min: { police: 1 }, poi: 'retail', weight: 10 },
   { scenario: 3, name: 'Colisão rodoviária', min: { fire: 2, medical: 1, police: 1 }, weight: 5 },
-  { scenario: 4, name: 'Incêndio em vegetação', min: { fire: 1 }, poi: 'forest', weight: 9 },
+  { scenario: 4, name: 'Incêndio em vegetação', min: { fire: 1 }, poi: 'forest', specialization: 'wildfire', weight: 9 },
   { scenario: 5, name: 'Distúrbios na praça', min: { police: 1 }, weight: 9 },
   { scenario: 6, name: 'Queda na via pública', min: { medical: 1 }, weight: 11 },
-  { scenario: 7, name: 'Incêndio em edifício alto', min: { fire: 3, medical: 1 }, extension: ['aerial'], vehicle: ['ladder'], weight: 4 },
-  { scenario: 8, name: 'Derrame químico industrial', min: { fire: 4, medical: 2, police: 1 }, extension: ['hazmat'], vehicle: ['hazmat-unit'], poi: 'industrial', weight: 3 },
-  { scenario: 9, name: 'Busca de pessoa desaparecida', min: { police: 3 }, extension: ['canine'], vehicle: ['canine-unit'], poi: 'forest', weight: 5 },
+  { scenario: 7, name: 'Incêndio em edifício alto', min: { fire: 3, medical: 1 }, extension: ['aerial'], vehicle: ['ladder'], specialization: 'urban', weight: 4 },
+  { scenario: 8, name: 'Derrame químico industrial', min: { fire: 4, medical: 2, police: 1 }, extension: ['hazmat'], vehicle: ['hazmat-unit'], poi: 'industrial', specialization: 'industrial', weight: 3 },
+  { scenario: 9, name: 'Busca de pessoa desaparecida', min: { police: 3 }, extension: ['canine'], vehicle: ['canine-unit'], poi: 'forest', specialization: 'criminal', weight: 5 },
   { scenario: 10, name: 'Incidente com múltiplas vítimas', min: { medical: 4, fire: 2, police: 2 }, extension: ['mass-casualty'], vehicle: ['mass-casualty-unit'], weight: 2 },
 ];
 
@@ -87,7 +87,7 @@ export function buildingCounts(game) {
 
 export function missionCap(game) {
   const counts = Object.values(buildingCounts(game));
-  return Math.max(1, ...(counts.length ? counts : [0])) + 1;
+  return Math.max(3, Math.max(1, ...(counts.length ? counts : [0])) + 1);
 }
 
 export function nextBuildingCost(game, service, basePrice) {
@@ -117,9 +117,10 @@ export function eligibleMissions(game) {
 export function weightedMission(game) {
   const pool = eligibleMissions(game);
   if (!pool.length) return MISSION_DEFINITIONS[1];
-  const total = pool.reduce((sum, item) => sum + item.weight, 0);
+  const weight = item => item.weight * (item.specialization && game.bases.some(base => base.specialization === item.specialization) ? 2.25 : 1);
+  const total = pool.reduce((sum, item) => sum + weight(item), 0);
   let roll = Math.random() * total;
-  return pool.find(item => (roll -= item.weight) <= 0) || pool[pool.length - 1];
+  return pool.find(item => (roll -= weight(item)) <= 0) || pool[pool.length - 1];
 }
 
 export function progressionSnapshot(game, services) {
