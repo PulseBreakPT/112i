@@ -13,11 +13,24 @@
 .geo-priority { width: 7px; height: 7px; position: absolute; right: -1px; top: 0; border: 2px solid #142029; border-radius: 50%; background: #80b2f0; }
 .geo-priority.priority-1 { background: #f58080; }
 .geo-priority.priority-2 { background: #eac16c; }
-.geo-vehicle { width: 14px; height: 26px; z-index: 5; pointer-events: none; }
-.geo-vehicle-body { position: absolute; inset: 0; display: block; border-radius: 4px; border: 1px solid #e8edefd9; background: var(--marker-color); transform: rotate(var(--vehicle-heading, 0deg)); box-shadow: 0 2px 7px #0009; }
-.geo-vehicle-body:before { content: ''; position: absolute; top: 4px; left: 2px; right: 2px; height: 5px; background: #182b36; border-radius: 2px 2px 0 0; }
-.geo-vehicle-body:after { content: ''; position: absolute; top: 11px; left: -1px; right: -1px; height: 3px; background: linear-gradient(90deg,#65bfff 48%,#f2f7ff 49%,#f2f7ff 52%,#65bfff 53%); box-shadow: 0 0 5px #67b8f988; }
-.geo-vehicle-label { display: block; position: absolute; top: 32px; left: 50%; transform: translateX(-50%); font: 8px var(--mono); color: #e1e8ea; white-space: nowrap; background: #142029db; border: 1px solid #ffffff1f; border-radius: 3px; padding: 3px 5px; }
+.geo-vehicle { width: 24px; height: 40px; z-index: 5; pointer-events: none; isolation: isolate; }
+.geo-vehicle-shadow { position: absolute; inset: 5px 3px 1px; border-radius: 8px; background: #000c; filter: blur(3px); transform: translate(2px, 3px) rotate(var(--vehicle-heading, 0deg)); }
+.geo-vehicle-body { position: absolute; inset: 2px 3px; display: block; overflow: visible; border-radius: 7px 7px 5px 5px; border: 1px solid #f5fbffdd; background: linear-gradient(90deg, color-mix(in srgb, var(--marker-color) 72%, #0b1115) 0 17%, var(--marker-color) 18% 82%, color-mix(in srgb, var(--marker-color) 72%, #0b1115) 83% 100%); transform: rotate(var(--vehicle-heading, 0deg)); box-shadow: inset 0 0 0 1px #0005, inset 0 -8px 10px #0003, 0 0 0 1px #061016b8; transform-origin: center; }
+.geo-vehicle-body:before { content: ''; position: absolute; z-index: -1; top: 5px; left: -3px; width: 2px; height: 8px; border-radius: 2px 0 0 2px; background: #080d10; box-shadow: 20px 0 #080d10, 0 18px #080d10, 20px 18px #080d10; }
+.geo-vehicle-body:after { content: ''; position: absolute; inset: -5px; border: 1px solid color-mix(in srgb, var(--marker-color) 50%, transparent); border-radius: 11px; opacity: .22; box-shadow: 0 0 12px color-mix(in srgb, var(--marker-color) 35%, transparent); }
+.geo-vehicle-windscreen { position: absolute; top: 4px; left: 3px; right: 3px; height: 6px; border-radius: 3px 3px 1px 1px; background: linear-gradient(135deg,#b8d8e5 0 18%,#19323d 20% 72%,#557685 74%); border-bottom: 1px solid #ffffff58; }
+.geo-vehicle-roof { position: absolute; top: 12px; left: 3px; right: 3px; bottom: 7px; border-radius: 2px; background: #f0f4f3e8; box-shadow: inset 0 0 0 1px #07111635; }
+.geo-vehicle-mark { position: absolute; z-index: 2; top: 18px; left: 50%; transform: translate(-50%,-50%); width: 9px; height: 9px; display: grid; place-items: center; color: #142028; font: 800 7px/1 var(--mono); }
+.geo-vehicle-mark:after { content: '•'; }
+.geo-vehicle[data-service="fire"] .geo-vehicle-mark:after { content: 'B'; }
+.geo-vehicle[data-service="medical"] .geo-vehicle-mark:after { content: '+'; font-size: 11px; }
+.geo-vehicle[data-service="police"] .geo-vehicle-mark:after { content: 'P'; }
+.geo-vehicle-lightbar { position: absolute; z-index: 3; top: 11px; left: 1px; right: 1px; height: 3px; border-radius: 2px; background: linear-gradient(90deg,#248cff 0 42%,#edf8ff 43% 56%,#248cff 57%); box-shadow: 0 0 6px #399cff, 0 0 10px #399cff7a; animation: emergency-light 1.1s steps(2,end) infinite; }
+.geo-vehicle-bumper { position: absolute; left: 2px; right: 2px; bottom: 2px; height: 3px; border-radius: 1px; background: repeating-linear-gradient(135deg,#f4d354 0 2px,#28343a 2px 4px); opacity: .9; }
+.geo-vehicle-label { display: block; position: absolute; top: 44px; left: 50%; transform: translateX(-50%); font: 700 8px var(--mono); letter-spacing: .2px; color: #f2f6f7; white-space: nowrap; background: #0b151bdc; border: 1px solid color-mix(in srgb, var(--marker-color) 45%, #ffffff22); border-radius: 4px; padding: 3px 6px; box-shadow: 0 3px 9px #0007; }
+.geo-vehicle[data-status="returning"] { opacity: .82; }
+@keyframes emergency-light { 0%,49% { filter: brightness(1.35); } 50%,100% { filter: brightness(.72); } }
+@media(prefers-reduced-motion:reduce) { .geo-vehicle-lightbar { animation: none; } }
 .portugal-map .maplibregl-ctrl-bottom-left { bottom: 7px; left: 13px; max-width: calc(100% - 85px); z-index: 4; }
 .portugal-map .maplibregl-ctrl-attrib { color: #9eaeb9; font: 9px 'Barlow', sans-serif; background: #142028ed; border: 1px solid #ffffff15; border-radius: 5px; margin: 0; }
 .portugal-map .maplibregl-ctrl-attrib a { color: #c7d0d5; }

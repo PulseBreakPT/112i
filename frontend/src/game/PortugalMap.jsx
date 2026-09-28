@@ -20,7 +20,7 @@ function calmCartography(map, detailed = false) {
   }
   const safe = (method, ...args) => { try { map[method](...args); } catch (_) {} };
   for (const layer of map.getStyle().layers) {
-    if (['operational-routes', 'route-casing', 'route-lines'].includes(layer.id)) continue;
+    if (layer.source === 'operational-routes') continue;
     const name = layer.id.toLowerCase();
     const original = map.__nexoLayerState[layer.id] || { visibility: 'visible', minzoom: 0, maxzoom: 24 };
     const isPoi = /poi|housenumber|address|amenity|shop|school|hospital|parking|transit|station|airport|ferry/.test(name);
@@ -98,12 +98,21 @@ function markerElement(kind, item) {
     el.textContent = { fire: 'B', medical: '+', police: 'P' }[item.service];
     el.setAttribute('aria-label', item.name);
   } else {
+    el.dataset.service = item.service;
+    el.dataset.status = item.status;
+    const shadow = document.createElement('span');
+    shadow.className = 'geo-vehicle-shadow';
     const body = document.createElement('span');
     body.className = 'geo-vehicle-body';
+    ['windscreen', 'roof', 'mark', 'lightbar', 'bumper'].forEach(part => {
+      const piece = document.createElement('i');
+      piece.className = `geo-vehicle-${part}`;
+      body.append(piece);
+    });
     const label = document.createElement('span');
     label.className = 'geo-vehicle-label';
     label.textContent = item.name;
-    el.append(body, label);
+    el.append(shadow, body, label);
   }
   return el;
 }
@@ -130,14 +139,29 @@ export const PortugalMap = ({ world, game, selected, onSelect, onCall, focusKey,
       map.addControl(new maplibregl.ScaleControl({ maxWidth: 90, unit: 'metric' }), 'bottom-left');
       map.on('load', () => {
         calmCartography(map, false);
-        map.addSource('operational-routes', { type: 'geojson', data: EMPTY });
+        map.addSource('operational-routes', { type: 'geojson', data: EMPTY, lineMetrics: true });
+        map.addLayer({ id: 'route-glow', type: 'line', source: 'operational-routes',
+          layout: { 'line-cap': 'round', 'line-join': 'round' },
+          paint: { 'line-color': ['get', 'color'], 'line-width': ['case', ['get', 'selected'], 15, 11],
+            'line-blur': 7, 'line-opacity': ['case', ['get', 'selected'], .2, .1] } });
         map.addLayer({ id: 'route-casing', type: 'line', source: 'operational-routes',
           layout: { 'line-cap': 'round', 'line-join': 'round' },
-          paint: { 'line-color': '#0a1118', 'line-width': 7, 'line-opacity': .7 } });
+          paint: { 'line-color': '#071016', 'line-width': ['case', ['get', 'selected'], 8, 6],
+            'line-opacity': ['case', ['get', 'selected'], .92, .76] } });
         map.addLayer({ id: 'route-lines', type: 'line', source: 'operational-routes',
           layout: { 'line-cap': 'round', 'line-join': 'round' },
-          paint: { 'line-color': ['get', 'color'], 'line-width': ['case', ['get', 'selected'], 3.5, 2.5],
-            'line-opacity': ['case', ['get', 'selected'], .9, .42] } });
+          paint: { 'line-color': ['get', 'color'], 'line-width': ['case', ['get', 'selected'], 4.6, 3.2],
+            'line-opacity': ['case', ['get', 'selected'], 1, .66] } });
+        map.addLayer({ id: 'route-core', type: 'line', source: 'operational-routes',
+          layout: { 'line-cap': 'round', 'line-join': 'round' },
+          paint: { 'line-color': '#f4fbff', 'line-width': ['case', ['get', 'selected'], 1.05, .7],
+            'line-opacity': ['case', ['get', 'selected'], .5, .2] } });
+        map.addLayer({ id: 'route-direction', type: 'symbol', source: 'operational-routes',
+          layout: { 'symbol-placement': 'line', 'symbol-spacing': 72, 'text-field': '›', 'text-size': 15,
+            'text-rotation-alignment': 'map', 'text-pitch-alignment': 'map', 'text-keep-upright': false,
+            'text-allow-overlap': true, 'symbol-avoid-edges': true },
+          paint: { 'text-color': ['get', 'color'], 'text-halo-color': '#071016',
+            'text-halo-width': 1.4, 'text-opacity': ['case', ['get', 'selected'], .95, .58] } });
         setLoaded(true); setError('');
       });
       map.on('error', event => {
@@ -185,9 +209,15 @@ export const PortugalMap = ({ world, game, selected, onSelect, onCall, focusKey,
       element.classList.toggle('is-selected', kind === 'incident' && item.id === selected);
       element.dataset.lng = item.lng; element.dataset.lat = item.lat;
       if (kind === 'incident') element.setAttribute('aria-pressed', String(item.id === selected));
+      if (kind === 'vehicle') {
+        element.dataset.status = item.status;
+        element.dataset.service = item.service;
+        const { bearing } = positionAt(item, item.travel || 0);
+        element.style.setProperty('--vehicle-heading', `${bearing}deg`);
+      }
     }
     markers.current.forEach((marker, id) => { if (!keep.has(id)) { marker.remove(); markers.current.delete(id); } });
-    map.getSource('operational-routes')?.setData({ type: 'FeatureCollection', features: game.units.filter(u => u.route?.length > 1 && ['enroute', 'returning'].includes(u.status)).map(u => ({ type: 'Feature', properties: { color: SERVICE[u.service].color, selected: u.incident_id === selected }, geometry: { type: 'LineString', coordinates: u.route } })) });
+    map.getSource('operational-routes')?.setData({ type: 'FeatureCollection', features: game.units.filter(u => u.route?.length > 1 && ['enroute', 'returning'].includes(u.status)).map(u => ({ type: 'Feature', properties: { color: SERVICE[u.service].color, service: u.service, status: u.status, selected: u.incident_id === selected }, geometry: { type: 'LineString', coordinates: u.route } })) });
   }, [game, selected, loaded, unitsVisible]);
 
   useEffect(() => {
