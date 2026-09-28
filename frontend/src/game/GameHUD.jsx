@@ -28,6 +28,7 @@ export function GameHUD({ game, act, sound, setSound, onSave, error }) {
           <div className="option-line"><span>Operador · Nível {game.level}</span><strong data-testid="user-level-badge">{rank}</strong></div>
           <div className="option-line"><span>Experiência</span><span>{game.xp % 200}/200 XP</span></div>
           <div className="xp-track"><i style={{ width: `${game.xp % 200 / 2}%` }} /></div>
+          <div className="option-line"><span>Condições</span><strong data-testid="current-conditions">{game.conditions?.weather_label || 'Céu limpo'} · {game.conditions?.traffic_label || 'Trânsito fluido'}{game.conditions?.night ? ' · Noite' : ''}{game.conditions?.roadworks ? ' · Obras' : ''}</strong></div>
           <div className="option-line"><span>Confiança</span><strong data-testid="city-trust" data-tone={game.trust >= 80 ? 'positive' : game.trust >= 50 ? 'warning' : 'negative'}>{game.trust}%</strong></div>
           <div className="option-actions"><button data-testid="sound-toggle" onClick={() => setSound(!sound)}>{sound ? <Volume2 size={15} /> : <VolumeX size={15} />}{sound ? 'Som ligado' : 'Som desligado'}</button><button data-testid="save-game-button" onClick={onSave}><Save size={15} /> Guardar</button></div>
         </div>}
