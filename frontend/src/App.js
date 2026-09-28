@@ -10,6 +10,7 @@ import { DispatchPanel } from './game/DispatchPanel';
 import { PortugalMap as CityMap } from './game/PortugalMap';
 import { CallModal, HelpModal } from './game/Modals';
 import Management from './game/Management';
+import Operations from './game/Operations';
 import Reports from './game/Reports';
 import Settings from './game/Settings';
 import { beep } from './game/common';
@@ -76,7 +77,7 @@ function GameApp() {
 
   if (!game || !world) return <div className="loading-screen" data-testid="loading-screen"><Radio size={40} /><h1>NEXO<span>112</span></h1>{error ? <><p data-testid="loading-error">{error}</p><button data-testid="retry-connection" className="primary-button" onClick={retry}>Voltar a ligar</button></> : <><LoaderCircle className="spinner" size={20} /><p>A estabelecer ligação à central…</p></>}</div>;
   const incident = game.incidents.find(i => i.id === selected);
-  const workspaceName = { '/bases': 'Rede de bases', '/frota': 'Frota de emergência', '/relatorios': 'Relatório do turno', '/definicoes': 'Definições' }[location.pathname] || 'Setor não encontrado';
+  const workspaceName = { '/bases': 'Rede de bases', '/frota': 'Frota de emergência', '/operacoes': 'Operações e apoio', '/relatorios': 'Relatório do turno', '/definicoes': 'Definições' }[location.pathname] || 'Setor não encontrado';
 
   return <div className={`app-shell immersive-shell minimal-shell dark ${isCentral ? 'central-open' : 'workspace-open'} ${panel && isCentral ? `panel-open panel-${panel}` : ''}`}>
     <main className="world-stage" aria-label="Mapa operacional" inert={!isCentral || menuOpen}>
@@ -109,6 +110,7 @@ function GameApp() {
         <Routes>
           <Route path="/bases" element={<Management key="bases" game={game} world={world} act={act} busy={busy} mode="bases" />} />
           <Route path="/frota" element={<Management key="fleet" game={game} world={world} act={act} busy={busy} mode="fleet" />} />
+          <Route path="/operacoes" element={<Operations game={game} world={world} act={act} busy={busy} />} />
           <Route path="/relatorios" element={<Reports game={game} />} />
           <Route path="/definicoes" element={<Settings game={game} act={act} sound={sound} setSound={setSound} onSave={save} onHelp={() => setHelp(true)} busy={busy} />} />
           <Route path="*" element={<div className="empty-state" data-testid="page-not-found"><h1>Setor não encontrado</h1><button className="primary-button" data-testid="return-to-central" onClick={() => navigate('/')}>Voltar à central</button></div>} />
