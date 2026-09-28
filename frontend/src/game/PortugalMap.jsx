@@ -10,25 +10,53 @@ maplibregl.setWorkerUrl(`${process.env.PUBLIC_URL || ''}/maplibre/maplibre-gl-wo
 
 const EMPTY = { type: 'FeatureCollection', features: [] };
 
-function nightCartography(map) {
-  // Restyle actual OpenStreetMap features. No generated terrain, roads or buildings.
+function calmCartography(map, detailed = false) {
+  // Mantém a cartografia OpenStreetMap, mas trata-a como contexto operacional.
+  if (!map.__nexoLayerState) {
+    map.__nexoLayerState = Object.fromEntries(map.getStyle().layers.map(layer => [
+      layer.id,
+      { visibility: layer.layout?.visibility || 'visible', minzoom: layer.minzoom ?? 0, maxzoom: layer.maxzoom ?? 24 },
+    ]));
+  }
+  const safe = (method, ...args) => { try { map[method](...args); } catch (_) {} };
   for (const layer of map.getStyle().layers) {
+    if (['operational-routes', 'route-casing', 'route-lines'].includes(layer.id)) continue;
     const name = layer.id.toLowerCase();
-    if (layer.type === 'background') map.setPaintProperty(layer.id, 'background-color', '#172025');
+    const original = map.__nexoLayerState[layer.id] || { visibility: 'visible', minzoom: 0, maxzoom: 24 };
+    const isPoi = /poi|housenumber|address|amenity|shop|school|hospital|parking|transit|station|airport|ferry/.test(name);
+    const isMinorLabel = /village|suburb|neighbour|hamlet|highway-name-minor|road-label-minor|street-label|path-label/.test(name);
+    const isPlace = /place|city|town|village|suburb|neighbour|hamlet/.test(name);
+    const isMajorRoad = /motorway|trunk|primary/.test(name);
+    const isMidRoad = /secondary|tertiary/.test(name);
+    const isMinorRoad = /minor|residential|service|street|path|track/.test(name);
+    const isBoundary = /boundary/.test(name);
+    const hiddenInCleanMode = isPoi || isMinorLabel;
+    safe('setLayoutProperty', layer.id, 'visibility', !detailed && hiddenInCleanMode ? 'none' : original.visibility);
+
+    if (layer.type === 'background') safe('setPaintProperty', layer.id, 'background-color', detailed ? '#142027' : '#101a20');
     if (layer.type === 'fill') {
-      const color = /water/.test(name) ? '#142e3b' : /building/.test(name) ? '#303b41' : /park|wood|forest|landcover|grass/.test(name) ? '#1e302c' : /industrial/.test(name) ? '#293034' : '#202a2f';
-      map.setPaintProperty(layer.id, 'fill-color', color);
-      if (/building/.test(name)) map.setPaintProperty(layer.id, 'fill-outline-color', '#435057');
+      const color = /water/.test(name) ? '#102c39' : /building/.test(name) ? '#263238' : /park|wood|forest|landcover|grass/.test(name) ? '#193029' : /industrial/.test(name) ? '#242d32' : '#19242a';
+      safe('setPaintProperty', layer.id, 'fill-color', color);
+      safe('setPaintProperty', layer.id, 'fill-opacity', detailed ? (/building/.test(name) ? .58 : .82) : (/building/.test(name) ? .24 : .62));
+      if (/building/.test(name)) safe('setPaintProperty', layer.id, 'fill-outline-color', detailed ? '#39474d' : '#2a373d');
     }
     if (layer.type === 'line') {
-      const color = /water/.test(name) ? '#254b5e' : /boundary/.test(name) ? '#62717a' : /motorway|trunk/.test(name) ? '#85908c' : /primary|secondary/.test(name) ? '#69777b' : /path|rail/.test(name) ? '#405055' : '#485a64';
-      map.setPaintProperty(layer.id, 'line-color', color);
+      const color = /water/.test(name) ? '#284957' : isBoundary ? '#52626a' : isMajorRoad ? '#66757a' : isMidRoad ? '#526269' : isMinorRoad ? '#3b4b52' : /rail/.test(name) ? '#405057' : '#44545b';
+      const opacity = detailed ? (isMajorRoad ? .88 : isMidRoad ? .68 : isMinorRoad ? .52 : .48) : (isMajorRoad ? .7 : isMidRoad ? .42 : isMinorRoad ? .2 : isBoundary ? .18 : .28);
+      const width = isMajorRoad ? (detailed ? 2.5 : 1.7) : isMidRoad ? (detailed ? 1.8 : 1.1) : (detailed ? 1.15 : .72);
+      safe('setPaintProperty', layer.id, 'line-color', color);
+      safe('setPaintProperty', layer.id, 'line-opacity', opacity);
+      safe('setPaintProperty', layer.id, 'line-width', ['interpolate', ['linear'], ['zoom'], 5, width * .55, 12, width, 18, width * 1.65]);
     }
     if (layer.type === 'symbol' && layer.layout?.['text-field']) {
-      map.setPaintProperty(layer.id, 'text-color', /place|city|town/.test(name) ? '#d6dfdf' : '#a0b2bd');
-      map.setPaintProperty(layer.id, 'text-halo-color', '#172025');
-      map.setPaintProperty(layer.id, 'text-halo-width', 1.5);
+      const labelColor = isPlace ? '#cbd4d6' : /road|highway/.test(name) ? '#829198' : '#91a0a6';
+      safe('setPaintProperty', layer.id, 'text-color', labelColor);
+      safe('setPaintProperty', layer.id, 'text-opacity', detailed ? (isPlace ? .9 : .72) : (isPlace ? .72 : .42));
+      safe('setPaintProperty', layer.id, 'text-halo-color', '#101a20');
+      safe('setPaintProperty', layer.id, 'text-halo-width', detailed ? 1.4 : 1.8);
+      safe('setLayoutProperty', layer.id, 'text-size', isPlace ? (detailed ? 14 : 12) : (detailed ? 11 : 9.5));
     }
+    if (layer.type === 'symbol' && layer.layout?.['icon-image']) safe('setPaintProperty', layer.id, 'icon-opacity', detailed ? .78 : .38);
   }
 }
 
@@ -86,6 +114,7 @@ export const PortugalMap = ({ world, game, selected, onSelect, onCall, focusKey,
   const latest = useRef({ game, selected, onSelect, received: performance.now() });
   const [loaded, setLoaded] = useState(false), [error, setError] = useState('');
   const [retry, setRetry] = useState(0), [layers, setLayers] = useState(false), [unitsVisible, setUnitsVisible] = useState(true);
+  const [detailed, setDetailed] = useState(false);
   useEffect(() => { latest.current = { game, selected, onSelect, received: performance.now() }; }, [game, selected, onSelect]);
 
   useEffect(() => {
@@ -100,7 +129,7 @@ export const PortugalMap = ({ world, game, selected, onSelect, onCall, focusKey,
       map.addControl(new maplibregl.AttributionControl({ compact: true, customAttribution: 'Rotas: OSRM · Tempos estimados' }), 'bottom-left');
       map.addControl(new maplibregl.ScaleControl({ maxWidth: 90, unit: 'metric' }), 'bottom-left');
       map.on('load', () => {
-        nightCartography(map);
+        calmCartography(map, false);
         map.addSource('operational-routes', { type: 'geojson', data: EMPTY });
         map.addLayer({ id: 'route-casing', type: 'line', source: 'operational-routes',
           layout: { 'line-cap': 'round', 'line-join': 'round' },
@@ -127,6 +156,10 @@ export const PortugalMap = ({ world, game, selected, onSelect, onCall, focusKey,
       if (map) map.remove();
     }
   }, [world, retry]);
+
+  useEffect(() => {
+    if (loaded && mapRef.current) calmCartography(mapRef.current, detailed);
+  }, [loaded, detailed]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -192,11 +225,11 @@ export const PortugalMap = ({ world, game, selected, onSelect, onCall, focusKey,
     setLayers(false);
   };
   const call = game.incidents.find(i => !i.call_answered);
-  return <section className="map-section portugal-map" data-testid="city-map" data-map-renderer="maplibre-webgl" data-map-ready={loaded}>
+  return <section className={detailed ? 'map-section portugal-map map-detailed' : 'map-section portugal-map map-clean'} data-testid="city-map" data-map-renderer="maplibre-webgl" data-map-ready={loaded}>
     <div ref={container} className="geographic-canvas" data-testid="portugal-map-canvas" aria-label="Mapa geográfico real de Portugal, navegável" />
     {!loaded && !error && <div className="geo-map-loading" role="status"><span className="geo-loading-dot" />A carregar cartografia de Portugal…</div>}
     {error && <div className="geo-map-error" role="alert" data-testid="map-provider-error"><span>{error}</span><button onClick={() => setRetry(n => n + 1)}>Tentar novamente</button></div>}
-    <div className="map-layer-wrap"><button data-testid="map-layers-button" className={`map-layer-button ${layers ? 'active' : ''}`} aria-label="Regiões e camadas do mapa" aria-expanded={layers} onClick={() => setLayers(!layers)}><Layers3 size={16} /></button>{layers && <div className="layer-menu geo-regions-menu" data-testid="map-layers-menu"><span className="geo-menu-caption">TERRITÓRIO PORTUGUÊS</span>{world.regions.map(region => <button key={region.id} data-testid={`map-region-${region.id}`} onClick={() => navigateRegion(region)}>{region.name}<ArrowUpRight size={13} /></button>)}<label><input type="checkbox" checked={unitsVisible} onChange={event => setUnitsVisible(event.target.checked)} data-testid="layer-unidades" />Viaturas no mapa</label><small>Cartografia OpenStreetMap.<br />Bases e ocorrências de simulação.</small></div>}</div>
+    <div className="map-layer-wrap"><button data-testid="map-layers-button" className={`map-layer-button ${layers ? 'active' : ''}`} aria-label="Regiões e camadas do mapa" aria-expanded={layers} onClick={() => setLayers(!layers)}><Layers3 size={16} /></button>{layers && <div className="layer-menu geo-regions-menu" data-testid="map-layers-menu"><span className="geo-menu-caption">TERRITÓRIO PORTUGUÊS</span>{world.regions.map(region => <button key={region.id} data-testid={`map-region-${region.id}`} onClick={() => navigateRegion(region)}>{region.name}<ArrowUpRight size={13} /></button>)}<div className="geo-style-control"><span>DETALHE DO MAPA</span><div><button className={!detailed ? 'active' : ''} onClick={() => setDetailed(false)}>Limpo</button><button className={detailed ? 'active' : ''} onClick={() => setDetailed(true)}>Detalhado</button></div></div><label><input type="checkbox" checked={unitsVisible} onChange={event => setUnitsVisible(event.target.checked)} data-testid="layer-unidades" />Viaturas no mapa</label><small>Cartografia OpenStreetMap.<br />Bases e ocorrências de simulação.</small></div>}</div>
     <div className="map-zoom"><IconButton icon={Plus} label="Aproximar mapa" testId="map-zoom-in" onClick={() => mapRef.current?.zoomIn()} /><IconButton icon={Minus} label="Afastar mapa" testId="map-zoom-out" onClick={() => mapRef.current?.zoomOut()} /><span /><IconButton icon={LocateFixed} label="Centrar no Porto" testId="map-reset" onClick={() => navigateRegion(world.regions[0])} /></div>
     <div className="map-bottom">{call && <button className="incoming-call" data-testid="incoming-call-button" onClick={() => onCall(call.id)}><span className="incoming-icon"><PhoneIncoming size={20} /></span><span><small>LINHA 112 · CHAMADA EM ESPERA</small><strong>Atender 112</strong></span><ArrowUpRight size={19} /></button>}</div>
     {!game.speed && <div className="paused-label" data-testid="game-paused-indicator">SIMULAÇÃO EM PAUSA</div>}
