@@ -166,6 +166,17 @@
 .arr-dispatch>div { display:flex; gap:5px; overflow:auto; }.arr-dispatch button { min-width:128px; padding:7px 9px; border:1px solid #3b3b3b; border-radius:3px; background:#202020; color:#bbb; text-align:left; }
 .arr-dispatch button strong,.arr-dispatch button small { display:block; }.arr-dispatch button strong { font-size:9px; }.arr-dispatch button small { margin-top:3px; color:#777; font-size:7px; }.arr-dispatch button:disabled { opacity:.35; }
 .fleet-status.patrol,.fleet-status.transporting { color:var(--status-active); }
+.incident-impact { display:flex; flex-wrap:wrap; gap:5px; margin:-5px 0 10px; }
+.incident-impact>span { display:inline-flex; align-items:center; gap:4px; padding:3px 5px; border:1px solid #393939; border-radius:2px; color:#8d8d8d; font:7px var(--mono); text-transform:uppercase; }
+.incident-impact>span:nth-child(2) { color:var(--status-warning); border-color:#edbb6935; }
+.incident-impact>span:nth-child(3) { color:var(--status-active); border-color:#83b3f535; }
+.mission-facts { display:flex; flex-wrap:wrap; gap:6px; margin:12px 0; }
+.mission-facts>span { display:flex; align-items:center; gap:5px; padding:5px 7px; border:1px solid #383838; background:#1b1b1b; color:#a0a0a0; font:8px var(--mono); }
+.specialized-requirements { padding:12px 16px; border-bottom:1px solid #303030; }
+.specialized-requirements h3 { margin-bottom:8px; color:#858585; font:8px var(--mono); }
+.specialized-requirements>div { display:flex; flex-wrap:wrap; gap:5px; }
+.specialized-requirements span { display:flex; align-items:center; gap:5px; padding:5px 7px; border:1px solid #edbb6940; color:var(--status-warning); font-size:8px; }
+.specialized-requirements span.ready { border-color:#79d9a340; color:var(--status-success); }
 @media (max-width:1050px) {
   .training-console { grid-template-columns:1fr 1fr; }.training-console>div { grid-column:1/-1; }
   .queue-board,.automation-grid { grid-template-columns:1fr; }.arr-builder { grid-template-columns:1fr 1fr; }
