@@ -1,4 +1,5 @@
 import { EXTENSIONS, SPECIALIZATIONS, VEHICLE_CATALOG, POIS, MISSION_DEFINITIONS, weightedMission, progressionSnapshot, nextBuildingCost } from './progression';
+import { NEW_SCENARIOS } from './expansionContent';
 
 const SAVE_KEY = 'nexo112-offline-save-v1';
 
@@ -66,6 +67,7 @@ const SCENARIOS = [
   { title:'Derrame químico industrial', service:'fire', priority:1, needs:{fire:2,medical:1,police:1}, reward:7600, xp:260, description:'Fuga de produto químico numa zona industrial. É necessária descontaminação e isolamento.', caller:'Um contentor rompeu-se e há uma nuvem estranha junto ao armazém.', choices:['Aproxime-se para ler o rótulo.','Afaste-se contra o vento e impeça outras pessoas de entrar.','Tente tapar a fuga.'], correct:1, feedback:'A área foi isolada e a direção da nuvem foi comunicada às equipas.' },
   { title:'Busca de pessoa desaparecida', service:'police', priority:2, needs:{police:2}, reward:4100, xp:160, description:'Pessoa vulnerável desaparecida junto a uma zona arborizada. Unidade cinotécnica recomendada.', caller:'O meu familiar saiu há horas e o telemóvel ficou em casa.', choices:['Espere até amanhã.','Reúna uma descrição, roupa e último local conhecido.','Procure sozinho dentro da mata.'], correct:1, feedback:'Os dados essenciais foram recolhidos e enviados às patrulhas.' },
   { title:'Incidente com múltiplas vítimas', service:'medical', priority:1, needs:{medical:3,fire:1,police:1}, reward:9800, xp:340, description:'Várias vítimas num evento público. É necessária triagem e coordenação interagências.', caller:'Há muitas pessoas feridas e toda a gente está a correr!', choices:['Mova todas as vítimas para o mesmo local.','Mantenha uma via livre e indique perigos imediatos.','Abandone o local sem dar referências.'], correct:1, feedback:'Foi criada uma zona de acesso e as equipas receberam uma primeira estimativa de vítimas.' },
+  ...NEW_SCENARIOS,
 ];
 
 export const WORLD = {
@@ -139,6 +141,7 @@ const addUnit=(g,base,vehicleType=null)=>{
   g.units.push({id:uid(),name:`${definition.name}-${String(number).padStart(2,'0')}`,service:base.service,vehicle_type:definition.id,base_id:base.id,node:base.node,lng:base.lng,lat:base.lat,x:base.lng,y:base.lat,land:base.land,status:crew>=definition.crew?'available':'uncrewed',incident_id:null,route:[],route_times:[],travel:0,travel_total:0,route_distance:0,advanced:definition.id!==VEHICLE_CATALOG[base.service][0].id,crew_required:definition.crew,crew_assigned:crew,training:definition.training||null,condition:100,fatigue:0,repair_until:0,rest_until:0});
 };
 const refreshProgression=g=>{g.progression=progressionSnapshot(g,SERVICES);return g;};
+const rollRange=value=>{const [min,max]=value||[0,0];return min+Math.floor(Math.random()*(Math.max(min,max)-min+1));};
 const spawn=(g,scenarioIndex=null,nodeId=null)=>{
   const definition=scenarioIndex===null?weightedMission(g):MISSION_DEFINITIONS.find(item=>item.scenario===scenarioIndex);
   const choice=definition?.scenario??1;
@@ -158,7 +161,7 @@ const spawn=(g,scenarioIndex=null,nodeId=null)=>{
     point=(candidates.length?candidates:fallback)[Math.floor(Math.random()*Math.max(1,(candidates.length||fallback.length)))]||POINTS['porto-aliados'];
   }
   const requiredPersonnel=Object.values(s.needs).reduce((sum,n)=>sum+n*2,0);
-  g.incidents.push({...clone(s),id:uid(),number:g.sequence++,scenario:choice,definition:definition?.name||s.title,required_vehicle_types:[...(definition?.vehicle||[])],required_personnel:requiredPersonnel,node:point.id,lng:point.lng,lat:point.lat,x:point.lng,y:point.lat,land:point.land,address:point.name,district:point.city,status:'waiting',created:g.elapsed,deadline:g.elapsed+({1:900,2:1200,3:1500}[s.priority]),assigned:[],progress:0,call_answered:false,escalated:false,false_alarm:Math.random()<.08,call:{text:s.caller,choices:s.choices}});
+  g.incidents.push({...clone(s),id:uid(),number:g.sequence++,scenario:choice,definition:definition?.name||s.title,difficulty:definition?.difficulty||({1:'Difícil',2:'Média',3:'Fácil'}[s.priority]),casualties:rollRange(definition?.victims),detainees:rollRange(definition?.prisoners),required_vehicle_types:[...(definition?.vehicle||[])],required_personnel:requiredPersonnel,node:point.id,lng:point.lng,lat:point.lat,x:point.lng,y:point.lat,land:point.land,address:point.name,district:point.city,status:'waiting',created:g.elapsed,deadline:g.elapsed+({1:900,2:1200,3:1500}[s.priority]),assigned:[],progress:0,call_answered:false,escalated:false,false_alarm:Math.random()<.08,call:{text:s.caller,choices:s.choices}});
   log(g,`Nova ocorrência em ${point.city}: ${s.title}.`,'alert');
 };
 export function newGame(){
@@ -183,13 +186,13 @@ const createAftercare=(g,incident)=>{
   if(incident.false_alarm)return;
   const hospitals=g.facilities.filter(f=>f.type==='hospital'&&facilityOccupancy(g,f)<f.capacity);
   const prisons=g.facilities.filter(f=>f.type==='prison'&&facilityOccupancy(g,f)<f.capacity);
-  if((incident.needs.medical||0)>0&&hospitals.length&&Math.random()<.65){
-    const count=Math.min(3,Math.max(1,incident.needs.medical||1));
+  if((incident.casualties||0)>0&&hospitals.length){
+    const count=incident.casualties;
     for(let index=0;index<count;index++){const severity=1+Math.floor(Math.random()*3);g.patients.push({id:uid(),incident:incident.title,source_node:incident.node,city:incident.district,severity,specialty:severity===3?'trauma':'urgency',needs_doctor:severity===3,status:'waiting',created:g.elapsed,hospital_id:null});}
     log(g,`${count} vítima(s) aguardam transporte hospitalar.`,'alert');
   }
-  if((incident.needs.police||0)>0&&prisons.length&&Math.random()<.38){
-    const count=Math.min(2,incident.needs.police||1);
+  if((incident.detainees||0)>0&&prisons.length){
+    const count=incident.detainees;
     for(let index=0;index<count;index++)g.prisoners.push({id:uid(),incident:incident.title,source_node:incident.node,city:incident.district,status:'waiting',created:g.elapsed,prison_id:null});
     log(g,`${count} detido(s) aguardam transporte.`,'alert');
   }
@@ -358,7 +361,7 @@ export function loadLocalGame(){
       const merged={...fresh,...saved,mode:'portugal-offline-v4',expenses:saved.expenses||0,next_upkeep:saved.next_upkeep||saved.elapsed+300,conditions:saved.conditions||freshConditions(saved.elapsed||0),facilities:saved.facilities||[],patients:saved.patients||[],prisoners:saved.prisoners||[],trainings:saved.trainings||[],arrs:saved.arrs?.length?saved.arrs:clone(DEFAULT_ARRS)};
       merged.bases=(saved.bases||fresh.bases).map(base=>{const count=(saved.units||fresh.units).filter(unit=>unit.base_id===base.id).length;return {level:1,capacity:Math.max(2,count),staff_capacity:14,personnel:base.service==='fire'?10:6,extensions:[],specialization:'general',qualifications:{},...base};});
       merged.units=(saved.units||fresh.units).map(unit=>{const definition=vehicleDefinition(unit.service,unit.vehicle_type||(unit.advanced?VEHICLE_CATALOG[unit.service]?.[1]?.id:null));return {condition:100,fatigue:0,repair_until:0,rest_until:0,vehicle_type:definition.id,crew_required:definition.crew,crew_assigned:definition.crew,...unit};});
-      merged.incidents=(saved.incidents||[]).map(incident=>({escalated:false,false_alarm:false,required_vehicle_types:[],required_personnel:Object.values(incident.needs||{}).reduce((sum,n)=>sum+n*2,0),...incident}));
+      merged.incidents=(saved.incidents||[]).map(incident=>({escalated:false,false_alarm:false,difficulty:{1:'Difícil',2:'Média',3:'Fácil'}[incident.priority]||'Média',casualties:0,detainees:0,required_vehicle_types:[],required_personnel:Object.values(incident.needs||{}).reduce((sum,n)=>sum+n*2,0),...incident}));
       return refreshProgression(merged);
     }
   }catch{}
