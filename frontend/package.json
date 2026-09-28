@@ -2,6 +2,7 @@
   "name": "frontend",
   "version": "0.1.0",
   "private": true,
+  "homepage": "https://pulsebreakpt.github.io/112i",
   "dependencies": {
     "@hookform/resolvers": "5.0.1",
     "@radix-ui/react-accordion": "1.2.8",
@@ -70,16 +71,8 @@
     "test": "craco test"
   },
   "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
+    "production": [">0.2%", "not dead", "not op_mini all"],
+    "development": ["last 1 chrome version", "last 1 firefox version", "last 1 safari version"]
   },
   "devDependencies": {
     "@babel/plugin-proposal-private-property-in-object": "7.21.11",
@@ -103,7 +96,7 @@
     "@mapbox/jsonlint-lines-primitives": "2.0.2",
     "react-router": "7.15.1",
     "node-forge": "1.4.0",
-    "fast-uri": "3.1.2",
+    "fast-uri": "3.2.2",
     "flatted": "3.4.2",
     "qs": "6.15.2",
     "diff": "4.0.4",
@@ -119,30 +112,28 @@
     "serialize-javascript": "7.0.5",
     "uuid": "11.1.1",
     "@tootallnate/once": "2.0.1",
-    "webpack-dev-server": "5.2.6",
-    "resolve-url-loader": "5.0.0",
     "**/resolve-url-loader/postcss": "8.5.10",
     "**/axios/form-data": "4.0.6",
     "**/jsdom/form-data": "3.0.5",
-    "**/postcss-svgo/svgo": "2.8.1",
+    "**/postcss-svgo/postcss": "8.5.10",
     "**/webpack-dev-server/ws": "8.21.0",
     "**/postcss-load-config/yaml": "2.8.3",
-    "**/cosmiconfig/yaml": "1.10.3",
-    "**/cssnano/yaml": "1.10.3",
+    "**/cosmiconfig/yaml": "2.8.3",
+    "**/cssnano/yaml": "2.8.3",
     "**/eslint/js-yaml": "4.3.0",
-    "**/@eslint/eslintrc/js-yaml": "4.3.0",
+    "**/@eslint/eslintrc/js-yaml": "3.15.0",
     "**/svgo/js-yaml": "3.15.0",
     "**/@istanbuljs/load-nyc-config/js-yaml": "3.15.0",
     "**/css-loader/postcss": "8.5.10",
     "**/css-minimizer-webpack-plugin/postcss": "8.5.10",
     "**/react-scripts/postcss": "8.5.10",
     "**/filelist/minimatch": "5.1.8",
-    "**/anymatch/picomatch": "2.3.2",
-    "**/micromatch/picomatch": "2.3.2",
-    "**/readdirp/picomatch": "2.3.2",
-    "**/jest-util/picomatch": "2.3.2",
-    "**/tinyglobby/picomatch": "4.0.4",
+    "**/anymatch/picomatch": "4.0.3",
+    "**/micromatch/picomatch": "4.0.3",
+    "**/readdirp/picomatch": "4.0.3",
+    "**/jest-util/picomatch": "4.0.3",
+    "**/tinyglobby/picomatch": "4.0.3",
     "http-proxy-middleware": "2.0.10"
   },
-  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
+  "packageManager": "yarn@1.22.22"
 }
