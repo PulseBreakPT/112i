@@ -1,0 +1,16 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800&family=Barlow:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@layer base {
+ :root { --background: 160 10% 8%; --foreground: 150 9% 90%; --card: 160 10% 10%; --card-foreground: 150 9% 90%; --popover: 160 10% 10%; --popover-foreground: 150 9% 90%; --primary: 155 55% 63%; --primary-foreground: 160 28% 10%; --secondary: 160 8% 16%; --secondary-foreground: 150 9% 90%; --muted: 160 8% 16%; --muted-foreground: 150 5% 57%; --accent: 160 8% 18%; --accent-foreground: 150 9% 90%; --destructive: 5 66% 60%; --destructive-foreground: 0 0% 100%; --border: 160 7% 19%; --input: 160 7% 24%; --ring: 155 55% 63%; --radius: .375rem; }
+ * { @apply border-border; box-sizing: border-box; letter-spacing: 0; }
+ body { margin: 0; background: #111716; color: #e1e8e4; font-family: 'Barlow', sans-serif; font-size: 14px; -webkit-font-smoothing: antialiased; }
+ button, input, select { font: inherit; }
+ button, a { -webkit-tap-highlight-color: transparent; }
+ button { cursor: pointer; } button:disabled { cursor: not-allowed; opacity: .4; }
+ button, a, input, select { outline-offset: 4px; } :focus-visible { outline: 2px solid #76d5b1; }
+ ::selection { background: #6cc8a4; color: #10231b; }
+ ::-webkit-scrollbar { width: 5px; height: 5px; } ::-webkit-scrollbar-thumb { background: #34413b; border-radius: 4px; } ::-webkit-scrollbar-track { background: transparent; }
+ [data-debug-wrapper="true"] { display: contents !important; }
+}

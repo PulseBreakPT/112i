@@ -1,0 +1,118 @@
+{
+  "project_title": "Operador 112: Central de Emergência Portuguesa (SSS Tier)",
+  "app_type": "Interactive Emergency Operations Dispatch & Management Game",
+  "archetype": "THE PERFORMANCE PRO / TACTICAL COMMAND CENTER",
+  "language": "pt-PT",
+  "theme": {
+    "default_mode": "dark",
+    "theme_description": "High-density dark tactical emergency room atmosphere (Slate-950 background, glowing high-contrast status beacons, neon radar vectors, glassmorphism telemetry panels)."
+  },
+  "typography": {
+    "font_family_heading": "Barlow Condensed, Chivo, Rajdhani, sans-serif",
+    "font_family_body": "Inter, Roboto Mono, sans-serif",
+    "hierarchy": {
+      "h1_command_title": "text-3xl sm:text-4xl lg:text-5xl font-extrabold uppercase tracking-tight text-slate-100",
+      "h2_section_header": "text-xl sm:text-2xl font-bold uppercase tracking-wide text-slate-200",
+      "h3_card_title": "text-lg font-semibold tracking-normal text-slate-100",
+      "h4_sublabel": "text-xs font-mono uppercase tracking-widest text-slate-400",
+      "body_text": "text-sm sm:text-base leading-relaxed text-slate-300",
+      "telemetry_mono": "font-mono text-xs text-amber-400 tracking-wider"
+    }
+  },
+  "colors": {
+    "background": {
+      "primary": "#0a0f1d",
+      "surface_card": "#111827",
+      "surface_elevated": "#1f2937",
+      "border": "#374151"
+    },
+    "branding_branches": {
+      "inem_ambulance": {
+        "primary": "#f59e0b",
+        "secondary": "#fbbf24",
+        "badge_bg": "#78350f",
+        "label": "INEM / INEM SIV / VMER (Ambulância & Emergência Médica)"
+      },
+      "police_psp_gnr": {
+        "primary": "#3b82f6",
+        "secondary": "#60a5fa",
+        "badge_bg": "#1e3a8a",
+        "label": "PSP / GNR (Polícia & Segurança)"
+      },
+      "bombeiros_fire": {
+        "primary": "#ef4444",
+        "secondary": "#f87171",
+        "badge_bg": "#7f1d1d",
+        "label": "Bombeiros Voluntários / CPCB (Incêndios & Resgate)"
+      },
+      "protecao_civil": {
+        "primary": "#8b5cf6",
+        "secondary": "#a78bfa",
+        "badge_bg": "#4c1d95",
+        "label": "Proteção Civil / Drones / Apoio Operacional"
+      }
+    },
+    "status_indicators": {
+      "status_1_available": "#22c55e",
+      "status_2_en_route": "#3b82f6",
+      "status_3_on_scene": "#eab308",
+      "status_4_transporting": "#ec4899",
+      "status_5_busy_maintenance": "#64748b"
+    },
+    "alert_levels": {
+      "critical_p1": "#dc2626",
+      "high_p2": "#f97316",
+      "medium_p3": "#eab308",
+      "low_p4": "#0ea5e9"
+    }
+  },
+  "layout_and_grids": {
+    "overall_structure": "Full viewport desktop tactical dashboard grid (100vh h-screen flex overflow-hidden).",
+    "grid_areas": {
+      "top_command_bar": "Sticky header with Credits, EXP, Level, Time Controls (Pause, 1x, 2x, 5x speed), Live Alerts & Audio Mute",
+      "left_sidebar_incidents": "Width 320px-380px: Filterable active incidents list (Priorities P1-P4, status indicators, quick dispatch button)",
+      "center_interactive_map": "Flex-1 canvas/SVG vector map of fictional Portuguese city 'Porto D'Ouro' with streets, highways, district sectors, moving unit nodes, station markers, live emergency event pins",
+      "right_sidebar_units_bases": "Width 340px-400px: Tabbed panel (Bases & Garagens, Unidades Ativas, Chamadas do 112 em direto, Loja de Veículos)",
+      "bottom_interactive_call_overlay": "Floating 112 Call Center Operator Dialog Modal when receiving live emergency phone call with interactive decision choices"
+    }
+  },
+  "key_features_blueprint": {
+    "1_simulated_map": "HTML5 Canvas or SVG road mesh with node routing, realistic emergency vehicle movement speeds along road vectors, clickable stations (Quartel de Bombeiros, Esquadra PSP, Posto INEM), and active incident beacons with pulsing radar rings.",
+    "2_live_112_calls": "Interactive phone dispatch minigame like '112 Operator'. Caller dialog in Portuguese, audio ring effect, caller panic bar, choice matrix (e.g., 'Enviar Polícia', 'Aconselhar RCP por telefone', 'Despachar VMER + Bombeiros'), affecting score & city trust.",
+    "3_dispatch_engine": "Select incident -> Select nearest available units -> Click 'Despachar Equipa'. Live ETA counter, real-time arrival, resolution timer bar, and payout on completion.",
+    "4_progression_system": "Earnings (€ Euros), Experience Points (XP), Central Rank ('Despachante Júnior' to 'Diretor de Operações 112'), unlocks for heavy vehicles (Autotanque, Helitransporte, Unidade K9, Brigada Transitória).",
+    "5_base_building_vehicle_shop": "Build new stations in city sectors (Baixa, Zona Industrial, Autoestrada A1, Zona Ribeirinha), buy vehicles, assign crew & equipment.",
+    "6_local_storage_persistence": "Auto-save game state locally every 15 seconds. Manual save / export / load buttons without external server requirements."
+  },
+  "image_urls": {
+    "command_center_bg": "https://images.unsplash.com/photo-1635408853634-e73e2f8f1c53?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzd8MHwxfHNlYXJjaHw0fHxlbWVyZ2VuY3klMjBkaXNwYXRjaCUyMGNvbW1hbmQlMjBjZW50ZXIlMjBtYXAlMjB2ZWhpY2xlfGVufDB8fHx8MTc5MDYwOTQxM3ww&ixlib=rb-4.1.0&q=85",
+    "ambulance_inem": "https://images.unsplash.com/photo-1691435702806-17d0aa7b02e9?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzR8MHwxfHNlYXJjaHszfHxhbWJ1bGFuY2UlMjBmaXJlJTIwdHJ1Y2slMjBwb2xpY2UlMjBjYXIlMjBlbWVyZ2VuY3l8ZW58MHx8fHwxNzkwNjA5NDIxfDA&ixlib=rb-4.1.0&q=85",
+    "fire_truck": "https://images.unsplash.com/photo-1597188558265-f0fb7428a243?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzR8MHwxfHNlYXJjaHw0fHxhbWJ1bGFuY2UlMjBmaXJlJTIwdHJ1Y2slMjBwb2xpY2UlMjBjYXIlMjBlbWVyZ2VuY3l8ZW58MHx8fHwxNzkwNjA5NDIxfDA&ixlib=rb-4.1.0&q=85",
+    "police_car": "https://images.unsplash.com/photo-1625258110620-b213f56b9267?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzR8MHwxfHNlYXJjaHwyfHxhbWJ1bGFuY2UlMjBmaXJlJTIwdHJ1Y2slMjBwb2xpY2UlMjBjYXIlMjBlbWVyZ2VuY3l8ZW58MHx8fHwxNzkwNjA5NDIxfDA&ixlib=rb-4.1.0&q=85"
+  },
+  "testing_and_accessibility": {
+    "data_testid_rules": "All interactive elements, game speed controls, dispatch buttons, tabs, unit selectors, modal options, and financial displays MUST have explicit kebab-case data-testid attributes.",
+    "key_data_testids": [
+      "data-testid='game-speed-pause'",
+      "data-testid='game-speed-1x'",
+      "data-testid='game-speed-2x'",
+      "data-testid='game-speed-5x'",
+      "data-testid='user-budget-display'",
+      "data-testid='user-level-badge'",
+      "data-testid='incident-card-item'",
+      "data-testid='dispatch-action-button'",
+      "data-testid='call-112-answer-button'",
+      "data-testid='buy-station-button'",
+      "data-testid='buy-vehicle-button'",
+      "data-testid='save-game-button'"
+    ]
+  },
+  "UNIVERSAL GUIDELINES FOR MAIN AGENT": [
+    "Use JS / JSX components only (not TSX files).",
+    "Never use pure transparent backgrounds on overlays, floating headers, or dropdowns. Use backdrop-blur-md with dark semi-opaque surfaces like bg-slate-900/90.",
+    "Avoid default soft AI slop designs; build an ultra-tactical, crisp command dashboard with glowing status rings, crisp 1px borders, subtle grid overlays, and radar wave animations.",
+    "Include authentic Portuguese emergency service terminology (112, INEM, PSP, GNR, Bombeiros Voluntários, VMER, SIV, CPCB, CODU).",
+    "Ensure complete responsive desktop layout without full-page scrolling — center viewport is dedicated to the interactive vector map with side control drawers.",
+    "Ensure sound effects can be synthesized using Web Audio API (beeps, siren clicks, radio static, dispatch chime) with an easy toggle button in the header."
+  ]
+}
