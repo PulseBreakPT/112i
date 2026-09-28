@@ -11,16 +11,22 @@ from pydantic import BaseModel, Field
 from starlette.middleware.cors import CORSMiddleware
 from engine import new_game, tick, action
 from world import world_data, SERVICES, SITES
+from geo_world import POINTS, MODE, world_data as geo_world_data
+import geo_engine
+from road_routing import RoadRouter
 
 load_dotenv(Path(__file__).parent / '.env')
 client = AsyncIOMotorClient(os.environ['MONGO_URL'])
 db = client[os.environ['DB_NAME']]
+road_router = RoadRouter(db)
 app = FastAPI(title='NEXO 112 · Central de Operações')
 api = APIRouter(prefix='/api')
 locks = {}
 
 class GameResponse(BaseModel):
     id: str
+    mode: str = 'legacy'
+    city: str = "Porto d'Ouro"
     money: int
     xp: int
     level: int
@@ -61,13 +67,26 @@ async def save_game(game):
 async def health():
     return {'status': 'operational', 'name': 'NEXO 112'}
 
+@api.get('/road-routes/{origin_id}/{destination_id}')
+async def road_route(origin_id: str, destination_id: str):
+    if origin_id not in POINTS or destination_id not in POINTS:
+        raise HTTPException(422, 'Localização desconhecida.')
+    return await road_router.get(POINTS[origin_id], POINTS[destination_id])
+
+
 @api.get('/world')
 async def world():
+    return geo_world_data()
+
+
+@api.get('/legacy/world')
+async def legacy_world():
     return {**world_data(), 'services': SERVICES, 'sites': SITES}
+
 
 @api.post('/games', response_model=GameResponse)
 async def create():
-    return await save_game(new_game())
+    return await save_game(geo_engine.new_game())
 
 @api.get('/games/{game_id}', response_model=GameResponse)
 async def get_game(game_id: UUID):
@@ -77,7 +96,10 @@ async def get_game(game_id: UUID):
 async def advance(game_id: UUID, req: TickRequest):
     async with locks.setdefault(str(game_id), asyncio.Lock()):
         game = await read_game(game_id)
-        tick(game, req.seconds)
+        if game.get('mode') == MODE:
+            geo_engine.tick(game, req.seconds)
+        else:
+            tick(game, req.seconds)
         return await save_game(game)
 
 @api.post('/games/{game_id}/action', response_model=GameResponse)
@@ -85,7 +107,10 @@ async def perform(game_id: UUID, req: ActionRequest):
     async with locks.setdefault(str(game_id), asyncio.Lock()):
         game = await read_game(game_id)
         if req.type == 'reset':
-            game = new_game(str(game_id))
+            game = geo_engine.new_game() if game.get('mode') == MODE else new_game()
+            game['id'] = str(game_id)
+        elif game.get('mode') == MODE:
+            await geo_engine.action(game, req.type, req.data, road_router)
         else:
             action(game, req.type, req.data)
         return await save_game(game)
@@ -96,7 +121,10 @@ app.add_middleware(CORSMiddleware, allow_origins=os.environ['CORS_ORIGINS'].spli
 @app.on_event('startup')
 async def startup():
     await db.games.create_index('id', unique=True)
+    await db.road_routes.create_index('key', unique=True)
+    await db.road_routes.create_index('expires_at', expireAfterSeconds=0)
 
 @app.on_event('shutdown')
 async def shutdown():
+    await road_router.close()
     client.close()

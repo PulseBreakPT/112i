@@ -4,9 +4,9 @@ import networkx as nx
 def river_y(x):
     return 790 - x * .23 + 58 * math.sin(x / 185)
 
-WORLD_WIDTH = 2720
+WORLD_WIDTH = 2800
 WORLD_HEIGHT = 2000
-GRID_COLUMNS = 33
+GRID_COLUMNS = 34
 GRID_ROWS = 24
 BLOCK_SIZE = 80
 ORIGIN_X, ORIGIN_Y = 60, 55
@@ -42,8 +42,32 @@ def route(start, end):
     path = nx.shortest_path(GRAPH, start, end, weight='weight')
     return [[NODES[k]['x'], NODES[k]['y']] for k in path]
 
+DISTRICTS = [
+    {'x': 238, 'y': 306, 'name': 'São Vicente', 'sub': 'BAIRRO RESIDENCIAL'},
+    {'x': 513, 'y': 396, 'name': 'Baixa', 'sub': 'CENTRO HISTÓRICO'},
+    {'x': 820, 'y': 177, 'name': 'Monte Belo', 'sub': ''},
+    {'x': 840, 'y': 411, 'name': 'Santa Clara', 'sub': 'DISTRITO CENTRAL'},
+    {'x': 1164, 'y': 198, 'name': 'Parque Industrial', 'sub': ''},
+    {'x': 514, 'y': 910, 'name': 'Margem Sul', 'sub': ''},
+    {'x': 1140, 'y': 771, 'name': 'Porto Comercial', 'sub': 'ZONA PORTUÁRIA'},
+    {'x': 1780, 'y': 590, 'name': 'Ribeira Nova', 'sub': 'FRENTE RIBEIRINHA'},
+    {'x': 2370, 'y': 670, 'name': 'Vale do Este', 'sub': 'BAIRRO RESIDENCIAL'},
+    {'x': 545, 'y': 1510, 'name': 'Jardins do Sul', 'sub': 'PARQUE METROPOLITANO'},
+    {'x': 1370, 'y': 1530, 'name': 'Nova Aurora', 'sub': 'DISTRITO SUL'},
+    {'x': 2250, 'y': 1580, 'name': 'Alto das Fontes', 'sub': 'ZONA DE EXPANSÃO'},
+]
+
+
+def district_name(node):
+    return min(DISTRICTS, key=lambda d: math.hypot(d['x'] - node['x'], d['y'] - node['y']))['name']
+
+
 def world_data():
-    return {'width': 1400, 'height': 1000, 'nodes': list(NODES.values()),
+    return {'width': WORLD_WIDTH, 'height': WORLD_HEIGHT, 'nodes': list(NODES.values()),
+            'grid': {'columns': GRID_COLUMNS, 'rows': GRID_ROWS, 'block': BLOCK_SIZE,
+                     'origin_x': ORIGIN_X, 'origin_y': ORIGIN_Y},
+            'river': [[x, river_y(x)] for x in range(-80, WORLD_WIDTH + 100, 20)],
+            'districts': DISTRICTS,
             'roads': [{'a': NODES[a], 'b': NODES[b], **d} for a, b, d in GRAPH.edges(data=True)]}
 
 SERVICES = {
@@ -57,6 +81,10 @@ SITES = [
     {'id': 'south', 'name': 'Margem Sul', 'node': '9-10'},
     {'id': 'west', 'name': 'São Vicente', 'node': '1-5'},
     {'id': 'port', 'name': 'Porto Comercial', 'node': '14-10'},
+    {'id': 'riverside', 'name': 'Ribeira Nova', 'node': '21-7'},
+    {'id': 'valley', 'name': 'Vale do Este', 'node': '29-8'},
+    {'id': 'gardens', 'name': 'Jardins do Sul', 'node': '6-18'},
+    {'id': 'heights', 'name': 'Alto das Fontes', 'node': '28-19'},
 ]
 
 SCENARIOS = [

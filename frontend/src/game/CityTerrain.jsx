@@ -1,9 +1,6 @@
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 
 const riverY = x => 790 - x * .23 + 58 * Math.sin(x / 185);
-const riverPoints = Array.from({ length: 79 }, (_, i) => [-80 + i * 20, riverY(-80 + i * 20)]);
-const riverPath = riverPoints.map(([x, y], i) => `${i ? 'L' : 'M'}${x},${y}`).join(' ');
-const parcels = [];
 
 function roof(x, y, w, h, seed, key) {
   const tone = ['#343434', '#393939', '#303030', '#3c3c3c'][seed % 4];
@@ -17,11 +14,13 @@ function roof(x, y, w, h, seed, key) {
   </g>;
 }
 
-for (let row = 0; row < 12; row++) for (let col = 0; col < 17; col++) {
-  const x = 60 + col * 80, y = 55 + row * 80;
+function buildParcels(grid) {
+const parcels = [];
+for (let row = 0; row < grid.rows - 1; row++) for (let col = 0; col < grid.columns - 1; col++) {
+  const x = grid.origin_x + col * grid.block, y = grid.origin_y + row * grid.block;
   if (Math.abs(y + 40 - riverY(x + 40)) < 102) continue;
   const seed = col * 11 + row * 7;
-  const park = (col >= 1 && col <= 3 && row >= 1 && row <= 2) || (col >= 10 && col <= 12 && row >= 6 && row <= 7) || (col === 7 && row < 3);
+  const park = (col >= 1 && col <= 3 && row >= 1 && row <= 2) || (col >= 10 && col <= 12 && row >= 6 && row <= 7) || (col === 7 && row < 3) || (col >= 4 && col <= 8 && row >= 15 && row <= 18) || (col >= 23 && col <= 25 && row >= 11 && row <= 13) || (col > 17 && seed % 19 === 0);
   if (park) {
     parcels.push(<g key={`park-${col}-${row}`}>
       <rect x={x + 8} y={y + 8} width="64" height="64" rx="5" fill="#242424" stroke="#393939" strokeWidth=".6" />
@@ -48,32 +47,26 @@ for (let row = 0; row < 12; row++) for (let col = 0; col < 17; col++) {
   }
   parcels.push(<g key={`parcel-${col}-${row}`}><rect x={x + 6} y={y + 6} width="68" height="68" rx="2" fill="#222222" stroke="#303030" strokeWidth=".65" />{buildings}</g>);
 }
-
-const districts = [
-  { x: 238, y: 306, name: 'SÃO VICENTE', sub: 'BAIRRO RESIDENCIAL' },
-  { x: 513, y: 396, name: 'BAIXA', sub: 'CENTRO HISTÓRICO' },
-  { x: 820, y: 177, name: 'MONTE BELO', sub: '' },
-  { x: 840, y: 411, name: 'SANTA CLARA', sub: 'DISTRITO CENTRAL' },
-  { x: 1164, y: 198, name: 'PARQUE INDUSTRIAL', sub: '' },
-  { x: 514, y: 910, name: 'MARGEM SUL', sub: '' },
-  { x: 1140, y: 771, name: 'PORTO COMERCIAL', sub: 'ZONA PORTUÁRIA' },
-];
+return parcels;
+}
 
 const CityTerrain = memo(function CityTerrain({ world, detailed, labelsVisible }) {
-  return <g className="polished-terrain">
+  const parcels = useMemo(() => buildParcels(world.grid), [world.grid]);
+  const riverPath = useMemo(() => world.river.map(([x, y], i) => `${i ? 'L' : 'M'}${x},${y}`).join(' '), [world.river]);
+  return <g className="polished-terrain" data-testid="city-terrain">
     <defs>
       <pattern id="terrain-grain" width="7" height="7" patternUnits="userSpaceOnUse"><circle cx="1" cy="2" r=".35" fill="#777" opacity=".1" /><circle cx="5" cy="5" r=".3" fill="#000" opacity=".3" /></pattern>
       <pattern id="river-ripples" width="29" height="17" patternUnits="userSpaceOnUse"><path d="M2 5q5-2 10 0m4 6q5-2 10 0" stroke="#737373" strokeWidth=".45" opacity=".2" fill="none" /></pattern>
       <linearGradient id="river-depth" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#171717" /><stop offset=".5" stopColor="#202020" /><stop offset="1" stopColor="#141414" /></linearGradient>
     </defs>
-    <rect width="1400" height="1000" fill="#1c1c1c" />
+    <rect width={world.width} height={world.height} fill="#1c1c1c" />
     {detailed && parcels}
     <path d={riverPath} fill="none" stroke="#3a3a3a" strokeWidth="126" />
     <path d={riverPath} fill="none" stroke="#2b2b2b" strokeWidth="120" />
     <path d={riverPath} fill="none" stroke="#656565" strokeWidth="107" opacity=".65" />
     <path d={riverPath} fill="none" stroke="url(#river-depth)" strokeWidth="103" />
     <path d={riverPath} fill="none" stroke="url(#river-ripples)" strokeWidth="102" />
-    <rect width="1400" height="1000" fill="url(#terrain-grain)" />
+    <rect width={world.width} height={world.height} fill="url(#terrain-grain)" />
     {world.roads.map((road, i) => <g key={i}>
       <line x1={road.a.x} y1={road.a.y} x2={road.b.x} y2={road.b.y} stroke={road.bridge ? '#9b9b9b' : road.major ? '#575757' : '#383838'} strokeWidth={road.bridge ? 13 : road.major ? 11 : 5.5} />
       <line x1={road.a.x} y1={road.a.y} x2={road.b.x} y2={road.b.y} stroke={road.bridge ? '#353535' : road.major ? '#303030' : '#252525'} strokeWidth={road.bridge ? 10 : road.major ? 8.5 : 3.5} />
@@ -85,7 +78,7 @@ const CityTerrain = memo(function CityTerrain({ world, detailed, labelsVisible }
       {[440, 890, 1250].map((x, i) => <g key={x} transform={`translate(${x},${riverY(x) + (i - 1) * 20}) rotate(-17)`}><path d="M-11 0L-6-3H7L12 0L7 3H-6Z" fill="#656565" stroke="#868686" strokeWidth=".5" /><rect x="-5" y="-1.5" width="9" height="3" fill="#353535" /><path d="M-15 0h-14" stroke="#888" strokeWidth=".5" opacity=".25" /></g>)}
     </>}
     {labelsVisible && <g className="district-labels" textAnchor="middle">
-      {districts.map(d => <g key={d.name}><text x={d.x} y={d.y} fill="#c3c3c3" fontSize="11" fontWeight="500" letterSpacing="2.4">{d.name}</text>{d.sub && <text x={d.x} y={d.y + 12} fill="#727272" fontSize="5" letterSpacing="1.6">{d.sub}</text>}</g>)}
+      {world.districts.map(d => <g key={d.name}><text x={d.x} y={d.y} fill="#c3c3c3" fontSize="11" fontWeight="500" letterSpacing="2.4">{d.name.toLocaleUpperCase('pt-PT')}</text>{d.sub && <text x={d.x} y={d.y + 12} fill="#727272" fontSize="5" letterSpacing="1.6">{d.sub}</text>}</g>)}
       <text x="645" y="728" transform="rotate(-18 645 728)" fill="#787878" fontSize="20" fontStyle="italic" fontFamily="Georgia" letterSpacing="5">Rio Douro</text>
       <text x="850" y="286" fill="#7a7a7a" fontSize="6.5" letterSpacing=".6">AV. DOS DESCOBRIMENTOS</text>
       <text x="490" y="523" fill="#7a7a7a" fontSize="6.5" letterSpacing=".6">AVENIDA DA REPÚBLICA</text>

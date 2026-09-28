@@ -1,0 +1,22 @@
+/* The map has real world-sized content: zooming out reveals every district. */
+.minimal-shell .map-content { width: var(--world-width) !important; height: var(--world-height) !important; flex-shrink: 0; }
+.minimal-shell .city-svg { width: 100%; height: 100%; overflow: hidden; }
+.urban-life, .atmospheric-weather { pointer-events: none; }
+.ambient-car, .ambient-walker { offset-rotate: auto; offset-anchor: 0px 0px; animation: street-travel 60s linear infinite; }
+.ambient-car { opacity: .75; }
+.ambient-walker { opacity: .6; animation-direction: alternate; }
+@keyframes street-travel { from { offset-distance: 0%; } to { offset-distance: 100%; } }
+.city-mist { animation: mist-drift 100s ease-in-out infinite alternate; }
+.city-drizzle { opacity: .24; animation: drizzle-breath 75s ease-in-out infinite; }
+.rain-sheet { animation: rain-fall 1.3s linear infinite; }
+@keyframes mist-drift { from { transform: translate(-90px, -25px); opacity: .55; } to { transform: translate(130px, 55px); opacity: .9; } }
+@keyframes rain-fall { from { transform: translate(0, 0); } to { transform: translate(0, 133px); } }
+@keyframes drizzle-breath { 0%, 100% { opacity: .17; } 45% { opacity: .34; } 75% { opacity: .23; } }
+.scene-paused *, .scene-paused { animation-play-state: paused !important; }
+@media (prefers-reduced-motion: reduce) {
+  .urban-life *, .atmospheric-weather * { animation: none !important; }
+  .ambient-car { offset-distance: 45%; }
+  .ambient-walker { offset-distance: 55%; }
+  .city-drizzle { display: none; }
+  .city-mist { opacity: .45; }
+}

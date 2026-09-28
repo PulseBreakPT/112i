@@ -4,7 +4,7 @@ import random
 import uuid
 from datetime import datetime, timezone
 from fastapi import HTTPException
-from world import NODES, SCENARIOS, SERVICES, SITES, route
+from world import NODES, SCENARIOS, SERVICES, SITES, district_name, route
 
 def uid():
     return str(uuid.uuid4())
@@ -19,7 +19,7 @@ def spawn(g, scenario=None, node=None):
     node = node or random.choice(list(NODES))
     n = NODES[node]
     streets = ['Rua da Liberdade', 'Avenida dos Descobrimentos', 'Rua de São João', 'Avenida da República', 'Rua das Flores', 'Estrada Nacional 112']
-    district = 'Parque Industrial' if n['x'] > 950 and n['y'] < 500 else 'Margem Sul' if n['y'] > 780 else 'Baixa' if n['x'] < 650 else 'Santa Clara'
+    district = district_name(n)
     incident = {k: copy.deepcopy(s[k]) for k in ['title', 'service', 'priority', 'needs', 'reward', 'xp', 'description']}
     incident.update({'id': uid(), 'number': g['sequence'], 'scenario': index, 'node': node, 'x': n['x'], 'y': n['y'], 'address': f'{streets[n["row"] % len(streets)]}, {n["col"] * 12 + 4}', 'district': district, 'status': 'waiting', 'created': g['elapsed'], 'deadline': g['elapsed'] + 420, 'assigned': [], 'progress': 0, 'call_answered': False, 'call': {'text': s['caller'], 'choices': s['choices']}})
     g['sequence'] += 1

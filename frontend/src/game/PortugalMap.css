@@ -1,0 +1,47 @@
+.geographic-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.portugal-map .maplibregl-map { font-family: 'Barlow', sans-serif; }
+.portugal-map .maplibregl-canvas { outline: none; }
+.minimal-shell .portugal-map:after { display: none; }
+.geo-marker { --marker-color: #ddd; border: 0; padding: 0; cursor: default; box-sizing: border-box; }
+.geo-base { display: grid; place-items: center; width: 25px; height: 25px; background: #172127ed; border: 1px solid var(--marker-color); border-radius: 5px; color: var(--marker-color); font: 600 13px var(--mono); box-shadow: 0 2px 8px #0009; z-index: 1; }
+.geo-incident { width: 36px; height: 36px; border-radius: 50%; background: #121b21f5; border: 1.5px solid var(--marker-color); color: #f2f4f4; cursor: pointer; box-shadow: 0 3px 12px #0008, inset 0 0 12px #ffffff05; z-index: 3; display: grid; place-items: center; }
+.geo-incident:after { content: ''; position: absolute; inset: -5px; border: 1px solid var(--marker-color); border-radius: 50%; opacity: 0; transition: opacity .2s; }
+.geo-incident:hover, .geo-incident:focus-visible { background: #34414c; outline: 2px solid #ffffffb3; outline-offset: 4px; }
+.geo-incident.is-selected:after { opacity: .55; }
+.geo-incident.is-selected { z-index: 4; box-shadow: 0 0 20px #0009; }
+.geo-incident-number { font: 500 10px var(--mono); letter-spacing: -.4px; }
+.geo-priority { width: 7px; height: 7px; position: absolute; right: -1px; top: 0; border: 2px solid #142029; border-radius: 50%; background: #80b2f0; }
+.geo-priority.priority-1 { background: #f58080; }
+.geo-priority.priority-2 { background: #eac16c; }
+.geo-vehicle { width: 14px; height: 26px; z-index: 5; pointer-events: none; }
+.geo-vehicle-body { position: absolute; inset: 0; display: block; border-radius: 4px; border: 1px solid #e8edefd9; background: var(--marker-color); transform: rotate(var(--vehicle-heading, 0deg)); box-shadow: 0 2px 7px #0009; }
+.geo-vehicle-body:before { content: ''; position: absolute; top: 4px; left: 2px; right: 2px; height: 5px; background: #182b36; border-radius: 2px 2px 0 0; }
+.geo-vehicle-body:after { content: ''; position: absolute; top: 11px; left: -1px; right: -1px; height: 3px; background: linear-gradient(90deg,#65bfff 48%,#f2f7ff 49%,#f2f7ff 52%,#65bfff 53%); box-shadow: 0 0 5px #67b8f988; }
+.geo-vehicle-label { display: block; position: absolute; top: 32px; left: 50%; transform: translateX(-50%); font: 8px var(--mono); color: #e1e8ea; white-space: nowrap; background: #142029db; border: 1px solid #ffffff1f; border-radius: 3px; padding: 3px 5px; }
+.portugal-map .maplibregl-ctrl-bottom-left { bottom: 7px; left: 13px; max-width: calc(100% - 85px); z-index: 4; }
+.portugal-map .maplibregl-ctrl-attrib { color: #9eaeb9; font: 9px 'Barlow', sans-serif; background: #142028ed; border: 1px solid #ffffff15; border-radius: 5px; margin: 0; }
+.portugal-map .maplibregl-ctrl-attrib a { color: #c7d0d5; }
+.portugal-map .maplibregl-ctrl-attrib-button { filter: invert(.8); }
+.portugal-map .maplibregl-ctrl-scale { border: 1px solid #8898a3; border-top: none; color: #bac7cf; background: #142028a3; font: 9px var(--mono); margin: 0 0 5px; }
+.geo-map-loading, .geo-map-error { position: absolute; top: 90px; left: 50%; transform: translateX(-50%); max-width: min(450px, calc(100% - 32px)); background: #142028ed; border: 1px solid #ffffff26; border-radius: 7px; padding: 12px 16px; color: #bcc8cf; font-size: 12px; z-index: 6; display: flex; align-items: center; gap: 10px; box-shadow: 0 8px 30px #0005; }
+.geo-loading-dot { width: 6px; height: 6px; border-radius: 50%; background: #a4c8ba; flex-shrink: 0; }
+.geo-map-error { flex-direction: column; align-items: flex-start; }
+.geo-map-error button { font-size: 11px; color: #fff; text-decoration: underline; }
+.geo-regions-menu { width: 206px; gap: 10px; }
+.geo-menu-caption { color: #8b9aa4; font: 7px var(--mono); letter-spacing: 1px; }
+.geo-regions-menu>button { display: flex; align-items: center; justify-content: space-between; color: #d8e0e4; padding: 7px 8px; margin: 0 -5px; border-radius: 4px; font-size: 12px; text-align: left; }
+.geo-regions-menu>button:hover { background: #ffffff0b; }
+.geo-regions-menu>small { color: #87959e; font-size: 9px; line-height: 1.6; border-top: 1px solid #ffffff15; padding-top: 10px; }
+.geo-regions-menu>label { border-top: 1px solid #ffffff15; padding-top: 13px; font-size: 11px; }
+.route-estimate-action { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 17px 12px; padding: 9px 10px; border: 1px solid #ffffff26; border-radius: 5px; font-size: 10px; color: #ced6da; }
+.route-estimate-action:disabled { opacity: .5; }
+.route-estimate-note { color: #86949c; font-size: 9px; line-height: 1.6; margin: 0 18px 12px; }
+.route-estimate-error { color: #ecaaa6; }
+.unit-choice .unit-road-eta { display: block; margin-top: 5px; color: #bfc8cc; font: 9px var(--mono); }
+.assigned-units .route-distance { font-size: 9px; color: #8e9ba2; margin-left: 6px; }
+@media(max-width:600px) {
+  .portugal-map .maplibregl-ctrl-bottom-left { bottom: 8px; left: 10px; max-width: calc(100% - 68px); }
+  .portugal-map .maplibregl-ctrl-attrib { font-size: 8px; }
+  .geo-map-loading, .geo-map-error { top: 120px; font-size: 11px; }
+  .geo-incident { width: 38px; height: 38px; }
+}

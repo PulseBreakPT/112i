@@ -7,12 +7,14 @@ import { Sidebar, Footer } from './game/Shell';
 import { GameHUD, OperationsDock } from './game/GameHUD';
 import { IncidentPanel } from './game/IncidentPanel';
 import { DispatchPanel } from './game/DispatchPanel';
-import { CityMap } from './game/CityMap';
+import { PortugalMap as CityMap } from './game/PortugalMap';
 import { CallModal, HelpModal } from './game/Modals';
 import Management from './game/Management';
 import Reports from './game/Reports';
 import Settings from './game/Settings';
 import { beep } from './game/common';
+import { ambientAudio } from './game/ambientAudio';
+import { useAmbientAudio } from './game/useAmbientAudio';
 import './Silver.css';
 import './game/semantics.css';
 import './Immersive.css';
@@ -30,9 +32,16 @@ function GameApp() {
   const [focusKey, setFocusKey] = useState(0);
   const [panel, setPanel] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [sound, setSoundState] = useState(() => localStorage.getItem('nexo-sound') === 'true');
+  const [sound, setSoundState] = useState(() => localStorage.getItem('nexo-sound') !== 'false');
   const sequence = useRef(null), completed = useRef(null);
-  const setSound = value => { setSoundState(value); localStorage.setItem('nexo-sound', String(value)); beep(value); };
+  const audioActive = !!game && !!game.speed && isCentral;
+  useAmbientAudio(sound, audioActive);
+  const setSound = value => {
+    setSoundState(value);
+    localStorage.setItem('nexo-sound', String(value));
+    ambientAudio.configure(value, audioActive);
+    if (value) ambientAudio.unlock();
+  };
 
   useEffect(() => {
     if (!game) return;
@@ -71,7 +80,7 @@ function GameApp() {
 
   return <div className={`app-shell immersive-shell minimal-shell dark ${isCentral ? 'central-open' : 'workspace-open'} ${panel && isCentral ? `panel-open panel-${panel}` : ''}`}>
     <main className="world-stage" aria-label="Mapa operacional" inert={!isCentral || menuOpen}>
-      <CityMap world={world} game={game} selected={selected} onSelect={selectIncident} onCall={call} focusKey={focusKey} />
+      <CityMap world={world} game={game} selected={selected} onSelect={selectIncident} onCall={call} focusKey={focusKey} active={isCentral && !menuOpen} />
     </main>
     <GameHUD game={game} act={act} sound={sound} setSound={setSound} onSave={save} error={error} />
     <div className="menu-launcher">

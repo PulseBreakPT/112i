@@ -1,4 +1,5 @@
 import { Flame, HeartPulse, Shield } from 'lucide-react';
+import { ambientAudio } from './ambientAudio';
 export const SERVICE = {
   fire: { name: 'Bombeiros', short: 'BOMBEIROS', color: '#f58080', icon: Flame },
   medical: { name: 'Emergência médica', short: 'INEM', color: '#f0c75e', icon: HeartPulse },
@@ -9,5 +10,4 @@ export const clock = elapsed => { const total = 14 * 3600 + 32 * 60 + Math.floor
 export const duration = n => `${Math.floor(Math.max(0, n) / 60).toString().padStart(2, '0')}:${Math.floor(Math.max(0, n) % 60).toString().padStart(2, '0')}`;
 export const STATUS = { waiting: 'Aguarda despacho', enroute: 'A caminho', onscene: 'No local', available: 'Disponível', returning: 'A regressar' };
 export const ServiceIcon = ({ service, size = 18, ...props }) => { const Icon = SERVICE[service]?.icon || Shield; return <Icon size={size} {...props} />; };
-let audio;
-export function beep(enabled, frequency = 660) { if (!enabled) return; try { audio ||= new (window.AudioContext || window.webkitAudioContext)(); audio.resume(); const o = audio.createOscillator(), gain = audio.createGain(); o.connect(gain); gain.connect(audio.destination); o.frequency.value = frequency; gain.gain.setValueAtTime(.045, audio.currentTime); gain.gain.exponentialRampToValueAtTime(.001, audio.currentTime + .2); o.start(); o.stop(audio.currentTime + .2); } catch (_) {} }
+export function beep(enabled, frequency = 660) { if (enabled) ambientAudio.beep(frequency); }
