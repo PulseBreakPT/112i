@@ -37,6 +37,8 @@ jobs:
           cache-dependency-path: frontend/package.json
       - name: Instalar dependências
         run: npm install --legacy-peer-deps --no-audit --no-fund
+      - name: Corrigir dependências de compilação
+        run: npm install --no-save --legacy-peer-deps ajv@8 ajv-keywords@5
       - name: Compilar jogo
         run: npm run build
       - name: Configurar Pages
