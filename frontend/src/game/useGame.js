@@ -67,6 +67,17 @@ export function useGame() {
         }));
         data={...data,routes:Object.fromEntries(plans.map(([id,outward])=>[id,outward])),return_routes:Object.fromEntries(plans.map(([id,,back])=>[id,back]))};
       }
+      if(type==='recall_unit'){
+        const unit=current.current.units.find(item=>item.id===data.unit_id),base=unit&&current.current.bases.find(item=>item.id===unit.base_id);
+        if(!unit||!base)throw new Error('Viatura ou base indisponível.');
+        data={...data,route:await fetchRoadRoute({lng:unit.lng,lat:unit.lat},base.node,current.current.conditions)};
+      }
+      if(type==='redirect_unit'){
+        const unit=current.current.units.find(item=>item.id===data.unit_id),incident=current.current.incidents.find(item=>item.id===data.incident_id),base=unit&&current.current.bases.find(item=>item.id===unit.base_id);
+        if(!unit||!incident||!base)throw new Error('Viatura, ocorrência ou base indisponível.');
+        const [route,returnRoute]=await Promise.all([fetchRoadRoute({lng:unit.lng,lat:unit.lat},incident.node,current.current.conditions),fetchRoadRoute(incident.node,base.node,current.current.conditions)]);
+        data={...data,route,return_route:returnRoute};
+      }
       if(type==='transport_patient'||type==='transport_prisoner'){
         const isPatient=type==='transport_patient';
         const task=(isPatient?current.current.patients:current.current.prisoners).find(item=>item.id===data[isPatient?'patient_id':'prisoner_id']);
@@ -80,6 +91,12 @@ export function useGame() {
           fetchRoadRoute(task.source_node,facility.node,current.current.conditions),
           fetchRoadRoute(facility.node,base.node,current.current.conditions),
         ]);
+        data={...data,unit_id:unit.id,routes:{pickup,delivery,back}};
+      }
+      if(type==='transport_medical_transfer'){
+        const transfer=current.current.medical_transfers?.find(item=>item.id===data.transfer_id),facility=transfer&&current.current.facilities.find(item=>item.id===transfer.target_facility_id),unit=current.current.units.find(item=>item.id===data.unit_id&&item.service==='medical'&&['available','patrol'].includes(item.status))||current.current.units.find(item=>item.service==='medical'&&['available','patrol'].includes(item.status));
+        if(!transfer||!facility||!unit)throw new Error('Sem meio médico disponível para a transferência.');
+        const base=current.current.bases.find(item=>item.id===unit.base_id),[pickup,delivery,back]=await Promise.all([fetchRoadRoute({lng:unit.lng,lat:unit.lat},transfer.source_node,current.current.conditions),fetchRoadRoute(transfer.source_node,facility.node,current.current.conditions),fetchRoadRoute(facility.node,base.node,current.current.conditions)]);
         data={...data,unit_id:unit.id,routes:{pickup,delivery,back}};
       }
       if(type==='toggle_patrol'){
@@ -113,6 +130,18 @@ export function useGame() {
       return null;
     } finally { setBusy(false); }
   }, [publishFeedback, update]);
+
+  useEffect(() => {
+    if (busy) return;
+    const snapshot=current.current,policy=snapshot?.dispatch_policy;
+    const patient=policy?.auto_patient_transport&&snapshot.patients?.find(item=>item.status==='waiting'&&item.treatment_complete);
+    const hospital=patient&&snapshot.facilities?.filter(item=>item.type==='hospital'&&item.enabled!==false&&(!item.operational_at||item.operational_at<=snapshot.elapsed)&&item.land===snapshot.units.find(unit=>unit.service==='medical')?.land).sort((a,b)=>Number(!(a.specialties||[]).includes(patient.specialty))-Number(!(b.specialties||[]).includes(patient.specialty)))[0];
+    const prisoner=!patient&&policy?.auto_prisoner_transport&&snapshot.prisoners?.find(item=>item.status==='waiting');
+    const prison=prisoner&&snapshot.facilities?.find(item=>item.type==='prison'&&item.enabled!==false&&(!item.operational_at||item.operational_at<=snapshot.elapsed));
+    if(!patient&&!prisoner)return;
+    const timer=setTimeout(()=>{if(patient&&hospital)act('transport_patient',{patient_id:patient.id,facility_id:hospital.id});else if(prisoner&&prison)act('transport_prisoner',{prisoner_id:prisoner.id,facility_id:prison.id});},500);
+    return()=>clearTimeout(timer);
+  },[act,busy,game.elapsed,game.patients,game.prisoners,game.dispatch_policy,game.facilities]);
 
   const displayGame = useMemo(() => presentGameCopy(game), [game]);
   const clearFeedback = useCallback(id => setFeedback(currentFeedback => currentFeedback?.id === id ? null : currentFeedback), []);

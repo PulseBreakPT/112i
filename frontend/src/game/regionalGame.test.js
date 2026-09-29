@@ -84,3 +84,45 @@ test('extra personnel increase operational resolution speed', () => {
   const reinforcedTick = tickGame(reinforced,10);
   expect(reinforcedTick.incidents[0].progress).toBeGreaterThan(normalTick.incidents[0].progress);
 });
+
+test('progressive recruitment only adds personnel after its completion time', () => {
+  let game=newGame();game.money=100000;
+  const base=game.bases[0],before=game.personnel.length;
+  game=applyAction(game,'queue_recruitment',{base_id:base.id,amount:2});
+  expect(game.personnel).toHaveLength(before);
+  expect(game.recruitment_queue[0].status).toBe('pending');
+  game=tickGame(game,241);
+  expect(game.personnel).toHaveLength(before+2);
+  expect(game.recruitment_queue[0].status).toBe('completed');
+});
+
+test('dispatch policy stores reserve and maximum response distance', () => {
+  let game=newGame();
+  game=applyAction(game,'update_dispatch_policy',{max_response_km:42,reserve_by_service:{fire:2}});
+  expect(game.dispatch_policy.max_response_km).toBe(42);
+  expect(game.dispatch_policy.reserve_by_service.fire).toBe(2);
+  expect(game.dispatch_policy.reserve_by_service.medical).toBe(1);
+});
+
+test('vehicle shifts and consumables are simulated', () => {
+  let game=newGame();const unit=game.units[0];
+  expect(unit.resources.water).toBe(3000);
+  game=applyAction(game,'update_advanced_unit',{unit_id:unit.id,shift:{start:0,end:1},max_response_km:25,fixed_crew:true});
+  game=tickGame(game,2);
+  const changed=game.units.find(item=>item.id===unit.id);
+  expect(changed.status).toBe('offshift');
+  expect(changed.max_response_km).toBe(25);
+  expect(changed.fixed_crew).toBe(true);
+});
+
+test('mission-specific ranges are stored by command center', () => {
+  let game=newGame();const center=game.command_centers[0];
+  game=applyAction(game,'set_mission_range',{command_center_id:center.id,mission_key:'fire',radius_km:18});
+  expect(game.command_centers[0].mission_ranges.fire).toBe(18);
+});
+
+test('custom coordinate POIs are accepted and preserved', () => {
+  let game=newGame();const center=game.command_centers[0];
+  game=applyAction(game,'create_player_poi',{name:'PDI Faro',type:'stadium',custom:true,lng:-7.93,lat:37.02,city:'Faro',command_center_id:center.id});
+  expect(game.player_pois[0]).toMatchObject({name:'PDI Faro',lng:-7.93,lat:37.02,city:'Faro'});
+});

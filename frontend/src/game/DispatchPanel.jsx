@@ -14,7 +14,7 @@ export const DispatchPanel = ({ game, world, incident, act, busy, onCall, onFocu
   const assigned = game.units.filter(u => u.incident_id === incident?.id);
   const needed = s => Math.max(0, (incident?.needs[s] || 0) - assigned.filter(u => u.service === s).length);
   const send = async () => { const routes=Object.fromEntries(picked.filter(id=>estimates[id]).map(id=>[id,estimates[id]]));const result = await act('dispatch', { incident_id: incident.id, unit_ids: picked, routes }); if (result) setPicked([]); };
-  const estimateRoutes = async () => {
+  const estimateRoutes = async (autoSelect=false) => {
     const request = ++estimateRequest.current;
     setEstimating(true);
     const origins = available.filter(u => needed(u.service) && u.land === incident.land);
@@ -23,7 +23,17 @@ export const DispatchPanel = ({ game, world, incident, act, busy, onCall, onFocu
       catch (error) { return [unit.id, { error: operationalText(error?.message || 'Estimativa indisponível. Tenta novamente.') }]; }
     }));
     if (request === estimateRequest.current) {
-      setEstimates(Object.fromEntries(routes));
+      const routeMap=Object.fromEntries(routes);
+      setEstimates(routeMap);
+      if(autoSelect){
+        const chosen=[];
+        Object.entries(incident.needs||{}).forEach(([service,count])=>{
+          const missing=Math.max(0,count-assigned.filter(unit=>unit.service===service).length),reserve=game.dispatch_policy?.reserve_by_service?.[service]||0;
+          const candidates=origins.filter(unit=>unit.service===service&&!routeMap[unit.id]?.error&&routeMap[unit.id].distance/1000<=(unit.max_response_km||game.dispatch_policy?.max_response_km||80)).sort((a,b)=>routeMap[a.id].duration-routeMap[b.id].duration);
+          chosen.push(...candidates.slice(0,Math.min(missing,Math.max(0,candidates.length-reserve))).map(unit=>unit.id));
+        });
+        setPicked(chosen);
+      }
       setEstimating(false);
     }
   };
@@ -41,9 +51,10 @@ export const DispatchPanel = ({ game, world, incident, act, busy, onCall, onFocu
         </div>
         <div className="requirements"><h3>Meios necessários</h3><div>{Object.entries(incident.needs).map(([s, n]) => <span key={s} className={!needed(s) ? 'requirement-ready' : ''} style={{ '--service-color': SERVICE[s].color }} data-testid={`requirement-${s}`}><ServiceIcon service={s} size={16} /><b>{assigned.filter(u => u.service === s).length}/{n}</b> {SERVICE[s].short}{!needed(s) && <Check size={13} />}</span>)}</div></div>
       {!!incident.required_vehicle_types?.length && <div className="specialized-requirements"><h3>VIATURAS OBRIGATÓRIAS</h3><div>{incident.required_vehicle_types.map(type => {const vehicle=Object.values(world.vehicle_catalog).flat().find(item => item.id === type);const present=assigned.some(unit => unit.vehicle_type === type);return <span className={present ? 'ready' : ''} key={type}>{vehicle?.name || type}{present && <Check size={11} />}</span>;})}</div></div>}
-      {assigned.length > 0 && <div className="assigned-units"><h3>MEIOS MOBILIZADOS</h3>{assigned.map(u => <div key={u.id} data-testid={`assigned-${u.name}`}><ServiceIcon service={u.service} size={15} color={SERVICE[u.service].color} /><b>{u.name}</b><span className="route-distance">{(u.route_distance / 1000).toFixed(1)} km</span><span className={`state-label ${u.status}`}>{['enroute', 'returning'].includes(u.status) ? `${duration(u.travel_total - u.travel)} · ${STATUS[u.status]}` : STATUS[u.status] || 'Estado indisponível'}</span></div>)}{incident.status === 'onscene' && <div className="resolution-progress" data-testid="resolution-progress"><i style={{ width: `${incident.progress}%` }} /></div>}</div>}
+      {assigned.length > 0 && <div className="assigned-units"><h3>MEIOS MOBILIZADOS</h3>{assigned.map(u => <div key={u.id} data-testid={`assigned-${u.name}`}><ServiceIcon service={u.service} size={15} color={SERVICE[u.service].color} /><b>{u.callsign||u.name}</b><span className="route-distance">{(u.route_distance / 1000).toFixed(1)} km</span><span className={`state-label ${u.status}`}>{['enroute', 'returning'].includes(u.status) ? `${duration(u.travel_total - u.travel)} · ${STATUS[u.status]}` : STATUS[u.status] || 'Estado indisponível'}</span>{u.status==='enroute'&&<button className="unit-recall" onClick={()=>act('recall_unit',{unit_id:u.id})}>Recolher</button>}</div>)}{incident.status === 'onscene' && <div className="resolution-progress" data-testid="resolution-progress"><i style={{ width: `${incident.progress}%` }} /></div>}</div>}
       <div className="units-heading"><h3>Seleciona os meios</h3><span data-testid="available-unit-count">{available.length} disponíveis</span></div>
-      <button className="route-estimate-action" data-testid="estimate-routes-button" disabled={estimating || !available.some(u => needed(u.service) && u.land === incident.land)} onClick={estimateRoutes}><MapPin size={14} />{estimating ? 'A calcular percursos…' : 'Estimar tempos de chegada'}<ArrowUpRight size={14} /></button>
+      <button className="route-estimate-action" data-testid="estimate-routes-button" disabled={estimating || !available.some(u => needed(u.service) && u.land === incident.land)} onClick={()=>estimateRoutes(false)}><MapPin size={14} />{estimating ? 'A calcular percursos…' : 'Estimar tempos de chegada'}<ArrowUpRight size={14} /></button>
+      <button className="route-estimate-action smart-dispatch" data-testid="smart-dispatch-button" disabled={estimating || !available.some(u => needed(u.service) && u.land === incident.land)} onClick={()=>estimateRoutes(true)}><Gauge size={14} />Selecionar meios mais rápidos, mantendo reserva<ArrowUpRight size={14} /></button>
       {Object.values(estimates).some(route => route.error) && <p className="route-estimate-note route-estimate-error" role="alert">{Object.values(estimates).find(route => route.error).error}</p>}
       <div className="units-scroll">{available.map(u => {
         const selected = picked.includes(u.id);
