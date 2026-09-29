@@ -1,6 +1,11 @@
 import { EXTENSIONS, SPECIALIZATIONS, VEHICLE_CATALOG, POIS, MISSION_DEFINITIONS, weightedMission, progressionSnapshot, nextBuildingCost } from './progression';
 import { NEW_SCENARIOS } from './expansionContent';
 import { applyAdvancedAction, initializeAdvancedState, tickAdvancedState } from './advancedSimulation';
+import { distanceMeters, fetchRoadRoute as fetchRoadRouteEngine, freshConditions, reverseRoute, RISK_ZONES } from './engines/mapEngine';
+import { facilityOccupancy, hospitalCanReceive } from './engines/hospitalEngine';
+import { operationalPhasesFor, generatedEvolution, vehicleTraining as vehicleTrainingEngine, requiredTrainingsFor as requiredTrainingsForEngine, trainedOnScene, mergeIncidentRequirements, readinessFor, PHASE_REQUIREMENTS } from './engines/missionEngine';
+import { operationalUnit, selectArrUnitIds as selectArrUnitIdsEngine, selectRecommendedUnitIds as selectRecommendedUnitIdsEngine } from './engines/dispatchEngine';
+import { locate, returnToBase, startRoute } from './engines/unitEngine';
 
 import { GAME_SAVE_KEY as SAVE_KEY } from './storageCompatibility';
 
@@ -43,43 +48,6 @@ const makeCareerTasks = g => [
   {id:uid(),type:'personnel',title:'Recrutar 2 elementos',target:2,baseline:g.personnel?.length||0,progress:0,reward:600,claimed:false},
 ];
 const PERSONNEL_NAMES = ['Ana Silva','Miguel Santos','Inês Costa','João Ferreira','Mariana Oliveira','Rui Pereira','Beatriz Martins','Diogo Rodrigues','Sofia Almeida','Tiago Sousa','Catarina Fernandes','André Gomes','Leonor Lopes','Pedro Marques','Marta Ribeiro','Gonçalo Carvalho','Carolina Teixeira','Bruno Correia','Matilde Neves','Hugo Monteiro'];
-const INCIDENT_EVOLUTIONS = {
-  0:{type:'expansion',title:'Incêndio industrial generalizado',add_needs:{fire:1,medical:1},reward_factor:1.55},
-  3:{type:'follow_up',scenario:4,title:'Incêndio após colisão',trigger_progress:42},
-  5:{type:'expansion',title:'Motim na via pública',add_needs:{police:2,medical:1},reward_factor:1.6},
-  9:{type:'subsequent',scenario:9,title:'Busca alargada da pessoa desaparecida'},
-};
-const operationalPhasesFor = service => service==='fire'?['Reconhecimento','Ataque inicial','Contenção','Rescaldo']:service==='medical'?['Triagem','Estabilização','Tratamento','Evacuação']:['Avaliação de risco','Perímetro','Intervenção','Recolha de prova'];
-const generatedEvolution = (scenario,service,priority) => INCIDENT_EVOLUTIONS[scenario]||(priority===1?{type:'expansion',title:service==='fire'?'Incidente de grande dimensão':service==='medical'?'Emergência com múltiplas vítimas':'Operação policial alargada',add_needs:{[service]:1},reward_factor:1.3}:null);
-const VEHICLE_TRAINING = {
-  'wildfire-unit':'wildfire',
-  tanker:'wildfire',
-  'heavy-rescue':'rescue',
-  'command-unit':'command',
-  'medical-helicopter':'aeromedical',
-  'traffic-unit':'traffic',
-  'prisoner-van':'custody',
-};
-const PHASE_REQUIREMENTS = {
-  fire:[
-    null,
-    incident=>incident.priority===1?{vehicles:['command-unit'],trainings:['command'],needs:{fire:1}}:null,
-    incident=>(incident.required_vehicle_types||[]).includes('heavy-rescue')||/colisão|encarcer/i.test(incident.title)?{vehicles:['heavy-rescue'],trainings:['rescue']}:incident.zone_risk?.includes('florestal')?{vehicles:['wildfire-unit'],trainings:['wildfire'],needs:{fire:1}}:null,
-    incident=>incident.casualties>0?{needs:{medical:1}}:null,
-  ],
-  medical:[
-    null,
-    incident=>incident.casualties>=3||incident.large_scale?{vehicles:['mass-casualty-unit'],trainings:['triage'],needs:{medical:1}}:null,
-    incident=>incident.casualties>=1?{vehicles:['vmer'],trainings:['advanced-care']}:null,
-    incident=>incident.casualties>=5?{vehicles:['medical-helicopter'],trainings:['aeromedical']}:null,
-  ],
-  police:[
-    null,
-    incident=>incident.detainees>0?{vehicles:['prisoner-van'],trainings:['custody']}:null,
-    incident=>/assalto|roubo|desaparecid|sequestro|tráfico/i.test(incident.title)?{trainings:['investigation'],needs:{police:1}}:null,
-    incident=>incident.priority===1||incident.detainees>=3?{vehicles:['riot-unit'],trainings:['public-order'],needs:{police:1}}:null,
-  ],
-};
 
 const places = [
   ['porto-boavista','Boavista · Porto',-8.6306,41.1578,'Porto','mainland'],
@@ -151,77 +119,7 @@ const uid = () => globalThis.crypto?.randomUUID?.() || Math.random().toString(36
 const clone = value => globalThis.structuredClone ? globalThis.structuredClone(value) : JSON.parse(JSON.stringify(value));
 const requireValue = (condition, message) => { if (!condition) throw new Error(message); };
 const log = (g,text,kind='info') => { g.logs.unshift({id:uid(),text,kind,time:g.elapsed}); g.logs=g.logs.slice(0,50); };
-const WEATHER = [
-  {id:'clear',label:'Céu limpo',factor:1},
-  {id:'rain',label:'Chuva',factor:1.18},
-  {id:'storm',label:'Tempestade',factor:1.38},
-  {id:'fog',label:'Nevoeiro',factor:1.25},
-];
-const TRAFFIC = [
-  {id:'light',label:'Trânsito fluido',factor:1},
-  {id:'moderate',label:'Trânsito moderado',factor:1.16},
-  {id:'heavy',label:'Trânsito intenso',factor:1.34},
-];
-const RISK_ZONES = {
-  'porto-campanha': { fire: 1.25, medical: 1.05, police: 1.1, label: 'industrial' },
-  'porto-foz': { fire: 1.2, medical: 1.15, police: 1, label: 'florestal e costeiro' },
-  matosinhos: { fire: 1.2, medical: 1.1, police: 1.05, label: 'porto e indústria' },
-  lisboa: { fire: 1.05, medical: 1.2, police: 1.2, label: 'metropolitano' },
-  faro: { fire: 1.15, medical: 1.2, police: 1.1, label: 'turístico e aeroporto' },
-  funchal: { fire: 1.15, medical: 1.1, police: 1.05, label: 'insular' },
-};
-const freshConditions = elapsed => {
-  const weather = WEATHER[Math.floor(Math.random()*WEATHER.length)];
-  const traffic = TRAFFIC[Math.floor(Math.random()*TRAFFIC.length)];
-  const hour = (14 + Math.floor((32*60+elapsed)/3600)) % 24;
-  return {weather:weather.id,weather_label:weather.label,weather_factor:weather.factor,traffic:traffic.id,traffic_label:traffic.label,traffic_factor:traffic.factor,roadworks:Math.random()<.22,night:hour>=20||hour<7,updated_at:elapsed};
-};
-const conditionsFactor = c => (c?.weather_factor||1)*(c?.traffic_factor||1)*(c?.roadworks?1.12:1)*(c?.night?1.06:1);
-const distanceMeters = (a,b) => {
-  const rad=n=>n*Math.PI/180, R=6371000, dLat=rad(b.lat-a.lat), dLng=rad(b.lng-a.lng);
-  const q=Math.sin(dLat/2)**2+Math.cos(rad(a.lat))*Math.cos(rad(b.lat))*Math.sin(dLng/2)**2;
-  return 2*R*Math.asin(Math.sqrt(q));
-};
-const roadRouteCache = new Map();
-const routeTimes = (coordinates,duration) => {
-  if(coordinates.length < 2) return [0];
-  const lengths=coordinates.slice(1).map((point,index)=>distanceMeters(
-    {lng:coordinates[index][0],lat:coordinates[index][1]},
-    {lng:point[0],lat:point[1]},
-  ));
-  const total=lengths.reduce((sum,value)=>sum+value,0)||1;
-  let covered=0;
-  return [0,...lengths.map(length=>{covered+=length;return duration*covered/total;})];
-};
-const reverseRoute = plan => {
-  const coordinates=[...plan.coordinates].reverse();
-  return {...plan,coordinates,times:routeTimes(coordinates,plan.duration)};
-};
-export async function fetchRoadRoute(originId,destinationId,conditions=null){
-  const a=typeof originId==='string'?POINTS[originId]:originId,b=typeof destinationId==='string'?POINTS[destinationId]:destinationId;
-  if(!a||!b) throw new Error('Localização desconhecida.');
-  const pointKey=point=>point.id||`${Number(point.lng).toFixed(5)},${Number(point.lat).toFixed(5)}`;
-  const key=`${pointKey(a)}:${pointKey(b)}`;
-  let road=roadRouteCache.get(key);
-  if(!road){
-    const controller=new AbortController();
-    const timeout=setTimeout(()=>controller.abort(),12000);
-    try{
-      const coordinates=`${a.lng},${a.lat};${b.lng},${b.lat}`;
-      const response=await fetch(`https://router.project-osrm.org/route/v1/driving/${coordinates}?overview=full&geometries=geojson&steps=false`,{headers:{Accept:'application/json'},signal:controller.signal});
-      if(!response.ok)throw new Error(`Serviço rodoviário indisponível (${response.status}).`);
-      const payload=await response.json(),route=payload?.routes?.[0];
-      if(payload?.code!=='Ok'||!route?.geometry?.coordinates?.length)throw new Error('Não existe um percurso rodoviário entre estes locais.');
-      road={coordinates:route.geometry.coordinates,distance:Math.round(route.distance),duration:Math.max(1,Math.round(route.duration))};
-      roadRouteCache.set(key,road);
-    }catch(error){
-      if(error?.name==='AbortError')throw new Error('O cálculo do percurso rodoviário demorou demasiado. Tenta novamente.');
-      throw new Error(error?.message||'Não foi possível calcular o percurso rodoviário. Tenta novamente.');
-    }finally{clearTimeout(timeout);}
-  }
-  const duration=Math.max(1,Math.round(road.duration*conditionsFactor(conditions)));
-  return {...road,duration,times:routeTimes(road.coordinates,duration),source:'OSRM / OpenStreetMap'};
-}
+export const fetchRoadRoute = (originId,destinationId,conditions=null) => fetchRoadRouteEngine(POINTS,originId,destinationId,conditions);
 const makeBase=(service,point)=>({...point,id:uid(),service,node:point.id,name:`${SERVICES[service].name} · ${point.name}`,level:1,capacity:2,staff_capacity:14,personnel:service==='fire'?10:6,extensions:[],specialization:'general'});
 const makeCommandCenter=(name,point,radius=35)=>({id:uid(),name,center_node:point.id,city:point.city,land:point.land,lng:point.lng,lat:point.lat,radius_km:radius,active:true,created_at:new Date().toISOString()});
 const commandCenterFor=(g,id)=>g.command_centers?.find(center=>center.id===id&&center.active!==false);
@@ -231,34 +129,12 @@ const freePeople=(g,base,training=null)=>(g.personnel||[]).filter(person=>person
 const freePersonnel=(g,base)=>g.personnel?.length?freePeople(g,base).length:Math.max(0,(base.personnel||0)-assignedPersonnel(g,base.id)-trainingPersonnel(g,base.id));
 const addPersonnel=(g,base,count)=>{g.personnel=g.personnel||[];const start=g.personnel.length;for(let index=0;index<count;index++)g.personnel.push({id:uid(),name:PERSONNEL_NAMES[(start+index)%PERSONNEL_NAMES.length],service:base.service,base_id:base.id,unit_id:null,status:'available',qualifications:[],fatigue:0,recruited_at:g.elapsed});};
 const assignUnitCrew=(g,unit,definition)=>{if(!g.personnel?.length)return;const base=g.bases.find(item=>item.id===unit.base_id);const candidates=freePeople(g,base,definition.training||null).slice(0,definition.crew);candidates.forEach(person=>{person.unit_id=unit.id;person.status='assigned';});unit.personnel_ids=candidates.map(person=>person.id);unit.crew_assigned=candidates.length;unit.status=candidates.length>=definition.crew?'available':'uncrewed';};
-const facilityOccupancy=(g,facility)=>facility.type==='hospital'?(g.patients||[]).filter(p=>p.hospital_id===facility.id&&['transporting','admitted'].includes(p.status)).length:(g.prisoners||[]).filter(p=>p.prison_id===facility.id&&['transporting','detained'].includes(p.status)).length;
-const hospitalSpecialtyCapacity=(facility,specialty)=>facility.type!=='hospital'?0:(facility.specialty_capacity?.[specialty]||0)+(specialty==='urgency'?facility.capacity:0);
-const hospitalSpecialtyOccupancy=(g,facility,specialty)=>(g.patients||[]).filter(patient=>patient.hospital_id===facility.id&&['transporting','admitted'].includes(patient.status)&&(patient.specialty===specialty||specialty==='urgency')).length;
-const hospitalCanReceive=(g,facility,patient)=>facility?.type==='hospital'&&operationalFacility(g,facility)&&facility.enabled!==false&&facilityOccupancy(g,facility)<facility.capacity&&(hospitalSpecialtyCapacity(facility,patient.specialty)>hospitalSpecialtyOccupancy(g,facility,patient.specialty)||(facility.specialties||[]).includes('urgency'));
 const operationalFacility=(g,facility)=>facility&&(!facility.operational_at||facility.operational_at<=g.elapsed);
 const makeFacility=(type,point)=>({id:uid(),type,node:point.id,name:`${FACILITY_CATALOG[type].name} · ${point.name}`,city:point.city,land:point.land,lng:point.lng,lat:point.lat,level:1,capacity:FACILITY_CATALOG[type].capacity,specialties:type==='hospital'?['urgency']:[],specialty_capacity:type==='hospital'?{urgency:FACILITY_CATALOG[type].capacity}:{}});
 const vehicleDefinition=(service,type)=>VEHICLE_CATALOG[service]?.find(v=>v.id===type)||VEHICLE_CATALOG[service]?.[0];
 const vehicleById=type=>Object.entries(VEHICLE_CATALOG).flatMap(([service,vehicles])=>vehicles.map(vehicle=>({...vehicle,service}))).find(vehicle=>vehicle.id===type);
-const vehicleTraining=type=>vehicleById(type)?.training||VEHICLE_TRAINING[type]||null;
-const requiredTrainingsFor=definition=>[...new Set([...(definition?.training||[]),...(definition?.vehicle||[]).map(vehicleTraining)].filter(Boolean))];
-const trainedOnScene=(g,onscene,training)=>onscene.flatMap(unit=>unit.personnel_ids||[]).map(id=>g.personnel.find(person=>person.id===id)).filter(Boolean).some(person=>(person.qualifications||[]).includes(training));
-const vehicleCapabilityExists=(g,type,commandCenterId=null)=>g.units.some(unit=>unit.vehicle_type===type&&(!commandCenterId||g.bases.find(base=>base.id===unit.base_id)?.command_center_id===commandCenterId));
-const trainingCapabilityExists=(g,training,commandCenterId=null)=>g.personnel.some(person=>(person.qualifications||[]).includes(training)&&(!commandCenterId||g.bases.find(base=>base.id===person.base_id)?.command_center_id===commandCenterId));
-const mergeIncidentRequirements=(g,inc,requirements,force=false)=>{
-  if(!requirements)return false;
-  let changed=false;
-  Object.entries(requirements.needs||{}).forEach(([service,count])=>{const value=(inc.needs[service]||0)+count;if(value!==inc.needs[service]){inc.needs[service]=value;changed=true;}});
-  (requirements.vehicles||[]).forEach(type=>{if(!force&&!vehicleCapabilityExists(g,type,inc.command_center_id))return;if(!(inc.required_vehicle_types||[]).includes(type)){inc.required_vehicle_types=[...(inc.required_vehicle_types||[]),type];changed=true;}});
-  (requirements.trainings||[]).forEach(training=>{if(!force&&!trainingCapabilityExists(g,training,inc.command_center_id))return;if(!(inc.required_trainings||[]).includes(training)){inc.required_trainings=[...(inc.required_trainings||[]),training];changed=true;}});
-  if(changed)inc.required_personnel=Object.values(inc.needs||{}).reduce((sum,count)=>sum+count*2,0);
-  return changed;
-};
-const readinessFor=(g,inc,onscene)=>({
-  services:Object.entries(inc.needs||{}).every(([service,count])=>onscene.filter(u=>u.service===service).length>=count),
-  vehicles:(inc.required_vehicle_types||[]).every(type=>onscene.some(u=>u.vehicle_type===type)),
-  personnel:onscene.reduce((sum,u)=>sum+(u.crew_assigned||0),0)>=(inc.required_personnel||0),
-  trainings:(inc.required_trainings||[]).every(training=>trainedOnScene(g,onscene,training)),
-});
+const vehicleTraining=type=>vehicleTrainingEngine(type,vehicleById);
+const requiredTrainingsFor=definition=>requiredTrainingsForEngine(definition,vehicleById);
 const addUnit=(g,base,vehicleType=null)=>{
   const definition=vehicleDefinition(base.service,vehicleType);
   const crewAvailable=freePersonnel(g,base);
@@ -334,20 +210,6 @@ export function newGame(){
   log(g,'Portugal · Central do Porto operacional. Modo local ativo.','success');
   return initializeAdvancedState(g);
 }
-const startRoute=(unit,plan,status,destination)=>{unit.status=status;unit.route=plan.coordinates;unit.route_times=plan.times;unit.travel=0;unit.travel_total=plan.duration;unit.route_distance=plan.distance;unit.destination=destination;unit.lng=plan.coordinates[0][0];unit.lat=plan.coordinates[0][1];unit.x=unit.lng;unit.y=unit.lat;};
-const locate=unit=>{
-  const times=unit.route_times||[], points=unit.route||[];
-  if(points.length<2||times.length<2)return;
-  const elapsed=Math.min(unit.travel,unit.travel_total); let i=0;
-  while(i<times.length-2&&times[i+1]<=elapsed)i++;
-  const span=times[i+1]-times[i], t=span?Math.max(0,Math.min(1,(elapsed-times[i])/span)):1;
-  unit.lng=points[i][0]+(points[i+1][0]-points[i][0])*t; unit.lat=points[i][1]+(points[i+1][1]-points[i][1])*t; unit.x=unit.lng;unit.y=unit.lat;
-};
-const returnToBase=(g,unit)=>{
-  const base=g.bases.find(b=>b.id===unit.base_id);unit.incident_id=null;unit.staging_area_id=null;
-  if(unit.road_return_plan){const plan=unit.road_return_plan;unit.road_return_plan=null;startRoute(unit,plan,'returning',base.node);return;}
-  unit.status='available';unit.node=base.node;unit.lng=base.lng;unit.lat=base.lat;unit.x=base.lng;unit.y=base.lat;unit.route=[];unit.route_times=[];
-};
 const createAftercare=(g,incident)=>{
   if(incident.false_alarm)return;
   if((incident.casualties||0)>0){
@@ -373,7 +235,6 @@ const resolveIncident=(g,incident,success)=>{
   else{const penalty=Math.min(g.money,Math.round(incident.reward*.08));g.money-=penalty;g.expenses+=penalty;g.failed++;g.trust=Math.max(0,g.trust-6);}
   g.incidents=g.incidents.filter(i=>i.id!==incident.id);
 };
-const operationalUnit=unit=>unit.enabled!==false&&['available','patrol','staged'].includes(unit.status);
 const mobilize=(g,incident,units,routes={},returnRoutes={})=>{
   requireValue(units.length&&units.every(operationalUnit),'Não existem meios disponíveis para este despacho.');
   requireValue(units.every(unit=>unit.land===incident.land),'Sem ligação rodoviária para esta ocorrência.');
@@ -383,42 +244,10 @@ const mobilize=(g,incident,units,routes={},returnRoutes={})=>{
   incident.status='enroute';incident.deadline=Math.max(incident.deadline,g.elapsed+Math.max(...units.map(unit=>unit.travel_total))+180);log(g,`${units.length} unidade(s) mobilizada(s) pela rede rodoviária.`);
 };
 export function selectArrUnitIds(g,incidentId,arrId){
-  const inc=g.incidents.find(i=>i.id===incidentId),arr=g.arrs.find(item=>item.id===arrId);requireValue(inc&&arr,'Ocorrência ou regulamento inválido.');
-  const pool=g.units.filter(unit=>operationalUnit(unit)&&unit.exclude_from_arr!==true&&unit.land===inc.land),chosen=[];
-  for(const [type,count] of Object.entries(arr.vehicles||{}))pool.filter(unit=>unit.vehicle_type===type&&!chosen.includes(unit)).slice(0,count).forEach(unit=>chosen.push(unit));
-  for(const [service,need] of Object.entries(inc.needs)){const already=g.units.filter(unit=>unit.incident_id===inc.id&&unit.service===service).length;const count=Math.min(Math.max(0,need-already),arr.resources[service]||0);const specific=(inc.required_vehicle_types||[]).map(type=>pool.find(unit=>unit.service===service&&unit.vehicle_type===type&&!chosen.includes(unit))).filter(Boolean);specific.slice(0,count).forEach(unit=>chosen.push(unit));pool.filter(unit=>unit.service===service&&!chosen.includes(unit)).slice(0,Math.max(0,count-specific.length)).forEach(unit=>chosen.push(unit));}
-  requireValue(chosen.length,'O RAR não encontrou meios compatíveis disponíveis.');return chosen.map(unit=>unit.id);
+  return selectArrUnitIdsEngine(g,incidentId,arrId,{requireValue});
 }
 export function selectRecommendedUnitIds(g,incidentId,mode='safe'){
-  const inc=g.incidents.find(i=>i.id===incidentId);requireValue(inc,'Ocorrência inválida.');
-  const assigned=g.units.filter(unit=>unit.incident_id===inc.id),chosen=[];
-  const available=g.units.filter(unit=>operationalUnit(unit)&&unit.exclude_from_arr!==true&&unit.land===inc.land&&(unit.condition||100)>20&&(unit.fatigue||0)<90);
-  const modeKey=['minimum','safe','full'].includes(mode)?mode:'safe';
-  const serviceNeedMultiplier=modeKey==='minimum'?1:modeKey==='full'?1.6:inc.priority===1?1.35:1.15;
-  const reserveWeight=modeKey==='full'?0:1;
-  const score=unit=>{
-    const definition=vehicleDefinition(unit.service,unit.vehicle_type),specialist=(inc.required_vehicle_types||[]).includes(unit.vehicle_type),trained=(unit.personnel_ids||[]).some(id=>{const person=(g.personnel||[]).find(item=>item.id===id);return (inc.required_trainings||[]).some(training=>(person?.qualifications||[]).includes(training));});
-    return distanceMeters(unit,inc)+(unit.status==='staged'?-2500:0)+(unit.status==='patrol'?-1200:0)+(specialist?-3200:0)+(trained?-1400:0)+(definition?.training?-400:0)+(unit.fatigue||0)*90+(100-(unit.condition||100))*60;
-  };
-  const reserveOk=unit=>{
-    const reserve=g.dispatch_policy?.reserve_by_service?.[unit.service]||0;
-    return available.filter(candidate=>candidate.service===unit.service&&!chosen.includes(candidate)).length>reserve*reserveWeight;
-  };
-  const pickUnit=(predicate,required=true)=>{
-    const unit=available.filter(unit=>!chosen.includes(unit)&&predicate(unit)&&reserveOk(unit)).sort((a,b)=>score(a)-score(b))[0]
-      || available.filter(unit=>!chosen.includes(unit)&&predicate(unit)).sort((a,b)=>score(a)-score(b))[0];
-    if(unit)chosen.push(unit);
-    else if(required)throw new Error('Não há meios compatíveis suficientes para despacho recomendado.');
-  };
-  (inc.required_vehicle_types||[]).forEach(type=>pickUnit(unit=>unit.vehicle_type===type));
-  (inc.required_trainings||[]).forEach(training=>pickUnit(unit=>(unit.personnel_ids||[]).some(id=>(g.personnel||[]).find(person=>person.id===id)?.qualifications?.includes(training))));
-  Object.entries(inc.needs||{}).forEach(([service,count])=>{
-    const already=assigned.filter(unit=>unit.service===service).length+chosen.filter(unit=>unit.service===service).length;
-    const target=Math.ceil(count*serviceNeedMultiplier);
-    for(let index=already;index<target;index++)pickUnit(unit=>unit.service===service,index<count);
-  });
-  requireValue(chosen.length,'Não há meios disponíveis para despacho recomendado.');
-  return [...new Set(chosen.map(unit=>unit.id))];
+  return selectRecommendedUnitIdsEngine(g,incidentId,mode,{requireValue,distanceMeters,vehicleDefinition});
 }
 export function tickGame(input,seconds){
   const g=initializeAdvancedState(clone(input)), dt=seconds*g.speed;if(!dt)return g;g.elapsed+=dt;
@@ -601,7 +430,7 @@ export function applyAction(input,kind,data={}){
   }
   else if(kind==='transport_patient'){
     const patient=g.patients.find(item=>item.id===data.patient_id&&item.status==='waiting'),hospital=g.facilities.find(item=>item.id===data.facility_id&&item.type==='hospital');requireValue(patient&&hospital,'Vítima ou hospital inválido.');requireValue(operationalFacility(g,hospital),'O hospital ainda está em construção.');
-    requireValue(hospitalCanReceive(g,hospital,patient),'Hospital sem capacidade compatível.');const unit=g.units.find(item=>item.id===data.unit_id&&item.service==='medical'&&operationalUnit(item))||g.units.filter(item=>item.service==='medical'&&operationalUnit(item)&&item.land===hospital.land).sort((a,b)=>distanceMeters(a,POINTS[patient.source_node])-distanceMeters(b,POINTS[patient.source_node]))[0];requireValue(unit,'Sem ambulâncias disponíveis.');requireValue(data.routes?.pickup&&data.routes?.delivery&&data.routes?.back,'Rotas de transporte não preparadas.');
+    requireValue(hospitalCanReceive(g,hospital,patient,operationalFacility),'Hospital sem capacidade compatível.');const unit=g.units.find(item=>item.id===data.unit_id&&item.service==='medical'&&operationalUnit(item))||g.units.filter(item=>item.service==='medical'&&operationalUnit(item)&&item.land===hospital.land).sort((a,b)=>distanceMeters(a,POINTS[patient.source_node])-distanceMeters(b,POINTS[patient.source_node]))[0];requireValue(unit,'Sem ambulâncias disponíveis.');requireValue(data.routes?.pickup&&data.routes?.delivery&&data.routes?.back,'Rotas de transporte não preparadas.');
     patient.status='transporting';patient.hospital_id=hospital.id;unit.task_id=patient.id;unit.transport_kind='patient';unit.transport_facility_id=hospital.id;unit.transport_facility_node=hospital.node;unit.transport_phase='pickup';unit.transport_delivery_plan=data.routes.delivery;unit.transport_return_plan=data.routes.back;startRoute(unit,data.routes.pickup,'transporting',patient.source_node);log(g,`${unit.name} iniciou deslocação para recolher a vítima e seguir para ${hospital.name}.`);
   }
   else if(kind==='transport_prisoner'){
