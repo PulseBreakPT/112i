@@ -16,7 +16,7 @@ class RoadRouter:
         self.lock = asyncio.Lock()
         self.last_request = 0.0
         self.client = httpx.AsyncClient(timeout=httpx.Timeout(15.0, connect=5.0),
-                                       headers={'User-Agent': 'NEXO112-GeographicSimulation/1.0'})
+                                       headers={'User-Agent': 'Distrito112-GeographicSimulation/1.0'})
 
     async def close(self):
         await self.client.aclose()

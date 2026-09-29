@@ -1,5 +1,5 @@
 """
-Game API Sanity Tests for NEXO 112
+Game API Sanity Tests for Distrito 112
 Tests basic game operations: create, pause, tick, speed changes, persistence
 """
 import requests
@@ -39,7 +39,7 @@ def test_health():
         response = requests.get(f"{BACKEND_URL}/", timeout=10)
         if response.status_code == 200:
             data = response.json()
-            if data.get('status') == 'operational' and data.get('name') == 'NEXO 112':
+            if data.get('status') == 'operational' and data.get('name') == 'Distrito 112':
                 log_test("Health endpoint", True, f"Status: {data.get('status')}, Name: {data.get('name')}")
                 return True
             else:
@@ -322,7 +322,7 @@ def print_summary():
 def main():
     """Run all game API sanity tests"""
     print("="*70)
-    print("NEXO 112 - Game API Sanity Tests")
+    print("Distrito 112 - Game API Sanity Tests")
     print("Testing: health, world, create, pause, tick, speed, persistence")
     print("="*70)
     

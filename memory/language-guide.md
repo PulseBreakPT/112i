@@ -1,4 +1,4 @@
-# NEXO 112 — Guia de linguagem PT-PT
+# Distrito 112 — Guia de linguagem PT-PT
 
 - Tom neutro, claro e operacional. Sem frases promocionais, elogios ou anglicismos desnecessários.
 - Dirige as instruções ao jogador por tu: seleciona, mobiliza, consulta, guarda, acompanha.

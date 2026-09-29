@@ -1,5 +1,5 @@
 """
-Phase 1 Backend Integration Tests for NEXO 112 Road Routing
+Phase 1 Backend Integration Tests for Distrito 112 Road Routing
 Tests real OSRM integration, cache, rate limiting, and MAP_STYLE_URL
 """
 import os
@@ -311,7 +311,7 @@ def print_summary():
 def main():
     """Run all tests"""
     print("="*70)
-    print("NEXO 112 - Phase 1 Backend Integration Tests")
+    print("Distrito 112 - Phase 1 Backend Integration Tests")
     print("Testing Real OSRM Road Routing Integration")
     print("="*70)
     

@@ -3,6 +3,7 @@ import { Radio, Pause, Play, Volume2, VolumeX, Save, Crosshair, SlidersHorizonta
 import { Link } from 'react-router-dom';
 import { IconButton } from './Shell';
 import { clock, money } from './common';
+import { APP_NAME, BRAND_WORD, BRAND_NUMBER } from './branding';
 
 export function GameHUD({ game, act, sound, setSound, onSave, error }) {
   const [optionsOpen, setOptionsOpen] = useState(false);
@@ -15,7 +16,7 @@ export function GameHUD({ game, act, sound, setSound, onSave, error }) {
   }, [optionsOpen]);
   const rank = game.level === 1 ? 'Operador em formação' : game.level < 4 ? 'Operador' : 'Coordenador de operações';
   return <header className="minimal-hud" aria-label="Painel de comando">
-    <Link to="/" className="minimal-brand" data-testid="brand-home" aria-label="NEXO 112 — voltar ao mapa"><Radio size={18} /><span data-testid="game-brand">NEXO<span>112</span></span></Link>
+    <Link to="/" className="minimal-brand" data-testid="brand-home" aria-label={`${APP_NAME} — voltar ao mapa`}><Radio size={18} /><span className="brand-wordmark" data-testid="game-brand">{BRAND_WORD}{' '}<span>{BRAND_NUMBER}</span></span></Link>
     <div className="minimal-readout">
       <div className="hud-stat hud-budget"><small>Orçamento</small><span className="minimal-budget" data-testid="user-budget-display" title={money(game.money)}>{money(game.money)}</span></div>
       <div className="hud-stat hud-time" data-paused={!game.speed}><small>{game.speed ? 'Turno' : 'Em pausa'}</small><b data-testid="game-clock">{clock(game.elapsed).slice(0, 5)}</b></div>

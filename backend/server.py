@@ -19,7 +19,7 @@ load_dotenv(Path(__file__).parent / '.env')
 client = AsyncIOMotorClient(os.environ['MONGO_URL'])
 db = client[os.environ['DB_NAME']]
 road_router = RoadRouter(db)
-app = FastAPI(title='NEXO 112 · Central de Operações')
+app = FastAPI(title='Distrito 112 · Central de Operações')
 api = APIRouter(prefix='/api')
 locks = {}
 
@@ -65,7 +65,7 @@ async def save_game(game):
 
 @api.get('/')
 async def health():
-    return {'status': 'operational', 'name': 'NEXO 112'}
+    return {'status': 'operational', 'name': 'Distrito 112'}
 
 @api.get('/road-routes/{origin_id}/{destination_id}')
 async def road_route(origin_id: str, destination_id: str):

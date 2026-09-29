@@ -19,6 +19,8 @@ import { beep } from './game/common';
 import { ambientAudio } from './game/ambientAudio';
 import { useAmbientAudio } from './game/useAmbientAudio';
 import EventEffects from './game/EventEffects';
+import { APP_NAME, BRAND_WORD, BRAND_NUMBER } from './game/branding';
+import { SOUND_PREFERENCE_KEY } from './game/storageCompatibility';
 import './Silver.css';
 import './game/semantics.css';
 import './Immersive.css';
@@ -40,13 +42,13 @@ function GameApp() {
   const [focusKey, setFocusKey] = useState(0);
   const [panel, setPanel] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [sound, setSoundState] = useState(() => localStorage.getItem('nexo-sound') !== 'false');
+  const [sound, setSoundState] = useState(() => localStorage.getItem(SOUND_PREFERENCE_KEY) !== 'false');
   const sequence = useRef(null);
   const audioActive = !!game && !!game.speed && isCentral;
   useAmbientAudio(sound, audioActive);
   const setSound = value => {
     setSoundState(value);
-    localStorage.setItem('nexo-sound', String(value));
+    localStorage.setItem(SOUND_PREFERENCE_KEY, String(value));
     ambientAudio.configure(value, audioActive);
     if (value) ambientAudio.unlock();
   };
@@ -82,13 +84,13 @@ function GameApp() {
   const focusIncident = () => { setPanel(null); setFocusKey(k => k + 1); };
   const openPanel = value => { setMenuOpen(false); setPanel(value); if (!isCentral) navigate('/'); };
 
-  if (!game || !world) return <div className="loading-screen" data-testid="loading-screen"><Radio size={40} /><h1>NEXO<span>112</span></h1>{error ? <><p data-testid="loading-error">{error}</p><button data-testid="retry-connection" className="primary-button" onClick={retry}>Voltar a ligar</button></> : <><LoaderCircle className="spinner" size={20} /><p>A estabelecer ligação à central…</p></>}</div>;
+  if (!game || !world) return <div className="loading-screen" data-testid="loading-screen"><Radio size={40} /><h1 className="brand-wordmark" aria-label={APP_NAME}>{BRAND_WORD}{' '}<span>{BRAND_NUMBER}</span></h1>{error ? <><p data-testid="loading-error">{error}</p><button data-testid="retry-connection" className="primary-button" onClick={retry}>Voltar a ligar</button></> : <><LoaderCircle className="spinner" size={20} /><p>A estabelecer ligação à central…</p></>}</div>;
   const incident = game.incidents.find(i => i.id === selected);
   const waitingIncidents = game.incidents.filter(item => item.status === 'waiting');
   const queueTone = waitingIncidents.some(item => item.priority === 1) ? 'danger' : waitingIncidents.length ? 'warning' : game.incidents.length ? 'active' : 'success';
   const workspaceName = { '/comando':'Áreas operacionais', '/estrategia':'Estratégia operacional', '/bases': 'Rede de bases', '/frota': 'Frota de emergência', '/operacoes': 'Operações e apoio', '/relatorios': 'Relatório do turno', '/definicoes': 'Definições' }[location.pathname] || 'Setor não encontrado';
 
-  return <div className={`app-shell immersive-shell minimal-shell nexo-interface dark ${isCentral ? 'central-open' : 'workspace-open'} ${panel && isCentral ? `panel-open panel-${panel}` : ''}`}>
+  return <div className={`app-shell immersive-shell minimal-shell distrito-interface dark ${isCentral ? 'central-open' : 'workspace-open'} ${panel && isCentral ? `panel-open panel-${panel}` : ''}`}>
     <main className="world-stage" aria-label="Mapa operacional" inert={!isCentral || menuOpen}>
       <CityMap world={world} game={game} selected={selected} onSelect={selectIncident} onCall={call} focusKey={focusKey} active={isCentral && !menuOpen} />
     </main>

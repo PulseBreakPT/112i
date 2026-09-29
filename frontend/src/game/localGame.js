@@ -2,7 +2,7 @@ import { EXTENSIONS, SPECIALIZATIONS, VEHICLE_CATALOG, POIS, MISSION_DEFINITIONS
 import { NEW_SCENARIOS } from './expansionContent';
 import { applyAdvancedAction, initializeAdvancedState, tickAdvancedState } from './advancedSimulation';
 
-const SAVE_KEY = 'nexo112-offline-save-v1';
+import { GAME_SAVE_KEY as SAVE_KEY } from './storageCompatibility';
 
 const SERVICES = {
   fire: { name: 'Bombeiros', vehicle: 'Veículo de combate a incêndios', short: 'VFCI', price: 5000, base_price: 10000 },

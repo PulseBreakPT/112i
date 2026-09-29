@@ -1,4 +1,4 @@
-# NEXO 112 — Programa integral de simulação
+# Distrito 112 — Programa integral de simulação
 
 Este documento transforma a auditoria de lógica num plano executável. Cada fase deve preservar os saves existentes, incluir testes do motor e terminar numa versão jogável.
 

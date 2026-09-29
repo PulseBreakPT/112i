@@ -1,6 +1,6 @@
 # Créditos das fotografias de viaturas
 
-As imagens WebP desta pasta são recortes com fundo transparente derivados das fotografias abaixo. Os recortes preservam a viatura e removem apenas o cenário, pessoas e chão. As imagens são usadas no catálogo de viaturas do NEXO 112.
+As imagens WebP desta pasta são recortes com fundo transparente derivados das fotografias abaixo. Os recortes preservam a viatura e removem apenas o cenário, pessoas e chão. As imagens são usadas no catálogo de viaturas do Distrito 112.
 
 | Ficheiro | Fotografia de origem | Autor | Licença |
 | --- | --- | --- | --- |

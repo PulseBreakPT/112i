@@ -12,8 +12,8 @@ const EMPTY = { type: 'FeatureCollection', features: [] };
 
 function calmCartography(map, detailed = false) {
   // Mantém a cartografia OpenStreetMap, mas trata-a como contexto operacional.
-  if (!map.__nexoLayerState) {
-    map.__nexoLayerState = Object.fromEntries(map.getStyle().layers.map(layer => [
+  if (!map.__distritoLayerState) {
+    map.__distritoLayerState = Object.fromEntries(map.getStyle().layers.map(layer => [
       layer.id,
       { visibility: layer.layout?.visibility || 'visible', minzoom: layer.minzoom ?? 0, maxzoom: layer.maxzoom ?? 24 },
     ]));
@@ -22,7 +22,7 @@ function calmCartography(map, detailed = false) {
   for (const layer of map.getStyle().layers) {
     if (layer.source === 'operational-routes') continue;
     const name = layer.id.toLowerCase();
-    const original = map.__nexoLayerState[layer.id] || { visibility: 'visible', minzoom: 0, maxzoom: 24 };
+    const original = map.__distritoLayerState[layer.id] || { visibility: 'visible', minzoom: 0, maxzoom: 24 };
     const isPoi = /poi|housenumber|address|amenity|shop|school|hospital|parking|transit|station|airport|ferry/.test(name);
     const isMinorLabel = /village|suburb|neighbour|hamlet|highway-name-minor|road-label-minor|street-label|path-label/.test(name);
     const isPlace = /place|city|town|village|suburb|neighbour|hamlet/.test(name);

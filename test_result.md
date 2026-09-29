@@ -102,8 +102,22 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Latest: significantly improve and unify ALL menus and HUDs using the same graphite background/material as the HUD, SSS-tier quality, preserving minimal map-first layout. User explicitly reaffirmed: Não corrigir a dependência, uniformiza e melhora os huds. No dependency, environment, backend, provider, gameplay or save changes authorized."
+user_problem_statement: "Latest approved: replace all active app-brand references with Distrito 112, including HUD/loading/legacy header, accessibility, HTML metadata, reports, API identity, internal names and docs; adapt longer wordmark for mobile. Preserve saves/preferences via historical compatibility storage keys. No dependencies, environment, URLs, gameplay, user-authored names or database data changes. No integrations required."
 backend:
+  - task: "Distrito 112 backend identity"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Only changed FastAPI title and GET /api/ name to Distrito 112, plus RoadRouter User-Agent to Distrito112-GeographicSimulation/1.0. Existing test name expectation updated. No contracts, routes, DB/config/env/URL/dependency changes. Python lint passes. Read-only static identity validation plus one GET /api/ if available requested; runtime previously blocked by missing networkx/env, do NOT repair."
+      - working: "NA"
+        agent: "testing"
+        comment: "✅ STATIC VALIDATION PASSED: Verified all rebrand strings in source code via read-only inspection. backend/server.py line 22: FastAPI title='Distrito 112 · Central de Operações' ✓. backend/server.py lines 66-68: GET /api/ returns {'status':'operational','name':'Distrito 112'} ✓. backend/road_routing.py line 19: User-Agent='Distrito112-GeographicSimulation/1.0' ✓. game_api_test.py line 42: health test expects name=='Distrito 112' ✓. ❌ RUNTIME HTTP BLOCKED: Backend service supervisor status RUNNING but ModuleNotFoundError 'networkx' prevents server startup, port 8001 refuses connections. Cannot perform GET /api/ verification. Per constraints: no installs, no repairs, stopped on runtime blocker. Static code changes confirmed correct; HTTP behavior untested."
   - task: "Real OSRM road routing integration"
     implemented: true
     working: true
@@ -150,6 +164,17 @@ backend:
         agent: "testing"
         comment: "✅ ALL BACKEND SANITY TESTS PASSED (12/12). Fixed missing networkx dependency (already in requirements.txt, just needed installation). Restored missing /app/backend/.env file with standard configuration (MONGO_URL=mongodb://localhost:27017, DB_NAME=nexo112, OSRM_URL, MAP_STYLE_URL, CORS_ORIGINS for both preview aliases). Backend now operational. Created game_api_test.py for sanity checks. Tested: health endpoint (operational), world endpoint (portugal-v1, 13 sites, 4 regions), game creation (disposable game ID: 915aaff0-b04c-4497-bd45-c705136b6487), pause (speed 0), tick while paused (elapsed unchanged), speed change to 1, tick at speed 1 (elapsed +2s), pause after tick, persistence (save/read working correctly with saved_at timestamps). All game API operations working as expected."
 frontend:
+  - task: "Distrito 112 complete application rebrand"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/game/branding.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Shared branding.js used by GameHUD, loading screen, legacy Header, accessible names and report filename. HTML title/description/noscript, CSS brand comments/tokens/classes/container and transient map property renamed. Wordmark includes actual space and mobile type size. Docs/attribution/workflow display label updated without configuration changes. All active source old-name references reduced to EXACTLY two historical localStorage keys in storageCompatibility.js; App/localGame use same values for reads and writes, no migration/deletion. Game state, filenames previously downloaded and player-authored names untouched. Backend lint/App lint pass; game-folder lint has no findings in modified branding consumers, but pre-existing empty catch (PortugalMap/localGame), undefined CarFront in DispatchPanel, Jest-global config errors; baseline verified, left untouched. No build/browser tests due existing blocked preview and permission pending."
   - task: "Unified graphite material across menus and HUDs"
     implemented: true
     working: "NA"
@@ -217,8 +242,8 @@ frontend:
         comment: "Implemented persistent fullscreen world-stage, compact floating GameHUD, operations dock, contextual mutually-exclusive drawers, close/ESC/map-focus interactions, overlay management workspaces with breadcrumb/back action, mobile bottom nav and sheets. Added semantics.css accents, colored map markers with grayscale terrain only, state-driven labels and report results. JS/Python lint and all CSS parsing passed. Backend testing first; frontend permission still pending."
 metadata:
   latest_design_direction: "Uniform all HUDs and menus with same graphite material, compact map-first. User reiterated no dependency fixes. Preserve service/state accents and existing gameplay."
-  latest_delivery: "Interface.css final import plus nexo-interface App.js class. Shared shells/cards/insets/headers/buttons/forms for HUDs, all menus, Comando/Estrategia, personnel/hospitals/RAR, portalled dialogs and toasts. Neutralized green/gold/blue page themes; responsive workspace containers and focus/disabled controls."
-  verification_scope: "App.js lint, backend server lint and diff whitespace passed. Read-only CSS cascade review only; no CSS parser/build/browser/screenshot verification. Frontend unavailable due missing node_modules and invalid fast-uri; user declined dependency fix. Latest read-only backend smoke BLOCKED by missing networkx and backend/.env, confirmed by troubleshooter; no repairs/installs/env writes/restarts performed."
+  latest_delivery: "Distrito 112 complete active rebrand, shared frontend branding constants, distrito-interface CSS namespace, same historical storage IDs in isolated compatibility module. Static reference audit: only two intentional old-brand identifiers in active source; historical logs retained accurately. No dependencies/env/URLs/gameplay changes."
+  verification_scope: "Distrito 112 static reference audit and backend identity checks pass; active old brand only in 2 compatibility storage keys. Backend/App lint and diff whitespace pass. Wider frontend lint has pre-existing CarFront/empty-catch/Jest-global findings, confirmed baseline and untouched. No new CSS parser/build/browser/screenshot verification. Frontend blocked by missing node_modules/fast-uri; runtime API blocked by missing networkx/backend env. User declined environment/dependency fixes; no repairs/install/restarts/mutations occurred."
   visual_artifacts: "Historical artifacts only; no new rendered UI screenshots in this task"
   created_by: "main_agent"
   version: "1.0"
@@ -226,12 +251,15 @@ metadata:
   run_ui: false
 test_plan:
   current_focus:
-    - "Unified graphite material across menus and HUDs"
+    - "Distrito 112 backend identity"
+    - "Distrito 112 complete application rebrand"
   stuck_tasks:
     - "Frontend preview: unavailable fast-uri@3.2.2 resolution, user declined dependency changes"
   test_all: false
   test_priority: "high_first"
 agent_communication:
+  - agent: "main"
+    message: "LATEST REBRAND: Read-only BACKEND verification only. Validate server title/health name and road_routing User-Agent, Python AST if useful, plus existing expected health name. At most one actual GET /api/ using available configured service; known environment blocked. DO NOT install, edit/create env/config/source/package files, restart services, mutate games, call upstream providers or run frontend tests. Only test_result.md may be updated. Report static checks separately from unavailable HTTP runtime; stop on blocked service. No auth: read memory/test_credentials.md. Pre-existing frontend CarFront/empty-catch/Jest lint findings are OUT OF SCOPE."
   - agent: "main"
     message: "LATEST: Interface.css-only design delivery plus App.js class/import; backend unchanged. Read memory/test_credentials.md (no auth). Backend READ-ONLY sanity: health/world GETs only using existing service config, no game mutations or upstream requests. CRITICAL: do not install ANYTHING, do not create/edit env files, no package/lock/source changes, no service restarts. If unavailable report blocked and STOP. Do not run frontend/browser tests; permission pending and frontend dependency fix explicitly declined. May update this test log only."
   - agent: "main"
@@ -246,3 +274,5 @@ agent_communication:
     message: "✅ Backend sanity check COMPLETE (12/12 tests passed). Fixed environment setup: installed missing networkx dependency and restored /app/backend/.env file (was missing, causing backend startup failure). Backend now fully operational. Game API tested: health, world, create game, pause (speed 0), tick while paused, speed changes, tick at speed 1, persistence. All operations working correctly. Disposable test game created (ID: 915aaff0-b04c-4497-bd45-c705136b6487). Frontend testing blocked: no node_modules, yarn install fails on fast-uri@3.2.2, user declined dependency changes. Backend ready for UI delivery."
   - agent: "testing"
     message: "🚫 READ-ONLY sanity check BLOCKED. Backend service unavailable: ModuleNotFoundError 'networkx' preventing server startup. Supervisor shows RUNNING but port 8001 refuses connections. Previous testing agent's networkx installation and .env file no longer present. Per constraints (NO installs, NO edits, NO restarts), cannot fix setup. GET /api/ and GET /api/world unreachable. Frontend-only CSS/class changes (Interface.css, App.js) cannot be verified against backend. STOPPED as instructed."
+  - agent: "testing"
+    message: "✅ STATIC VALIDATION COMPLETE for Distrito 112 rebrand. Read-only verification confirmed all source code changes correct: FastAPI title, GET /api/ response name, RoadRouter User-Agent, and test expectation all properly updated to 'Distrito 112'. ❌ RUNTIME HTTP VERIFICATION BLOCKED: backend unavailable (missing networkx), cannot perform GET /api/ call. Per constraints: no repairs attempted, stopped on blocker. Static metadata assertions passed; HTTP behavior untested."

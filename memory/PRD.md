@@ -1,10 +1,27 @@
-# NEXO 112 — Current Design Handoff
+# Distrito 112 — Current Design Handoff
 
-## Latest task — uniform menus and HUDs (supersedes historical notes)
+## Latest task — complete rebrand to Distrito 112
+User explicitly approved replacing all active brand references, including internal identity, API, docs and exports, with compatibility exceptions for existing saves/preferences. Earlier prohibition on dependency/environment fixes remains in force.
+
+### Rebrand implementation
+- `game/branding.js` centralizes BRAND_WORD, BRAND_NUMBER, APP_NAME and REPORT_FILENAME. HUD, loading screen and legacy header render Distrito 112 with real text spacing, matching accessible names; exported report is `distrito112-relatorio.json` (JSON data schema unchanged).
+- HTML title/description/noscript, README, simulation roadmap, language guide, vehicle credits, test labels and workflow display name updated. No build configuration, links, package/lock or environment changes.
+- Interface.css custom properties/classes/container names now use `distrito-`; App.js root matches. Wordmark typography adapts to the longer name (18px desktop HUD, 16px mobile; responsive loading size). No changes to material, page flow or services/semantic colors.
+- Backend identity: FastAPI title `Distrito 112 · Central de Operações`, GET `/api/` name `Distrito 112`, router User-Agent `Distrito112-GeographicSimulation/1.0`. Request/response shapes, endpoints, DB selection and provider URLs unchanged.
+- Transient map-state property renamed consistently. Only TWO old-brand strings remain in active source, both intentionally kept in `game/storageCompatibility.js`. App and localGame import these identical historical storage IDs for reads AND writes. No migration, reset, deletion or duplicate saves; player-authored names/data untouched.
+- Historical testing log entries remain accurate; they are not active product branding.
+
+### Rebrand verification
+- Full source/public/backend reference inventory: old name only in the two intentional storage constants; no old-brand filenames. App.js and backend lint pass, modified branding consumers/modules have no lint findings.
+- Read-only backend identity checks PASS (title, health return, User-Agent, test expectation); HTTP verification BLOCKED by existing missing networkx/.env. No repair, install, restart or mutation attempted.
+- Wider frontend lint exposes PRE-EXISTING empty catches in PortugalMap/localGame, missing CarFront import in DispatchPanel (crash risk when rendering unit groups), and missing Jest lint globals. Confirmed against baseline; not fixed without permission.
+- No browser/build verification or screenshots. Preview still blocked by unavailable frontend dependencies; frontend test permission pending. Once independently available and authorized, verify branding everywhere, report filename, existing-save/sound retention and wordmark overflow at 1920x800 / 390x844. Do NOT fix dependencies or create an alternate preview without explicit permission.
+
+## Previous task — uniform menus and HUDs
 User requested SSS-tier unification of all menus using the same background/material as the HUD, then explicitly confirmed: “Não corrigir a dependência, uniformiza e melhora os huds”. Dependencies and environment must remain untouched.
 
 ### Latest delivery
-- Added `frontend/src/Interface.css`, imported LAST after VehicleMedia.css. App.js adds `nexo-interface` to the existing minimal shell; no handlers/routes/game logic changed.
+- Added `frontend/src/Interface.css`, imported LAST after VehicleMedia.css. App.js adds `distrito-interface` to the existing minimal shell; no handlers/routes/game logic changed.
 - One graphite glass token for HUD islands, menu/turn controls, launchers, map controls, tactical drawers, workspace, portalled modals and toasts. Shared nested card/inset/header/button materials and consistent borders/radii/shadows.
 - Neutralized divergent green/gold Comando/Estratégia, personnel, hospital specialties and RAR controls, plus blue support surfaces. No decorative radar sweeps/rotated diamonds in menus. Preserved meaningful service/status colors.
 - Standardized headings, form fields (including PDI/command creation), focus, disabled/active states, secondary actions and silver primary actions. Kept compact map-first layout; container queries make grids respect actual workspace width, and mobile controls/forms adapt without touching map renderer or vehicle assets.

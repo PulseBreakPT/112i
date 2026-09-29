@@ -1,4 +1,4 @@
-# NEXO 112
+# Distrito 112
 
 Simulador português de gestão de emergências.
 
