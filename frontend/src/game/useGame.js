@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { WORLD, applyAction, fetchRoadRoute, loadLocalGame, saveLocalGame, selectArrUnitIds, selectRecommendedUnitIds, tickGame } from './localGame';
+import { WORLD, fetchRoadRoute, selectArrUnitIds, selectRecommendedUnitIds } from './localGame';
+import { localGameApi } from './gameApi';
 import { operationalText, presentGameCopy, presentWorldCopy } from './operationalLanguage';
 import { detectGameFeedback, failureFeedback } from './eventFeedback';
 
 const DISPLAY_WORLD = presentWorldCopy(WORLD);
 
 export function useGame() {
-  const [game, setGame] = useState(() => loadLocalGame());
+  const [game, setGame] = useState(() => localGameApi.load());
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState(null);
   const current = useRef(game);
@@ -19,7 +20,7 @@ export function useGame() {
 
   const update = useCallback((next, action = 'tick') => {
     const previous = current.current;
-    const saved = saveLocalGame(next);
+    const saved = localGameApi.save(next);
     current.current = saved;
     setGame(saved);
     publishFeedback(detectGameFeedback(previous, saved, action));
@@ -30,7 +31,7 @@ export function useGame() {
   useEffect(() => {
     const timer = setInterval(() => {
       if (document.hidden || !current.current?.speed) return;
-      update(tickGame(current.current, 2));
+      update(localGameApi.tick(current.current, 2));
     }, 2000);
     return () => clearInterval(timer);
   }, [update]);
@@ -126,7 +127,7 @@ export function useGame() {
         if(!unit||!base)throw new Error('A viatura não está numa zona de concentração.');
         data={...data,route:await fetchRoadRoute({lng:unit.lng,lat:unit.lat},base.node,current.current.conditions)};
       }
-      return update(applyAction(current.current, type, data), requestedType);
+      return update(localGameApi.action(current.current, type, data), requestedType);
     } catch (error) {
       const message = operationalText(error?.message || 'Não foi possível concluir a ação. Tenta novamente.');
       toast.error(message, { 'data-testid': 'action-error-toast' });
