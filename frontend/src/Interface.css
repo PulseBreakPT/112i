@@ -1,0 +1,553 @@
+/* NEXO 112 — shared interface material.
+   Import last. Compact.css owns the map-first layout; this file owns the finish.
+   Portalled dialogs use the same root tokens. No map filters or gameplay changes. */
+:root {
+  --nexo-font: 'Barlow', sans-serif;
+  --nexo-text: #f0f1f3;
+  --nexo-secondary: #c1c5cd;
+  --nexo-muted: #a2a8b3;
+  --nexo-edge: #ffffff24;
+  --nexo-divider: #ffffff12;
+  --nexo-focus: #d5e4ff;
+  --nexo-radius: 12px;
+  --nexo-card-radius: 9px;
+  --nexo-control-radius: 7px;
+  --nexo-glass: radial-gradient(ellipse at 8% 0%, #ffffff08, transparent 58%), linear-gradient(135deg, #222429f5, #17191ef7 55%, #111318fa);
+  --nexo-card: linear-gradient(135deg, #27292f, #1e2026 75%);
+  --nexo-inset: linear-gradient(180deg, #13151a, #191b20);
+  --nexo-header: linear-gradient(100deg, #ffffff05, #ffffff01);
+  --nexo-control: linear-gradient(135deg, #31343b, #25282f);
+  --nexo-hover: linear-gradient(125deg, #3b3e47, #2d3038);
+  --nexo-selected: linear-gradient(110deg, #ffffff12, #ffffff06);
+  --nexo-silver: linear-gradient(120deg, #eef0f4, #c7ccd5);
+  --nexo-shadow: 0 14px 38px #0005, 0 3px 9px #0003, inset 0 1px #ffffff0c;
+  --nexo-card-shadow: 0 3px 10px #0002, inset 0 1px #ffffff06;
+}
+.minimal-shell.nexo-interface, .game-modal {
+  --ui-surface: #191b20;
+  --ui-raised: #27292f;
+  --ui-inset: #14161b;
+  --ui-line: #383b44;
+  --ui-text: var(--nexo-text);
+  --ui-secondary: var(--nexo-secondary);
+  --ui-muted: var(--nexo-muted);
+  --text: var(--nexo-text);
+  --muted: var(--nexo-muted);
+  --border: var(--nexo-edge);
+  --compact-surface: var(--nexo-glass);
+  --compact-line: var(--nexo-edge);
+  --cinema-glass: var(--nexo-glass);
+  --panel-radius: var(--nexo-radius);
+  color-scheme: dark;
+  font-family: var(--nexo-font);
+}
+
+/* One identical shell, from the smallest HUD instrument to the largest menu.
+   Background blur is restricted to floating roots, never nested cards. */
+.minimal-shell.nexo-interface :is(
+  .minimal-brand, .minimal-readout, .hud-options, .game-menu, .layer-menu,
+  .menu-launcher > button, .map-layer-button, .map-zoom, .game-workspace,
+  .tactical-drawer > .incident-panel, .tactical-drawer > .dispatch-panel,
+  .incoming-call, .paused-label, .geo-map-loading, .geo-map-error, .connection-notice
+) {
+  background: var(--nexo-glass);
+  border: 1px solid var(--nexo-edge);
+  border-radius: var(--nexo-radius);
+  box-shadow: var(--nexo-shadow);
+  -webkit-backdrop-filter: blur(16px) saturate(.65);
+  backdrop-filter: blur(16px) saturate(.65);
+  text-shadow: none;
+}
+.minimal-shell.nexo-interface :is(.minimal-brand, .minimal-readout, .menu-launcher > button, .map-layer-button, .map-zoom, .incoming-call, .paused-label) {
+  border-radius: var(--nexo-control-radius);
+  box-shadow: 0 5px 18px #0004, inset 0 1px #ffffff0c;
+}
+.minimal-shell.nexo-interface :is(.game-menu, .hud-options, .game-workspace)::before,
+.minimal-shell.nexo-interface .tactical-drawer > :is(.incident-panel, .dispatch-panel)::before,
+.game-modal::before {
+  display: block;
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 16px;
+  right: 16px;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, #ffffff38, #ffffff0a, transparent);
+}
+.minimal-shell.nexo-interface :is(.game-menu, .hud-options)::after { display: none; }
+.minimal-shell.nexo-interface .game-workspace { container: nexo-workspace / inline-size; }
+.minimal-shell.nexo-interface .game-workspace .management-page { background: transparent; border: 0; }
+.minimal-shell.nexo-interface :is(.management-page, .incidents-scroll, .dispatch-content, .game-menu, .hud-options),
+.game-modal {
+  scrollbar-width: thin;
+  scrollbar-color: #565b66 transparent;
+  overscroll-behavior: contain;
+  scroll-padding-block: 16px;
+}
+
+/* Shared hierarchy: quiet labels, clear titles, one understated divider. */
+.minimal-shell.nexo-interface :is(.workspace-bar, .tactical-drawer .panel-heading) {
+  background: var(--nexo-header);
+  border-color: var(--nexo-divider);
+  box-shadow: none;
+  min-height: 46px;
+}
+.minimal-shell.nexo-interface :is(.game-menu-heading, .hud-options-heading) {
+  color: var(--nexo-muted);
+  font: 600 10px/1.5 var(--nexo-font);
+  letter-spacing: 1.15px;
+  border-color: var(--nexo-divider);
+}
+.minimal-shell.nexo-interface :is(.workspace-breadcrumb, .workspace-close) { color: var(--nexo-secondary); }
+.minimal-shell.nexo-interface .workspace-breadcrumb strong { color: var(--nexo-text); font-weight: 500; }
+.minimal-shell.nexo-interface .workspace-close kbd { border-color: var(--nexo-edge); color: var(--nexo-muted); }
+.minimal-shell.nexo-interface .game-workspace .page-heading {
+  padding-bottom: 18px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--nexo-divider);
+}
+.minimal-shell.nexo-interface .game-workspace .page-heading h1 {
+  color: var(--nexo-text);
+  font: 600 26px/1.15 var(--nexo-font);
+  letter-spacing: -.6px;
+  text-wrap: balance;
+}
+.minimal-shell.nexo-interface .game-workspace .page-heading p { color: var(--nexo-muted); font-size: 13px; line-height: 1.6; max-width: 65ch; }
+.minimal-shell.nexo-interface .game-workspace .page-eyebrow { color: var(--nexo-muted); font: 600 10px/1.5 var(--nexo-font); letter-spacing: 1.2px; margin-bottom: 7px; }
+.minimal-shell.nexo-interface .game-workspace .section-line { margin: 22px 0 12px; }
+.minimal-shell.nexo-interface .game-workspace .section-line h2 { color: var(--nexo-text); font: 600 15px/1.4 var(--nexo-font); }
+.minimal-shell.nexo-interface .game-workspace .section-line > span { color: var(--nexo-muted); font-size: 10px; letter-spacing: .6px; }
+.minimal-shell.nexo-interface :is(.tactical-drawer .panel-heading h2, .panel-heading h2 > svg) { color: var(--nexo-text); }
+.minimal-shell.nexo-interface :is(.game-menu .rail-links, .game-menu .rail-bottom, .menu-operations) { gap: 4px; border-color: var(--nexo-divider); }
+.minimal-shell.nexo-interface .game-menu { width: 264px; padding: 9px; }
+.minimal-shell.nexo-interface :is(.game-menu .rail-link, .menu-operations > button, .game-menu .rail-bottom > .icon-btn) {
+  height: auto;
+  min-height: 38px;
+  border: 1px solid transparent;
+  border-radius: var(--nexo-control-radius);
+  color: var(--nexo-secondary);
+  box-shadow: none;
+}
+.minimal-shell.nexo-interface .menu-operations > button { padding: 8px; }
+.minimal-shell.nexo-interface :is(.game-menu .rail-link span, .game-menu .rail-bottom > .icon-btn::after, .menu-operations > button) { font-size: 13px; }
+.minimal-shell.nexo-interface .game-menu .rail-link.active::before { display: none; }
+.minimal-shell.nexo-interface .game-menu .rail-link.active {
+  background: var(--nexo-selected);
+  color: var(--nexo-text);
+  border-color: #ffffff22;
+  box-shadow: inset 2px 0 #d7dbe4, inset 0 1px #ffffff06;
+}
+.minimal-shell.nexo-interface .menu-operations > button > b { background: #ffffff08; border: 1px solid var(--nexo-edge); color: var(--nexo-secondary); }
+.minimal-shell.nexo-interface .minimal-readout { gap: 8px; }
+.minimal-shell.nexo-interface :is(.minimal-budget, .hud-time b) { font-variant-numeric: tabular-nums; }
+.minimal-shell.nexo-interface .minimal-brand > span > span { color: #aeb4bf; }
+.minimal-shell.nexo-interface .hud-time { border-color: var(--nexo-edge); }
+.minimal-shell.nexo-interface .option-line { color: var(--nexo-secondary); }
+.minimal-shell.nexo-interface .option-line > strong { color: var(--nexo-text); }
+
+/* The card material is deliberately independent of service/section colour. */
+.minimal-shell.nexo-interface .game-workspace :is(
+  .base-card, .vehicle-card, .facility-card, .report-metric, .career-rank,
+  .settings-section, .expansion-strip, .specialist-strip, .command-card,
+  .command-overview, .strategy-hero, .strategy-panel,
+  .training-console, .arr-builder, .training-list article, .qualification-grid article,
+  .patrol-list article, .arr-list article, .case-list article, .personnel-grid article,
+  .poi-board article, .unit-control-grid article
+) {
+  background: var(--nexo-card);
+  border: 1px solid var(--nexo-edge);
+  border-radius: var(--nexo-card-radius);
+  box-shadow: var(--nexo-card-shadow);
+  clip-path: none;
+  min-width: 0;
+}
+.minimal-shell.nexo-interface .game-workspace :is(.base-card, .vehicle-card):hover {
+  border-color: #ffffff3d;
+  box-shadow: var(--nexo-card-shadow);
+  transform: none;
+}
+.minimal-shell.nexo-interface :is(.strategy-list article, .complex-grid article, .recruitment-grid article, .policy-grid label, .hospital-specialties, .arr-vehicle-builder) {
+  background: var(--nexo-inset);
+  border: 1px solid var(--nexo-divider);
+  border-radius: var(--nexo-control-radius);
+  min-width: 0;
+}
+.minimal-shell.nexo-interface :is(.progression-ribbon, .operations-summary) {
+  background: var(--nexo-divider);
+  border-color: var(--nexo-edge);
+  border-radius: var(--nexo-card-radius);
+  box-shadow: none;
+}
+.minimal-shell.nexo-interface :is(.progression-ribbon, .operations-summary) > div { background: var(--nexo-card); }
+.minimal-shell.nexo-interface :is(.progression-ribbon, .operations-summary) span { color: var(--nexo-muted); }
+.minimal-shell.nexo-interface .progression-ribbon strong { color: var(--nexo-text); }
+.minimal-shell.nexo-interface :is(.fleet-table, .full-logs, .report-empty, .operations-empty) {
+  background: var(--nexo-inset);
+  border-color: var(--nexo-edge);
+  border-radius: var(--nexo-card-radius);
+  box-shadow: none;
+}
+.minimal-shell.nexo-interface .fleet-row,
+.minimal-shell.nexo-interface .fleet-row:nth-child(odd):not(.fleet-table-header) {
+  background: transparent;
+  border-color: var(--nexo-divider);
+  color: var(--nexo-secondary);
+}
+.minimal-shell.nexo-interface .fleet-row.fleet-table-header { background: var(--nexo-header); color: var(--nexo-muted); }
+.minimal-shell.nexo-interface .fleet-row:not(.fleet-table-header):hover { background: #ffffff04; }
+.minimal-shell.nexo-interface :is(.history-row, .milestones > div, .full-logs > div, .setting-row, .settings-section > h2, .vehicle-price, .base-actions, .base-development, .base-capacity, .resource-strip) { border-color: var(--nexo-divider); }
+.minimal-shell.nexo-interface .game-workspace :is(.base-illustration, .vehicle-photo) { background: var(--nexo-inset); border-color: var(--nexo-divider); }
+.minimal-shell.nexo-interface .base-illustration > svg { background: var(--nexo-control); border-color: var(--nexo-edge); box-shadow: var(--nexo-card-shadow); }
+
+/* Tactical instruments use the same card and inset vocabulary. */
+.minimal-shell.nexo-interface .tactical-drawer :is(.incident-card, .unit-choice) {
+  background: var(--nexo-card);
+  border-color: var(--nexo-edge);
+  border-radius: var(--nexo-control-radius);
+  box-shadow: inset 0 1px #ffffff05;
+}
+.minimal-shell.nexo-interface .tactical-drawer :is(.incident-card.selected, .unit-choice.selected) {
+  background: var(--nexo-hover);
+  border-color: #c5cdd280;
+  box-shadow: inset 2px 0 #d7dbe4, inset 0 1px #ffffff08;
+}
+.minimal-shell.nexo-interface .tactical-drawer .incident-card h3 { font-size: 15px; font-weight: 600; }
+.minimal-shell.nexo-interface .tactical-drawer .incident-address { font-size: 12px; color: var(--nexo-muted); }
+.minimal-shell.nexo-interface .tactical-drawer .dispatch-detail > h2 { font-size: 21px; font-weight: 600; }
+.minimal-shell.nexo-interface .tactical-drawer :is(.requirements, .dispatch-bottom),
+.minimal-shell.nexo-interface .shift-overview { background: var(--nexo-inset); border-color: var(--nexo-divider); }
+.minimal-shell.nexo-interface :is(.dispatch-foldout, .dispatch-situation, .dispatch-detail, .specialized-requirements, .assigned-units) { border-color: var(--nexo-divider); }
+.minimal-shell.nexo-interface .unit-icon { background: var(--nexo-control); border-color: var(--nexo-edge); box-shadow: none; }
+.minimal-shell.nexo-interface .call-mini { background: var(--nexo-card); border-color: #f8ca784d; }
+.minimal-shell.nexo-interface :is(.incoming-call, .paused-label) { border-color: #f8ca784d; }
+.minimal-shell.nexo-interface :is(.geo-map-error, .connection-notice) { border-color: #ffa19a66; }
+
+/* Segmented controls have one selected treatment; services retain their meaning. */
+.minimal-shell.nexo-interface :is(.operations-tabs, .tactical-drawer .incident-tabs, .hud-options .speed-group, .geo-style-control > div) {
+  background: var(--nexo-inset);
+  border: 1px solid var(--nexo-edge);
+  border-radius: var(--nexo-control-radius);
+  padding: 3px;
+  gap: 3px;
+  box-shadow: inset 0 1px 4px #0003;
+}
+.minimal-shell.nexo-interface :is(.operations-tabs button, .incident-tabs > button, .geo-style-control button) {
+  color: var(--nexo-muted);
+  border: 1px solid transparent;
+  border-radius: 5px;
+}
+.minimal-shell.nexo-interface :is(.operations-tabs button.active, .tactical-drawer .incident-tabs > button.selected, .geo-style-control button.active) {
+  background: var(--nexo-control);
+  color: var(--nexo-text);
+  border-color: #ffffff29;
+  box-shadow: inset 0 1px #ffffff09, 0 2px 5px #0003;
+}
+.minimal-shell.nexo-interface .tactical-drawer .incident-tabs > button[data-service]:not([data-service="all"]).selected {
+  color: var(--service-color);
+  border-color: color-mix(in srgb, var(--service-color) 45%, transparent);
+}
+.minimal-shell.nexo-interface .hud-options .speed-group > button.chosen { background: var(--nexo-silver); color: #14161b; }
+
+/* Commands, strategy and later additions used to have separate green/gold themes. */
+.minimal-shell.nexo-interface :is(.command-overview, .strategy-hero) { padding: 18px; gap: 16px; grid-template-columns: 56px minmax(0, 1fr) auto; }
+.minimal-shell.nexo-interface :is(.command-radar, .command-emblem, .strategy-pulse) {
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--nexo-edge);
+  border-radius: var(--nexo-card-radius);
+  background: var(--nexo-control);
+  color: var(--nexo-secondary);
+  transform: none;
+  flex-shrink: 0;
+}
+.minimal-shell.nexo-interface :is(.command-radar i, .command-radar::after, .strategy-pulse i, .coverage-sweep) { display: none; animation: none; }
+.minimal-shell.nexo-interface :is(.command-emblem svg, .strategy-pulse > svg) { transform: none; }
+.minimal-shell.nexo-interface :is(.command-radar > svg, .command-emblem > svg, .strategy-pulse > svg) { width: 23px; height: 23px; stroke-width: 1.5; }
+.minimal-shell.nexo-interface :is(.command-overview > div:nth-child(2) > span, .strategy-hero > div:nth-child(2) > span, .command-card header span, .command-assignments > strong, .arr-vehicle-builder > strong) {
+  color: var(--nexo-muted);
+  font: 600 10px/1.5 var(--nexo-font);
+  letter-spacing: .8px;
+}
+.minimal-shell.nexo-interface :is(.command-overview > div:nth-child(2) > strong, .strategy-hero strong) { color: var(--nexo-text); font: 600 22px/1.25 var(--nexo-font); letter-spacing: -.3px; }
+.minimal-shell.nexo-interface :is(.command-overview > div:nth-child(2) > small, .strategy-hero small) { color: var(--nexo-muted); font: 12px/1.6 var(--nexo-font); }
+.minimal-shell.nexo-interface :is(.command-overview-metrics span, .strategy-score span) { color: var(--nexo-muted); font: 11px/1.5 var(--nexo-font); }
+.minimal-shell.nexo-interface :is(.command-overview-metrics b, .strategy-score b) { color: var(--nexo-text); font: 500 22px/1.3 var(--mono); }
+.minimal-shell.nexo-interface .strategy-score { color: var(--nexo-secondary); }
+.minimal-shell.nexo-interface .game-workspace .command-card.active { border-color: #ffffff48; box-shadow: inset 2px 0 #cfd4de, var(--nexo-card-shadow); }
+.minimal-shell.nexo-interface :is(.command-card > header, .strategy-panel > header) {
+  background: var(--nexo-header);
+  border-color: var(--nexo-divider);
+  border-radius: var(--nexo-card-radius) var(--nexo-card-radius) 0 0;
+  color: var(--nexo-secondary);
+  padding: 16px;
+}
+.minimal-shell.nexo-interface :is(.command-card h3, .strategy-panel > header h2) { color: var(--nexo-text); font: 600 16px/1.4 var(--nexo-font); white-space: normal; }
+.minimal-shell.nexo-interface :is(.command-card header p, .strategy-panel > header p) { color: var(--nexo-muted); font-size: 12px; line-height: 1.5; }
+.minimal-shell.nexo-interface .coverage-band { background: var(--nexo-inset); padding: 13px 16px; }
+.minimal-shell.nexo-interface .coverage-band > span { color: var(--nexo-muted); font-size: 10px; }
+.minimal-shell.nexo-interface .coverage-band > strong { color: var(--nexo-text); font-size: 12px; }
+.minimal-shell.nexo-interface :is(.command-metrics, .command-metrics span, .command-edit, .command-assignments label) { border-color: var(--nexo-divider); }
+.minimal-shell.nexo-interface .command-metrics span { color: var(--nexo-secondary); }
+.minimal-shell.nexo-interface .command-metrics b { color: var(--nexo-text); }
+.minimal-shell.nexo-interface .command-metrics small { color: var(--nexo-muted); font-size: 11px; }
+.minimal-shell.nexo-interface .command-assignments label { opacity: 1; padding: 9px 0; }
+.minimal-shell.nexo-interface .command-assignments em { color: var(--nexo-secondary); font-size: 12px; white-space: normal; }
+.minimal-shell.nexo-interface :is(.mission-range-grid label, .policy-grid label, .unit-control-grid label, .strategy-form label, .complex-grid label, .hospital-specialties label, .arr-vehicle-builder label) { color: var(--nexo-secondary); font: 12px/1.5 var(--nexo-font); }
+.minimal-shell.nexo-interface :is(.strategy-list, .complex-grid, .recruitment-grid, .cooperation-card, .task-list, .unit-control-grid, .poi-board, .personnel-grid) strong,
+.minimal-shell.nexo-interface .complex-grid h3 { color: var(--nexo-text); font: 500 13px/1.5 var(--nexo-font); }
+.minimal-shell.nexo-interface :is(.strategy-list, .complex-grid, .recruitment-grid, .cooperation-card, .task-list, .unit-control-grid, .poi-board, .personnel-grid) small {
+  color: var(--nexo-muted);
+  font: 11px/1.6 var(--nexo-font);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.minimal-shell.nexo-interface :is(.strategy-empty, .cooperation-card p) { color: var(--nexo-muted); font-size: 12px; line-height: 1.6; }
+.minimal-shell.nexo-interface :is(.unit-control-grid header, .poi-board article, .task-icon) { color: var(--nexo-secondary); }
+.minimal-shell.nexo-interface :is(.unit-control-grid header > div, .poi-board article > div, .recruitment-grid article > div) { min-width: 0; }
+.minimal-shell.nexo-interface .strategy-list article[data-state="completed"] { opacity: 1; border-style: dashed; }
+.minimal-shell.nexo-interface .strategy-list article[data-state="active"] { border-color: #9cc5ff55; }
+.minimal-shell.nexo-interface .resource-strip { color: var(--nexo-secondary); font-size: 11px; }
+.minimal-shell.nexo-interface :is(.achievement-row span, .hospital-specialties > div span) {
+  color: var(--nexo-secondary);
+  font: 11px/1.4 var(--nexo-font);
+  border: 1px solid var(--nexo-edge);
+  border-radius: 5px;
+  background: #ffffff04;
+}
+.minimal-shell.nexo-interface .event-banner span { background: var(--nexo-inset); border-color: #f8ca783d; border-radius: var(--nexo-control-radius); color: var(--status-warning); font-size: 12px; }
+.minimal-shell.nexo-interface .task-list span { background: #ffffff12; border-radius: 3px; overflow: hidden; }
+.minimal-shell.nexo-interface .task-list span i { background: #bac3d2; }
+.minimal-shell.nexo-interface .task-list article.done :is(.task-icon, strong) { color: var(--status-success); }
+.minimal-shell.nexo-interface .task-list article.done span i { background: var(--status-success); }
+.minimal-shell.nexo-interface .personnel-grid article { grid-template-columns: 8px minmax(0, 1fr) 36px; }
+.minimal-shell.nexo-interface .personnel-grid article > select { grid-column: 2 / -1; grid-row: 2; width: 100%; }
+.minimal-shell.nexo-interface .personnel-grid article > button { grid-column: 3; grid-row: 1; }
+
+/* All form fields, including portalled creation dialogs, use the same inset. */
+.minimal-shell.nexo-interface :is(.game-workspace, .hud-options) :is(input:not([type="checkbox"]):not([type="range"]), select, textarea),
+.game-modal :is(input:not([type="checkbox"]):not([type="range"]), select, textarea) {
+  background: var(--nexo-inset);
+  color: var(--nexo-text);
+  border: 1px solid #ffffff30;
+  border-radius: var(--nexo-control-radius);
+  min-height: 36px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 8px 10px;
+  font: 12px/1.4 var(--nexo-font);
+  box-shadow: inset 0 2px 4px #0002;
+}
+.game-modal .field-label > :is(input:not([type="checkbox"]), select, textarea) { width: 100%; }
+.minimal-shell.nexo-interface :is(input, textarea)::placeholder,
+.game-modal :is(input, textarea)::placeholder { color: #989fac; opacity: 1; }
+.minimal-shell.nexo-interface select option, .game-modal select option { background: #1d2026; color: var(--nexo-text); }
+.minimal-shell.nexo-interface :is(input[type="range"], input[type="checkbox"]),
+.game-modal :is(input[type="range"], input[type="checkbox"]) { accent-color: #d5dce8; }
+.minimal-shell.nexo-interface input[type="checkbox"], .game-modal input[type="checkbox"] { width: 16px; height: 16px; min-height: 0; flex-shrink: 0; }
+.minimal-shell.nexo-interface .coverage-band input[type="range"] { width: 100%; min-width: 0; }
+.minimal-shell.nexo-interface .mission-range-grid input { width: 58px; }
+.minimal-shell.nexo-interface .arr-vehicle-builder label { grid-template-columns: minmax(0, 1fr) 54px; }
+.minimal-shell.nexo-interface .arr-vehicle-builder input:not([type="checkbox"]) { width: 54px; }
+.minimal-shell.nexo-interface .setting-row [role="switch"] { border-color: #ffffff38; background: #363b45; }
+.minimal-shell.nexo-interface .setting-row [role="switch"][data-state="checked"] { background: #b5dcc8; border-color: #cee9db; }
+
+/* One button language. Scoped defaults also cover the previously unstyled
+   shadcn actions in strategy without touching map markers or toggles. */
+.minimal-shell.nexo-interface :is(.game-workspace, .hud-options, .dispatch-panel, .incident-panel) button:not(.icon-btn):not(.unit-choice):not(.incident-card):not(.queue-sort):not(.location-link):not([role="switch"]):not([role="tab"]):not(.chosen):not(.selected),
+.game-modal :is(.primary-button, .outline-button, .call-choices > button) {
+  border-radius: var(--nexo-control-radius);
+}
+.minimal-shell.nexo-interface :is(
+  .base-actions button, .extension-list button, .facility-card > button,
+  .patrol-list button, .arr-dispatch button, .option-actions > button,
+  .new-incident, .route-estimate-action, .command-card header > button,
+  .command-edit button, .hospital-specialties label button,
+  .strategy-form button, .recruitment-grid button, .cooperation-card > button,
+  .task-list button, .case-action button, .case-list article > button,
+  .unit-control-grid header button
+) {
+  background: var(--nexo-control);
+  color: var(--nexo-secondary);
+  border: 1px solid #ffffff2d;
+  box-shadow: inset 0 1px #ffffff08;
+  min-height: 36px;
+  height: auto;
+  padding: 7px 10px;
+  font: 500 12px/1.4 var(--nexo-font);
+  white-space: normal;
+}
+.minimal-shell.nexo-interface .smart-dispatch { color: var(--nexo-secondary) !important; border-color: #ffffff2d !important; }
+.minimal-shell.nexo-interface :is(.primary-button, .dispatch-button), .game-modal .primary-button {
+  background: var(--nexo-silver) !important;
+  border: 1px solid #e8ecf2 !important;
+  color: #16191f !important;
+  border-radius: var(--nexo-control-radius) !important;
+  box-shadow: inset 0 1px #ffffffaa, 0 2px 7px #0003;
+  font-weight: 600;
+}
+.minimal-shell.nexo-interface .outline-button, .game-modal .outline-button {
+  background: var(--nexo-control) !important;
+  border: 1px solid #ffffff35 !important;
+  color: var(--nexo-text) !important;
+  border-radius: var(--nexo-control-radius) !important;
+  box-shadow: inset 0 1px #ffffff08;
+}
+.minimal-shell.nexo-interface :is(.danger-button, .unit-recall), .game-modal .danger-button {
+  color: var(--status-danger, #ffa19a) !important;
+  background: #ffa19a09 !important;
+  border: 1px solid #ffa19a4d !important;
+  border-radius: var(--nexo-control-radius) !important;
+}
+.minimal-shell.nexo-interface :is(.personnel-grid button, .poi-board button, .arr-list article > button, .strategy-list button) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  min-height: 36px;
+  border-radius: var(--nexo-control-radius);
+  border: 1px solid #ffa19a30;
+  color: var(--status-danger);
+  background: #ffa19a08;
+}
+.minimal-shell.nexo-interface .extension-list button.active { color: var(--status-success); border-color: #8ae2b54d; }
+.minimal-shell.nexo-interface .extension-list button.installed:not(.active) { color: var(--status-warning); border-color: #f8ca784d; }
+
+/* Portals are not descendants of the game shell: explicitly use the same kit. */
+.game-modal {
+  background: var(--nexo-glass) !important;
+  border: 1px solid var(--nexo-edge) !important;
+  border-radius: var(--nexo-radius) !important;
+  color: var(--nexo-text) !important;
+  box-shadow: var(--nexo-shadow) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(.65);
+  backdrop-filter: blur(16px) saturate(.65);
+  padding: 24px !important;
+  gap: 14px;
+}
+.game-modal h2 { color: var(--nexo-text); font: 600 23px/1.2 var(--nexo-font) !important; letter-spacing: -.4px !important; }
+.game-modal [id$="description"] { color: var(--nexo-muted); font: 13px/1.6 var(--nexo-font); }
+.game-modal :is(.modal-eyebrow, .caller small, .call-choices h3, .help-steps small) { color: var(--nexo-muted); letter-spacing: .8px; font-size: 10px; }
+.game-modal .modal-eyebrow { padding-right: 24px; }
+.game-modal :is(.field-label, .purchase-total) { color: var(--nexo-secondary); font-size: 13px; }
+.game-modal :is(.caller p, .help-steps h3) { color: var(--nexo-text); }
+.game-modal :is(.caller-avatar, .help-steps > div > span) { background: var(--nexo-control); color: var(--nexo-secondary); border: 1px solid var(--nexo-edge); border-radius: var(--nexo-control-radius); }
+.game-modal :is(.call-choices > button, .call-result) { background: var(--nexo-card); border-color: var(--nexo-edge); color: var(--nexo-text); border-radius: var(--nexo-control-radius); }
+.game-modal .call-choices > button { min-height: 46px; padding: 12px; font-size: 13px; }
+.game-modal .call-choices > button > span { border-color: var(--nexo-edge); color: var(--nexo-muted); }
+.game-modal :is(.help-steps p, .call-result p, .simulation-disclaimer) { color: var(--nexo-muted); line-height: 1.65; }
+.game-modal .call-result.correct { background: var(--nexo-card); border-color: #8ae2b559; box-shadow: inset 2px 0 #8ae2b5; }
+.game-modal .call-result.incorrect { background: var(--nexo-card); border-color: #ffa19a59; box-shadow: inset 2px 0 #ffa19a; }
+.game-modal > button.absolute { display: grid; place-items: center; width: 34px; height: 34px; top: 10px; right: 10px; border: 1px solid var(--nexo-edge); background: var(--nexo-control); color: var(--nexo-secondary); border-radius: var(--nexo-control-radius); }
+[data-sonner-toast] { background: var(--nexo-glass) !important; color: var(--nexo-text) !important; border: 1px solid var(--nexo-edge) !important; border-radius: var(--nexo-card-radius) !important; box-shadow: var(--nexo-shadow) !important; }
+[data-sonner-toast] [data-description] { color: var(--nexo-secondary) !important; }
+[data-sonner-toast][data-type="error"] { border-left-color: #ffa19a !important; }
+[data-sonner-toast][data-type="success"] { border-left-color: #8ae2b5 !important; }
+
+/* Neutral copy for the formerly blue-tinted support/management panels.
+   Avoid status chips, service icons and metric values: their colour is data. */
+.minimal-shell.nexo-interface .game-workspace :is(.base-info h3, .vehicle-card h3, .facility-card h3, .settings-section > h2, .setting-row h3, .history-row strong) { color: var(--nexo-text); }
+.minimal-shell.nexo-interface .game-workspace :is(.base-info p, .vehicle-card p, .facility-card > p, .setting-row p, .settings-note, .settings-note p, .section-copy, .training-console p, .history-row small, .milestones p, .report-metric span, .career-rank > span, .career-rank p, .expansion-strip p, .specialist-strip p) { color: var(--nexo-muted); }
+.minimal-shell.nexo-interface :is(.training-list, .qualification-grid, .patrol-list, .arr-list, .case-list) strong { color: var(--nexo-text); }
+.minimal-shell.nexo-interface :is(.training-list, .qualification-grid, .patrol-list, .arr-list, .case-list) small { color: var(--nexo-muted); }
+.minimal-shell.nexo-interface :is(.geo-menu-caption, .geo-style-control > span) { font: 600 10px/1.5 var(--nexo-font); color: var(--nexo-muted); letter-spacing: .7px; }
+.minimal-shell.nexo-interface .geo-regions-menu > small { color: var(--nexo-muted); }
+
+/* Restrained motion and clear focus, identical on every menu. */
+.minimal-shell.nexo-interface :is(button, a, input, select, summary),
+.game-modal :is(button, input, select) { transition: border-color .16s ease, background-color .16s ease, color .16s ease, box-shadow .16s ease; }
+@media (hover: hover) {
+  .minimal-shell.nexo-interface :is(.game-menu .rail-link, .menu-operations > button, .game-menu .rail-bottom > .icon-btn, .geo-regions-menu > button):hover { color: var(--nexo-text); background: #ffffff08; border-color: #ffffff1a; box-shadow: none; }
+  .minimal-shell.nexo-interface :is(.menu-launcher > button, .minimal-options-toggle, .map-layer-button):hover { background: var(--nexo-hover); border-color: #ffffff40; }
+  .minimal-shell.nexo-interface .tactical-drawer :is(.incident-card, .unit-choice):hover:not(:disabled),
+  .minimal-shell.nexo-interface :is(.option-actions > button, .base-actions button, .extension-list button, .facility-card > button, .command-edit button, .command-card header > button, .strategy-form button, .recruitment-grid button, .cooperation-card > button, .task-list button, .new-incident, .route-estimate-action, .patrol-list button, .arr-dispatch button, .hospital-specialties label button, .case-action button, .unit-control-grid header button):hover:not(:disabled),
+  .game-modal .call-choices > button:hover:not(:disabled) { background: var(--nexo-hover); border-color: #ffffff55; color: var(--nexo-text); }
+  .minimal-shell.nexo-interface .outline-button:hover:not(:disabled), .game-modal .outline-button:hover:not(:disabled) { background: var(--nexo-hover) !important; border-color: #ffffff55 !important; }
+  .minimal-shell.nexo-interface :is(.primary-button, .dispatch-button):hover:not(:disabled), .game-modal .primary-button:hover:not(:disabled) { background: linear-gradient(120deg, #fff, #e1e5ec) !important; box-shadow: inset 0 1px #fff, 0 3px 12px #0004; }
+}
+.minimal-shell.nexo-interface .menu-launcher > button[aria-expanded="true"],
+.minimal-shell.nexo-interface .minimal-options-toggle.active { background: var(--nexo-hover); border-color: #ffffff55; }
+.minimal-shell.nexo-interface :is(button, a, summary, input, select, textarea):focus-visible,
+.game-modal :is(button, a, summary, input, select, textarea):focus-visible {
+  outline: 2px solid var(--nexo-focus);
+  outline-offset: 2px;
+}
+.minimal-shell.nexo-interface :is(.game-workspace, .hud-options, .tactical-drawer) button:disabled,
+.game-modal button:disabled {
+  background: #23262d !important;
+  border-color: #ffffff1c !important;
+  color: #979fac !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+  cursor: not-allowed;
+  filter: none;
+}
+.minimal-shell.nexo-interface :is(.unit-choice:disabled .unit-ready, .unit-choice:disabled .unit-choice-text > small) { color: #979fac; }
+
+/* Layout adapts to the WINDOW width, not only the browser width. */
+.minimal-shell.nexo-interface :is(.command-grid, .unit-control-grid) { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.minimal-shell.nexo-interface .strategy-columns { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.minimal-shell.nexo-interface :is(.strategy-form, .strategy-form.inline) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.minimal-shell.nexo-interface .mission-range-grid { grid-template-columns: minmax(0, 1fr); }
+.minimal-shell.nexo-interface .policy-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.minimal-shell.nexo-interface :is(.strategy-form, .policy-grid, .complex-grid article > div) > * { min-width: 0; }
+.minimal-shell.nexo-interface :is(.strategy-list article, .recruitment-grid article, .command-card > header) { flex-wrap: wrap; }
+.minimal-shell.nexo-interface .strategy-list article > div { flex-basis: 160px; }
+.minimal-shell.nexo-interface .strategy-list select { max-width: 100%; }
+.minimal-shell.nexo-interface .command-card header > div:nth-child(2) { flex-basis: 140px; }
+.minimal-shell.nexo-interface .command-assignments label { grid-template-columns: 5px minmax(0, 1fr); }
+.minimal-shell.nexo-interface .command-assignments select { grid-column: 2; width: 100%; }
+.minimal-shell.nexo-interface .command-overview-metrics { flex-wrap: wrap; gap: 18px; }
+.minimal-shell.nexo-interface .command-heading-actions { max-width: 100%; }
+.minimal-shell.nexo-interface :is(.command-heading-actions button, .recruitment-grid button) { height: auto; white-space: normal; }
+.minimal-shell.nexo-interface .task-list article { grid-template-columns: 26px minmax(0, 1fr) auto; }
+.minimal-shell.nexo-interface .unit-control-grid label { flex-wrap: wrap; }
+.minimal-shell.nexo-interface .unit-control-grid label input:not([type="checkbox"]) { max-width: 100%; }
+.minimal-shell.nexo-interface .game-workspace :is(.queue-board, .automation-grid) { grid-template-columns: minmax(0, 1fr); }
+@container nexo-workspace (max-width: 650px) {
+  .minimal-shell.nexo-interface :is(.command-grid, .unit-control-grid, .personnel-grid, .poi-board, .policy-grid) { grid-template-columns: minmax(0, 1fr); }
+  .minimal-shell.nexo-interface :is(.command-overview, .strategy-hero) { grid-template-columns: 44px minmax(0, 1fr); }
+  .minimal-shell.nexo-interface :is(.command-overview-metrics, .strategy-score) { grid-column: 1 / -1; border-top: 1px solid var(--nexo-divider); padding-top: 12px; }
+  .minimal-shell.nexo-interface .command-overview-metrics { justify-content: space-between; }
+}
+@container nexo-workspace (max-width: 440px) {
+  .minimal-shell.nexo-interface :is(.strategy-form, .strategy-form.inline, .complex-grid article > div, .cooperation-card) { grid-template-columns: minmax(0, 1fr); }
+  .minimal-shell.nexo-interface .cooperation-card p { grid-column: 1; }
+  .minimal-shell.nexo-interface .task-list article > button { grid-column: 2; justify-self: start; }
+}
+@media (max-width: 600px) {
+  .minimal-shell.nexo-interface .minimal-hud { height: 44px; }
+  .minimal-shell.nexo-interface .minimal-readout { gap: 4px; padding-left: 7px; }
+  .minimal-shell.nexo-interface .hud-budget { flex-shrink: 1; }
+  .minimal-shell.nexo-interface .minimal-budget { max-width: 90px; font-size: 11px; }
+  .minimal-shell.nexo-interface .hud-time b { font-size: 11px; }
+  .minimal-shell.nexo-interface :is(.minimal-readout > .icon-btn, .minimal-options-toggle) { width: 36px; height: 40px; min-height: 40px; }
+  .minimal-shell.nexo-interface .hud-options { right: -2px; max-width: calc(100vw - 24px); }
+  .minimal-shell.nexo-interface .game-menu { max-width: calc(100vw - 20px); }
+  .minimal-shell.nexo-interface :is(.game-menu .rail-link, .menu-operations > button, .game-menu .rail-bottom > .icon-btn) { min-height: 44px; }
+  .minimal-shell.nexo-interface :is(.game-menu-heading .icon-btn, .panel-heading-actions > .icon-btn, .workspace-close) { min-width: 40px; min-height: 40px; }
+  .minimal-shell.nexo-interface .game-workspace .page-heading h1 { font-size: 24px; }
+  .minimal-shell.nexo-interface .game-workspace .page-heading { padding-bottom: 14px; margin-bottom: 16px; }
+  .minimal-shell.nexo-interface :is(.command-grid, .unit-control-grid, .personnel-grid, .poi-board, .strategy-form, .strategy-form.inline, .policy-grid, .cooperation-card) { grid-template-columns: minmax(0, 1fr); }
+  .minimal-shell.nexo-interface :is(.command-overview, .strategy-hero) { grid-template-columns: 44px minmax(0, 1fr); padding: 14px; gap: 12px; }
+  .minimal-shell.nexo-interface :is(.command-overview-metrics, .strategy-score) { grid-column: 1 / -1; }
+  .minimal-shell.nexo-interface .command-heading-actions { width: 100%; }
+  .minimal-shell.nexo-interface .command-heading-actions > button { flex: 1; }
+  .minimal-shell.nexo-interface .hospital-specialties label { grid-template-columns: minmax(0, 1fr); }
+  .minimal-shell.nexo-interface .hospital-specialties label button { grid-column: 1; grid-row: auto; }
+  .minimal-shell.nexo-interface :is(.game-workspace, .hud-options) :is(input:not([type="checkbox"]):not([type="range"]), select, textarea),
+  .game-modal :is(input:not([type="checkbox"]):not([type="range"]), select, textarea) { min-height: 42px; font-size: 16px; }
+  .minimal-shell.nexo-interface :is(.command-card header > button, .command-edit button, .strategy-form button, .recruitment-grid button, .task-list button, .cooperation-card > button, .facility-card > button, .base-actions button, .extension-list button, .option-actions > button, .hospital-specialties label button, .primary-button, .outline-button) { min-height: 42px; }
+  .game-modal { padding: 20px !important; max-height: calc(100dvh - 72px); }
+  .game-modal > button.absolute { width: 36px; height: 36px; }
+  .game-modal h2 { font-size: 22px !important; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  :root { --nexo-glass: linear-gradient(135deg, #23252a, #17191e 55%, #111318); }
+  .minimal-shell.nexo-interface :is(.minimal-brand, .minimal-readout, .hud-options, .game-menu, .layer-menu, .menu-launcher > button, .map-layer-button, .map-zoom, .game-workspace, .tactical-drawer > .incident-panel, .tactical-drawer > .dispatch-panel, .incoming-call, .paused-label, .geo-map-loading, .geo-map-error, .connection-notice),
+  .game-modal { -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .minimal-shell.nexo-interface *, .minimal-shell.nexo-interface *::before, .minimal-shell.nexo-interface *::after,
+  .game-modal, .game-modal *, .game-modal::before { animation: none !important; transition: none !important; }
+}

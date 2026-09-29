@@ -1,7 +1,23 @@
 # NEXO 112 — Current Design Handoff
 
-## Latest task (supersedes the historical notes below)
-User wants a significantly clearer UI/HUD, minimal and map-first, now explicitly GTA6/Rockstar-inspired with gradients, shadows and lights. Keep real Portugal map full-screen and drawers closed by default. Semantic accents remain INEM yellow, fire red, PSP blue; waiting amber, active blue, positive green, danger red.
+## Latest task — uniform menus and HUDs (supersedes historical notes)
+User requested SSS-tier unification of all menus using the same background/material as the HUD, then explicitly confirmed: “Não corrigir a dependência, uniformiza e melhora os huds”. Dependencies and environment must remain untouched.
+
+### Latest delivery
+- Added `frontend/src/Interface.css`, imported LAST after VehicleMedia.css. App.js adds `nexo-interface` to the existing minimal shell; no handlers/routes/game logic changed.
+- One graphite glass token for HUD islands, menu/turn controls, launchers, map controls, tactical drawers, workspace, portalled modals and toasts. Shared nested card/inset/header/button materials and consistent borders/radii/shadows.
+- Neutralized divergent green/gold Comando/Estratégia, personnel, hospital specialties and RAR controls, plus blue support surfaces. No decorative radar sweeps/rotated diamonds in menus. Preserved meaningful service/status colors.
+- Standardized headings, form fields (including PDI/command creation), focus, disabled/active states, secondary actions and silver primary actions. Kept compact map-first layout; container queries make grids respect actual workspace width, and mobile controls/forms adapt without touching map renderer or vehicle assets.
+- No integrations, package/lock/environment/backend/gameplay/persistence changes. No authentication; memory/test_credentials.md records this explicitly.
+
+### Current verification and blockers
+- App.js lint and git diff whitespace check PASS. Read-only CSS cascade review found no actionable conflicts. This is NOT visual verification, CSS parser verification, or a build pass.
+- Frontend remains unavailable: no node_modules, unavailable fast-uri@3.2.2 resolution, missing frontend/.env reported by diagnostic agent. User refused dependency changes; no install, configuration writes, restart, replacement version or alternative preview attempted.
+- Read-only backend smoke attempt BLOCKED: GET /api/ and /api/world connection refused. Troubleshooter confirmed missing networkx and backend/.env, unrelated to frontend CSS patch. No repairs, installs or game mutations were performed.
+- Browser/screenshot tests have NOT run. Frontend testing permission pending; do not claim desktop/mobile overflow or render pass. When authorized AND environment restored independently, inspect all populated menus/modals and HUD at 1920x800 and 390x844, including Comando, Estratégia, personnel, hospital specialties and RAR, focus/disabled states, navigation and long names.
+
+## Previous design task (historical)
+User wanted a significantly clearer UI/HUD, minimal and map-first, GTA6/Rockstar-inspired with gradients, shadows and lights. Keep real Portugal map full-screen and drawers closed by default. Semantic accents remain INEM yellow, fire red, PSP blue; waiting amber, active blue, positive green, danger red.
 
 ### Current implementation
 - App.js uses PortugalMap.jsx (MapLibre/OpenFreeMap). useGame.js uses localGame.js/localStorage. Existing OSRM integration and gameplay unchanged. No new integrations/auth.

@@ -27,6 +27,7 @@ import './Polish.css';
 import './Clarity.css';
 import './Compact.css';
 import './VehicleMedia.css';
+import './Interface.css';
 
 function GameApp() {
   const { game, world, error, busy, act, retry, feedback, clearFeedback } = useGame();
@@ -87,7 +88,7 @@ function GameApp() {
   const queueTone = waitingIncidents.some(item => item.priority === 1) ? 'danger' : waitingIncidents.length ? 'warning' : game.incidents.length ? 'active' : 'success';
   const workspaceName = { '/comando':'Áreas operacionais', '/estrategia':'Estratégia operacional', '/bases': 'Rede de bases', '/frota': 'Frota de emergência', '/operacoes': 'Operações e apoio', '/relatorios': 'Relatório do turno', '/definicoes': 'Definições' }[location.pathname] || 'Setor não encontrado';
 
-  return <div className={`app-shell immersive-shell minimal-shell dark ${isCentral ? 'central-open' : 'workspace-open'} ${panel && isCentral ? `panel-open panel-${panel}` : ''}`}>
+  return <div className={`app-shell immersive-shell minimal-shell nexo-interface dark ${isCentral ? 'central-open' : 'workspace-open'} ${panel && isCentral ? `panel-open panel-${panel}` : ''}`}>
     <main className="world-stage" aria-label="Mapa operacional" inert={!isCentral || menuOpen}>
       <CityMap world={world} game={game} selected={selected} onSelect={selectIncident} onCall={call} focusKey={focusKey} active={isCentral && !menuOpen} />
     </main>
