@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { WORLD, applyAction, fetchRoadRoute, loadLocalGame, saveLocalGame, selectArrUnitIds, tickGame } from './localGame';
+import { WORLD, applyAction, fetchRoadRoute, loadLocalGame, saveLocalGame, selectArrUnitIds, selectRecommendedUnitIds, tickGame } from './localGame';
 import { operationalText, presentGameCopy, presentWorldCopy } from './operationalLanguage';
 import { detectGameFeedback, failureFeedback } from './eventFeedback';
 
@@ -41,6 +41,10 @@ export function useGame() {
       let type=requestedType,data={...requestedData};
       if(type==='dispatch_arr'){
         data={incident_id:data.incident_id,unit_ids:selectArrUnitIds(current.current,data.incident_id,data.arr_id),via_arr:true};
+        type='dispatch';
+      }
+      if(type==='dispatch_recommended'){
+        data={incident_id:data.incident_id,unit_ids:selectRecommendedUnitIds(current.current,data.incident_id),via_arr:true};
         type='dispatch';
       }
       if(type==='dispatch_group'){
@@ -135,7 +139,12 @@ export function useGame() {
     if (busy) return;
     const snapshot=current.current,policy=snapshot?.dispatch_policy;
     const patient=policy?.auto_patient_transport&&snapshot.patients?.find(item=>item.status==='waiting'&&item.treatment_complete);
-    const hospital=patient&&snapshot.facilities?.filter(item=>item.type==='hospital'&&item.enabled!==false&&(!item.operational_at||item.operational_at<=snapshot.elapsed)&&item.land===snapshot.units.find(unit=>unit.service==='medical')?.land).sort((a,b)=>Number(!(a.specialties||[]).includes(patient.specialty))-Number(!(b.specialties||[]).includes(patient.specialty)))[0];
+    const hospital=patient&&snapshot.facilities?.filter(item=>{
+      const occupancy=(snapshot.patients||[]).filter(candidate=>candidate.hospital_id===item.id&&['transporting','admitted'].includes(candidate.status)).length;
+      const specialtyOccupancy=(snapshot.patients||[]).filter(candidate=>candidate.hospital_id===item.id&&['transporting','admitted'].includes(candidate.status)&&(candidate.specialty===patient.specialty||patient.specialty==='urgency')).length;
+      const specialtyCapacity=(item.specialty_capacity?.[patient.specialty]||0)+(patient.specialty==='urgency'?(item.capacity||0):0);
+      return item.type==='hospital'&&item.enabled!==false&&(!item.operational_at||item.operational_at<=snapshot.elapsed)&&item.land===snapshot.units.find(unit=>unit.service==='medical')?.land&&occupancy<(item.capacity||0)&&(specialtyCapacity>specialtyOccupancy||(item.specialties||[]).includes('urgency'));
+    }).sort((a,b)=>Number(!(a.specialties||[]).includes(patient.specialty))-Number(!(b.specialties||[]).includes(patient.specialty)))[0];
     const prisoner=!patient&&policy?.auto_prisoner_transport&&snapshot.prisoners?.find(item=>item.status==='waiting');
     const prison=prisoner&&snapshot.facilities?.find(item=>item.type==='prison'&&item.enabled!==false&&(!item.operational_at||item.operational_at<=snapshot.elapsed));
     if(!patient&&!prisoner)return;
