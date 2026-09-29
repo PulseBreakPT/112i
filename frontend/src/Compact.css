@@ -1,0 +1,345 @@
+/* Map-first density. Compact the layout, never scale the canvas or shrink hit targets.
+   Essentials stay visible; secondary information remains in contextual details. */
+.minimal-shell {
+  --compact-surface: linear-gradient(135deg, #1b1e24f5, #13161cf7);
+  --compact-line: #737d8d50;
+  --compact-shadow: 0 4px 16px #0004;
+  --workspace-top: 66px;
+}
+
+/* One-line HUD, 38px rather than 56px. Labels remain available to screen readers. */
+.minimal-shell .minimal-hud { top: 14px; left: 16px; right: 16px; height: 38px; gap: 10px; }
+.minimal-shell .minimal-brand, .minimal-shell .minimal-readout {
+  background: var(--compact-surface); border-color: var(--compact-line);
+  border-radius: 7px; box-shadow: var(--compact-shadow); backdrop-filter: blur(10px);
+}
+.minimal-shell .minimal-brand { padding: 0 10px; gap: 6px; }
+.minimal-shell .minimal-brand > svg { width: 15px; height: 15px; filter: none; color: #c7ced9; }
+.minimal-shell .minimal-brand > span { font-size: 18px; font-weight: 550; letter-spacing: -.5px; text-shadow: none; }
+.minimal-shell .minimal-brand > span > span { margin-left: 3px; }
+.minimal-shell .minimal-readout { padding: 2px 4px 2px 11px; gap: 8px; }
+.minimal-shell .hud-stat { position: relative; gap: 0; }
+.minimal-shell .hud-stat > small {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+.minimal-shell .minimal-budget, .minimal-shell .hud-time b { font: 500 12px/1.2 var(--mono); letter-spacing: -.25px; }
+.minimal-shell .hud-time { padding-left: 10px; margin-left: 2px; }
+.minimal-shell .hud-time[data-paused="true"] b { color: var(--status-warning); }
+.minimal-shell .minimal-readout > .icon-btn { width: 30px; height: 30px; border-radius: 5px; }
+.minimal-shell .minimal-readout > .icon-btn svg { width: 14px; height: 14px; }
+.minimal-shell .minimal-options-toggle { width: auto; min-height: 30px; height: 30px; padding: 4px 6px; gap: 5px; font-size: 10px; border-radius: 5px; }
+.minimal-shell .minimal-options-toggle > svg { width: 14px; height: 14px; }
+.minimal-shell .minimal-options-toggle:hover, .minimal-shell .minimal-options-toggle.active { background: #292e37; border-color: #67738470; }
+.minimal-shell .hud-options { top: 39px; width: 270px; padding: 14px; border-radius: 9px; }
+.minimal-shell .hud-options-heading { font-size: 10px; letter-spacing: .65px; padding-bottom: 9px; }
+.minimal-shell .option-line { padding: 8px 0; font-size: 12px; gap: 10px; }
+.minimal-shell .option-line > strong { font-size: 12px; }
+.minimal-shell .hud-options .speed-group > button { width: 33px; height: 29px; font-size: 11px; }
+.minimal-shell .option-actions { padding-top: 10px; gap: 6px; }
+.minimal-shell .option-actions > button { min-height: 34px; font-size: 11px; padding: 6px; }
+.minimal-shell .connection-notice { top: 46px; font-size: 12px; }
+
+/* Small launchers, not a permanent navigation bar. */
+.minimal-shell .menu-launcher { left: 16px; bottom: 28px; gap: 6px; }
+.minimal-shell .menu-launcher > button { min-height: 34px; padding: 6px 9px; gap: 6px; border-radius: 7px; font-size: 12px; }
+.minimal-shell .menu-launcher > button > svg { width: 14px; height: 14px; }
+.minimal-shell .quick-incidents > .quick-incidents-label { display: none; }
+.minimal-shell .queue-count { min-width: 20px; height: 19px; padding: 0 4px; font-size: 10px; border-radius: 4px; box-shadow: none; }
+.minimal-shell .game-menu { left: 16px; bottom: 72px; width: 238px; padding: 7px; max-height: calc(100dvh - 138px); border-radius: 9px; }
+.minimal-shell .game-menu-heading { padding: 2px 6px 7px; font-size: 10px; letter-spacing: .3px; }
+.minimal-shell .game-menu-heading .icon-btn { width: 28px; height: 28px; }
+.minimal-shell .menu-operations > button { min-height: 36px; padding: 7px 9px; gap: 8px; font-size: 12px; }
+.minimal-shell .menu-operations > button > svg { width: 15px; height: 15px; }
+.minimal-shell .menu-operations > button > :is(b, small) { font-size: 10px; }
+.minimal-shell .game-menu .rail-link { min-height: 34px; height: 34px; padding: 6px 9px; gap: 8px; border-radius: 5px; }
+.minimal-shell .game-menu .rail-link svg { width: 15px; height: 15px; }
+.minimal-shell .game-menu .rail-link span, .minimal-shell .game-menu .rail-bottom > .icon-btn:after { font-size: 12px; }
+.minimal-shell .game-menu .rail-bottom > .icon-btn { min-height: 34px; height: 34px; }
+.minimal-shell .game-menu .rail-bottom > .icon-btn > svg { width: 15px; height: 15px; }
+
+/* Bounded floating panels leave the majority of the map uncovered. */
+.minimal-shell .tactical-drawer {
+  top: 66px; bottom: auto; width: 304px; height: min(68dvh, 550px);
+  max-height: calc(100dvh - 146px); max-width: calc(100% - 32px);
+}
+.minimal-shell .incidents-drawer { left: 16px; right: auto; }
+.minimal-shell .dispatch-drawer { right: 16px; left: auto; width: 328px; height: min(74dvh, 610px); }
+.minimal-shell .tactical-drawer > :is(.incident-panel, .dispatch-panel) { border-radius: 9px; background: #161a20f7; border-color: var(--compact-line); box-shadow: 0 6px 22px #0005; }
+.minimal-shell .tactical-drawer .panel-heading { min-height: 44px; padding: 0 12px; background: #1d222a; border-color: #ffffff16; box-shadow: none; }
+.minimal-shell .tactical-drawer .panel-heading h2 { font-size: 14px; gap: 7px; font-weight: 500; }
+.minimal-shell .panel-heading h2 > svg { width: 14px; height: 14px; }
+.minimal-shell .panel-heading-actions > .icon-btn { width: 30px; height: 30px; }
+.minimal-shell .panel-heading-actions > .icon-btn > svg { width: 15px; height: 15px; }
+.minimal-shell .count-badge { height: 20px; padding: 0 5px; font-size: 10px; border-color: #75819760; background: #282f3a; }
+.minimal-shell .tactical-drawer .incident-tabs { margin: 9px 10px 0; padding: 2px; gap: 2px; border-radius: 6px; }
+.minimal-shell .tactical-drawer .incident-tabs > button { min-height: 29px; font-size: 11px; padding: 4px; }
+.minimal-shell .queue-label { padding: 5px 12px; gap: 8px; }
+.minimal-shell .queue-pending, .minimal-shell .queue-sort { font-size: 11px; }
+.minimal-shell .queue-sort { min-height: 28px; padding: 3px 4px; }
+.minimal-shell .incidents-scroll { min-height: 0; padding: 0 10px 2px; }
+.minimal-shell .tactical-drawer .incident-card { padding: 10px 11px; margin-bottom: 7px; border-radius: 6px; background: #1d222a; border-color: #64708442; box-shadow: none; }
+.minimal-shell .tactical-drawer .incident-card:hover { background: #252c36; border-color: #8a9ab166; box-shadow: none; }
+.minimal-shell .tactical-drawer .incident-card.selected { background: #262e39; border-color: #b2bfd180; box-shadow: inset 2px 0 #c9d4e5; }
+.minimal-shell .incident-top { margin-bottom: 8px; gap: 8px; }
+.minimal-shell .priority { font-size: 10px; padding: 3px 5px; border-radius: 4px; letter-spacing: 0; box-shadow: none; }
+.minimal-shell .incident-timer { font-size: 11px; gap: 4px; }
+.minimal-shell .incident-timer > svg { width: 11px; height: 11px; }
+.minimal-shell .tactical-drawer .incident-card h3 { font-size: 14px; line-height: 1.35; gap: 7px; font-weight: 500; }
+.minimal-shell .incident-card .service-icon > svg { width: 16px; height: 16px; }
+.minimal-shell .tactical-drawer .incident-address { font-size: 11px; line-height: 1.45; margin: 5px 0 7px; gap: 5px; }
+.minimal-shell .incident-address > svg { width: 11px; height: 11px; margin-top: 2px; }
+.minimal-shell .tactical-drawer .incident-meta { font-size: 11px; gap: 6px; }
+.minimal-shell .incident-state { font-size: 11px; padding: 2px 5px; border-color: transparent; }
+.minimal-shell .incident-meta > .incident-number { font-size: 10px; }
+/* These details are all retained in the contextual mobilisation panel. */
+.minimal-shell .incident-card :is(.incident-bottom, .incident-secondary) { display: none; }
+.minimal-shell .tactical-drawer .new-incident { min-height: 34px; margin: 7px 10px; font-size: 12px; border-radius: 6px; box-shadow: none; }
+.minimal-shell .new-incident > svg { width: 13px; height: 13px; }
+.minimal-shell .shift-overview { flex-shrink: 0; border-top: 1px solid #ffffff16; background: #14181f; }
+.minimal-shell .shift-overview > summary { display: flex; align-items: center; gap: 7px; padding: 8px 12px; min-height: 32px; list-style: none; cursor: pointer; font-size: 11px; color: #bac3d1; }
+.minimal-shell .shift-overview > summary::-webkit-details-marker { display: none; }
+.minimal-shell .shift-overview > summary > svg:last-child { margin-left: auto; }
+.minimal-shell .shift-overview[open] > summary > svg:last-child { transform: rotate(90deg); }
+.minimal-shell .tactical-drawer .shift-overview .shift-summary { display: flex; padding: 0 12px 10px; border: 0; background: transparent; }
+.minimal-shell .shift-overview .shift-summary > div { width: 100%; justify-content: space-between; gap: 12px; }
+.minimal-shell .tactical-drawer .shift-summary strong { font-size: 14px; }
+.minimal-shell .tactical-drawer .shift-summary strong small { font-size: 10px; }
+.minimal-shell .empty-state { padding: 22px 14px; gap: 9px; }
+.minimal-shell .empty-state > svg { width: 23px; height: 23px; }
+.minimal-shell .empty-state strong { font-size: 14px; }
+.minimal-shell .empty-state p { font-size: 12px; }
+
+/* Mobilisation: denser rows, no loss of operational information. */
+.minimal-shell .dispatch-content { min-height: 0; overscroll-behavior: contain; }
+.minimal-shell .tactical-drawer .dispatch-detail { padding: 13px 14px; background: none; }
+.minimal-shell .detail-eyebrow { margin-bottom: 8px; gap: 6px; }
+.minimal-shell .service-tag { font-size: 10px; padding: 3px 5px; }
+.minimal-shell .tactical-drawer .dispatch-detail > h2 { font-size: 19px; line-height: 1.25; letter-spacing: -.3px; }
+.minimal-shell .location-link { margin-top: 5px; min-height: 28px; font-size: 12px; line-height: 1.4; gap: 5px; }
+.minimal-shell .dispatch-situation { margin-top: 9px; padding-top: 9px; gap: 9px; border-color: #ffffff1c; }
+.minimal-shell .dispatch-deadline small { font-size: 10px; }
+.minimal-shell .dispatch-deadline b { font-size: 14px; gap: 4px; }
+.minimal-shell .dispatch-impact { margin: 9px 0 0; }
+.minimal-shell .mission-facts > span { font-size: 11px; padding: 3px 5px; }
+.minimal-shell .call-mini { min-height: 36px; margin-top: 10px; padding: 7px 9px; gap: 8px; font-size: 12px; border-radius: 6px; box-shadow: none; }
+.minimal-shell .call-mini small { display: none; }
+.minimal-shell .call-mini > svg { width: 14px; height: 14px; filter: none; }
+.minimal-shell .tactical-drawer .requirements { padding: 11px 14px; background: #13171d; box-shadow: none; }
+.minimal-shell :is(.requirements h3, .units-heading h3, .assigned-units h3, .specialized-requirements h3) { font-size: 11px; letter-spacing: .25px; }
+.minimal-shell .tactical-drawer .requirements > div > span { padding: 5px 6px; gap: 5px; font-size: 10px; box-shadow: none; }
+.minimal-shell .requirements b { font-size: 12px; }
+.minimal-shell .specialized-requirements { padding: 10px 14px; }
+.minimal-shell .specialized-requirements span { font-size: 11px; padding: 4px 6px; }
+.minimal-shell .units-heading { padding: 12px 14px 8px; }
+.minimal-shell .units-heading > span { font-size: 10px; padding: 2px 5px; }
+.minimal-shell .route-estimate-action { min-height: 31px; margin: 0 14px 7px; padding: 6px 8px; font-size: 11px; }
+.minimal-shell .units-scroll { padding: 0 9px 10px; }
+.minimal-shell .tactical-drawer .unit-choice { padding: 8px; gap: 7px; margin-top: 4px; border-radius: 6px; box-shadow: none; }
+.minimal-shell .tactical-drawer .unit-choice.selected { box-shadow: inset 2px 0 #d1dceb; }
+.minimal-shell .unit-icon { width: 29px; height: 31px; border-radius: 5px; box-shadow: none; }
+.minimal-shell .unit-icon > svg { width: 16px; height: 16px; }
+.minimal-shell .tactical-drawer .unit-choice-text > strong { font-size: 12px; font-weight: 500; }
+.minimal-shell .tactical-drawer .unit-choice-text > small { font-size: 11px; margin-top: 2px; }
+.minimal-shell .unit-choice-right { gap: 6px; max-width: 88px; }
+.minimal-shell .tactical-drawer .unit-ready { font-size: 10px; }
+.minimal-shell .checkbox { width: 16px; height: 16px; border-radius: 4px; }
+.minimal-shell .assigned-units { padding: 11px 14px; }
+.minimal-shell .assigned-units > div:not(.resolution-progress) { padding: 6px 0; font-size: 11px; }
+.minimal-shell .assigned-units .state-label { font-size: 11px; }
+.minimal-shell .dispatch-foldout { padding: 0 14px; }
+.minimal-shell .dispatch-foldout > summary { min-height: 36px; padding: 8px 0; gap: 7px; font-size: 12px; }
+.minimal-shell .dispatch-foldout[open] { padding-bottom: 10px; }
+.minimal-shell .arr-dispatch button { padding: 8px 9px; }
+.minimal-shell .arr-dispatch button strong { font-size: 12px; }
+.minimal-shell .mission-briefing > p { font-size: 12px; line-height: 1.6; }
+.minimal-shell .route-estimate-note { margin-top: 9px; font-size: 11px; }
+.minimal-shell .tactical-drawer .dispatch-bottom { padding: 10px 12px 12px; border-color: #7c8da052; background: #141920; box-shadow: none; }
+.minimal-shell .tactical-drawer .dispatch-bottom > div { margin-bottom: 7px; font-size: 11px; gap: 5px; }
+.minimal-shell .dispatch-bottom > div > .dispatch-selection-state { display: none; }
+.minimal-shell .tactical-drawer .dispatch-button { height: 36px !important; min-height: 36px; font-size: 12px !important; border-radius: 6px !important; }
+.minimal-shell .dispatch-button > svg { width: 14px; height: 14px; }
+
+/* Quiet map controls; the cartography is no longer dimmed behind the UI. */
+.minimal-shell .portugal-map .maplibregl-canvas { filter: saturate(.9) brightness(1) contrast(1); }
+.minimal-shell .portugal-map.map-detailed .maplibregl-canvas { filter: none; }
+.minimal-shell .portugal-map.map-clean::before { background: none; }
+.minimal-shell .workspace-shade, .minimal-shell .menu-dismiss { background: transparent; backdrop-filter: none; }
+.minimal-shell .map-layer-wrap { top: 66px; right: 16px; }
+.minimal-shell .map-layer-button { width: 32px; height: 32px; padding: 7px; border-radius: 6px; }
+.minimal-shell .map-layer-button > svg { width: 14px; height: 14px; }
+.minimal-shell .map-zoom { right: 16px; bottom: 78px; padding: 2px; border-radius: 6px; }
+.minimal-shell .map-zoom .icon-btn { width: 27px; height: 29px; }
+.minimal-shell .map-zoom .icon-btn > svg { width: 14px; height: 14px; }
+.minimal-shell.panel-dispatch .map-layer-wrap, .minimal-shell.panel-dispatch .map-zoom { right: 356px; }
+.minimal-shell .layer-menu { top: 40px; width: 210px; padding: 12px; gap: 8px; border-radius: 8px; }
+.minimal-shell .geo-regions-menu > button { min-height: 33px; font-size: 12px; }
+.minimal-shell .geo-regions-menu > label, .minimal-shell .geo-regions-menu > small { font-size: 11px; }
+.minimal-shell .geo-style-control button { min-height: 30px; font-size: 11px; }
+.minimal-shell .map-bottom { right: 16px; bottom: 28px; }
+.minimal-shell .incoming-call { min-height: 34px; padding: 6px 9px; gap: 6px; border-radius: 7px; box-shadow: none; }
+.minimal-shell .incoming-call strong { font-size: 12px; }
+.minimal-shell .incoming-icon { width: 16px; height: 16px; filter: none; }
+.minimal-shell .incoming-icon > svg { width: 14px; height: 14px; }
+.minimal-shell .incoming-call > svg { width: 13px; height: 13px; }
+.minimal-shell .paused-label { right: 16px; bottom: 194px; padding: 5px 7px; font-size: 10px; letter-spacing: 0; box-shadow: none; }
+.minimal-shell .geo-map-loading, .minimal-shell .geo-map-error { top: 66px; font-size: 12px; padding: 9px 12px; box-shadow: var(--compact-shadow); }
+
+/* Management is a smaller contextual window, not a replacement for the map. */
+.minimal-shell .game-workspace {
+  top: 66px; right: 16px; bottom: auto; left: auto; width: 760px; max-width: calc(100% - 32px);
+  height: min(74dvh, 640px); max-height: calc(100dvh - 146px); border-radius: 9px;
+  border-color: var(--compact-line); box-shadow: 0 7px 26px #0005;
+}
+.minimal-shell .workspace-bar { min-height: 40px; padding: 0 14px; background: #1d232c; box-shadow: none; }
+.minimal-shell .workspace-breadcrumb { font-size: 10px; letter-spacing: .2px; gap: 7px; }
+.minimal-shell .workspace-close { min-height: 32px; font-size: 11px; }
+.minimal-shell .workspace-close > svg { width: 15px; height: 15px; }
+.minimal-shell .game-workspace .management-page { padding: 18px 20px 24px; background: #171c24; }
+.minimal-shell .game-workspace .page-heading { margin-bottom: 17px; gap: 12px; }
+.minimal-shell .game-workspace .page-heading h1 { font-size: 24px; letter-spacing: -.5px; }
+.minimal-shell .game-workspace .page-heading p { font-size: 12px; line-height: 1.5; margin-top: 6px; }
+.minimal-shell .game-workspace .page-eyebrow { font-size: 10px; letter-spacing: .55px; margin-bottom: 5px; }
+.minimal-shell .game-workspace .section-line { margin: 17px 0 11px; gap: 9px; }
+.minimal-shell .game-workspace .section-line h2 { font-size: 15px; }
+.minimal-shell .game-workspace .section-line > span { font-size: 10px; letter-spacing: .2px; }
+.minimal-shell .game-workspace :is(.base-grid, .vehicle-grid, .facility-grid, .qualification-grid) { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; }
+.minimal-shell .game-workspace .base-illustration { height: 70px; background: linear-gradient(135deg, #242b36, #1c232e); }
+.minimal-shell .game-workspace .base-illustration > svg { width: 42px; height: 42px; padding: 10px; box-shadow: none; }
+.minimal-shell .game-workspace :is(.base-info, .vehicle-card, .facility-card, .report-metric, .settings-section) { padding: 13px; }
+.minimal-shell .game-workspace :is(.base-info h3, .vehicle-card h3, .facility-card h3) { font-size: 16px; }
+.minimal-shell .vehicle-art { max-height: 75px; margin: 9px 0; filter: saturate(.5); }
+.minimal-shell .game-workspace .vehicle-price strong { font-size: 16px; }
+.minimal-shell .base-actions button, .minimal-shell .facility-card > button { min-height: 34px; font-size: 12px; }
+.minimal-shell .extension-list button { min-height: 38px; padding: 6px 8px; }
+.minimal-shell .progression-ribbon { margin: 0 0 18px; }
+.minimal-shell .progression-ribbon > div, .minimal-shell .operations-summary > div { padding: 10px 12px; }
+.minimal-shell .progression-ribbon strong { font-size: 13px; }
+.minimal-shell .game-workspace .report-metrics { gap: 9px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.minimal-shell .game-workspace .report-metric strong { font-size: 21px; }
+.minimal-shell .game-workspace .report-metric span { font-size: 12px; }
+.minimal-shell .game-workspace .report-columns { grid-template-columns: 1fr; gap: 18px; }
+.minimal-shell .game-workspace :is(.expansion-strip, .specialist-strip) { padding: 13px; gap: 11px; }
+.minimal-shell .game-workspace :is(.expansion-strip, .specialist-strip) h3 { font-size: 14px; }
+.minimal-shell .game-workspace :is(.expansion-strip, .specialist-strip) p { font-size: 12px; }
+.minimal-shell .game-workspace .settings-section > h2 { font-size: 16px; }
+.minimal-shell .game-workspace .setting-row { padding: 13px 0; }
+.minimal-shell .game-workspace .setting-row h3 { font-size: 13px; }
+.minimal-shell .game-workspace .setting-row p { font-size: 12px; line-height: 1.5; }
+.minimal-shell .fleet-row { padding: 11px 12px; font-size: 12px; }
+.minimal-shell .operations-tabs button { min-height: 35px; font-size: 12px; }
+.minimal-shell .support-board { grid-template-columns: 1fr; gap: 18px; }
+.minimal-shell .training-console, .minimal-shell .arr-builder { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 13px; }
+.minimal-shell .training-console > div, .minimal-shell .arr-builder > label:first-child { grid-column: 1 / -1; }
+.minimal-shell :is(.training-list, .qualification-grid, .patrol-list, .arr-list) article, .minimal-shell .case-list article { padding: 11px; }
+
+/* Retain depth without bright bloom, chrome reflections or a dark veil over the map. */
+.minimal-shell :is(.hud-options, .game-menu, .layer-menu, .menu-launcher > button, .map-layer-button, .map-zoom) { background: var(--compact-surface); border-color: var(--compact-line); box-shadow: var(--compact-shadow); }
+.minimal-shell .game-menu::before, .minimal-shell .game-menu::after, .minimal-shell .hud-options::before, .minimal-shell .hud-options::after,
+.minimal-shell .tactical-drawer > .incident-panel::before, .minimal-shell .tactical-drawer > .dispatch-panel::before,
+.minimal-shell .game-workspace::before, .game-modal::before { display: none; }
+.minimal-shell .game-workspace :is(.base-card, .vehicle-card, .facility-card, .report-metric, .career-rank, .settings-section),
+.minimal-shell .game-workspace :is(.expansion-strip, .specialist-strip), .minimal-shell .training-console, .minimal-shell .arr-builder,
+.minimal-shell :is(.training-list, .qualification-grid, .patrol-list, .arr-list) article, .minimal-shell .case-list article {
+  background: #202731; border-color: #8392a844; box-shadow: none; border-radius: 7px;
+}
+.minimal-shell .game-workspace :is(.base-card, .vehicle-card):hover { box-shadow: none; }
+.minimal-shell :is(.progression-ribbon, .operations-summary, .fleet-table, .report-empty, .operations-empty, .full-logs) { box-shadow: none; }
+.minimal-shell :is(.primary-button, .outline-button, .danger-button) { min-height: 34px; font-size: 12px !important; }
+.minimal-shell .primary-button, .game-modal .primary-button, .minimal-shell .dispatch-button:not(:disabled) { background: linear-gradient(135deg, #d5dbe4, #bfc8d6) !important; border-color: #d1dbe9 !important; color: #141c28 !important; box-shadow: none; }
+.minimal-shell .primary-button:hover:not(:disabled), .game-modal .primary-button:hover:not(:disabled), .minimal-shell .dispatch-button:hover:not(:disabled) { background: #dce4f0 !important; box-shadow: none; }
+.minimal-shell .outline-button { background: #2b3544 !important; box-shadow: none; }
+.minimal-shell :is(.primary-button, .outline-button, .dispatch-button):disabled, .game-modal :is(.primary-button, .outline-button):disabled { background: #283242 !important; color: #b4c4dc !important; border-color: #596d89 !important; box-shadow: none; }
+.game-modal { width: min(430px, calc(100vw - 28px)) !important; max-width: calc(100vw - 28px) !important; max-height: min(72dvh, calc(100dvh - 96px)); padding: 18px !important; gap: 11px; background: linear-gradient(140deg, #222a36, #192230) !important; border-color: #9badc65e !important; box-shadow: 0 10px 35px #0006 !important; }
+.game-modal h2 { font-size: 21px !important; line-height: 1.25; padding-right: 24px; }
+.game-modal [id$="description"] { font-size: 12px; line-height: 1.5; }
+.game-modal .modal-eyebrow { font-size: 10px; letter-spacing: .4px; }
+.game-modal .caller { gap: 9px; padding-top: 10px; margin-top: 3px; }
+.game-modal .caller-avatar { width: 30px; height: 30px; box-shadow: none; }
+.game-modal .caller-avatar > svg { width: 15px; height: 15px; }
+.game-modal .caller p { font-size: 14px; line-height: 1.5; }
+.game-modal .audio-wave { display: none; }
+.game-modal .call-choices { gap: 7px; margin-top: 4px; }
+.game-modal .call-choices > button { padding: 10px; min-height: 40px; font-size: 12px; line-height: 1.5; box-shadow: none; background: #28364a; }
+.game-modal .call-choices > button > span { font-size: 11px; }
+.game-modal .call-result { margin-top: 8px; padding: 13px; }
+.game-modal .call-result p, .game-modal .help-steps p { font-size: 12px; line-height: 1.55; }
+.game-modal .help-steps { gap: 13px; margin: 10px 0; }
+.game-modal .help-steps > div { gap: 10px; }
+.game-modal .help-steps > div > span { width: 30px; height: 30px; box-shadow: none; }
+.game-modal .help-steps > div > span > svg { width: 16px; height: 16px; }
+.game-modal .help-steps h3 { font-size: 14px; }
+.game-modal .help-steps small { font-size: 10px; }
+.game-modal .simulation-disclaimer { font-size: 11px; }
+.game-modal :is(.primary-button, .outline-button, .danger-button) { min-height: 36px; font-size: 12px !important; }
+.game-modal > button.absolute { top: 12px; right: 12px; width: 27px; height: 27px; background: #29374c; }
+[data-sonner-toast] { padding: 11px 13px !important; font-size: 12px !important; background: #202a39 !important; border-color: #788ea955 !important; box-shadow: 0 5px 18px #0004 !important; }
+
+@media (max-width: 800px) {
+  .minimal-shell .operations-tabs { grid-template-columns: 1fr 1fr; }
+  .minimal-shell .game-workspace .page-heading { flex-wrap: wrap; }
+}
+@media (max-width: 600px) {
+  .minimal-shell .minimal-hud { top: max(12px, env(safe-area-inset-top)); left: 10px; right: 10px; height: 38px; gap: 6px; }
+  .minimal-shell .minimal-brand { padding: 0 8px; gap: 5px; }
+  .minimal-shell .minimal-brand > svg { display: none; }
+  .minimal-shell .minimal-brand > span { font-size: 17px; }
+  .minimal-shell .minimal-readout { padding: 0 3px 0 9px; gap: 4px; }
+  .minimal-shell .hud-time { padding-left: 7px; margin-left: 1px; }
+  .minimal-shell .minimal-readout > .icon-btn { width: 40px; height: 44px; }
+  .minimal-shell .minimal-options-toggle { width: 40px; height: 44px; min-height: 44px; padding: 7px; justify-content: center; }
+  .minimal-shell .minimal-options-toggle > span { display: none; }
+  .minimal-shell .hud-options { top: 50px; right: -3px; width: 270px; max-height: min(62dvh, calc(100dvh - 134px)); overflow-y: auto; }
+  .minimal-shell .menu-launcher { left: 10px; bottom: max(25px, calc(env(safe-area-inset-bottom) + 10px)); }
+  .minimal-shell .menu-launcher > button { min-height: 40px; padding: 8px 10px; }
+  .minimal-shell .game-menu { left: 10px; bottom: max(73px, calc(env(safe-area-inset-bottom) + 58px)); width: 238px; max-height: min(66dvh, calc(100dvh - 143px)); }
+  .minimal-shell .menu-operations > button, .minimal-shell .game-menu .rail-link, .minimal-shell .game-menu .rail-bottom > .icon-btn { min-height: 40px; height: 40px; }
+  .minimal-shell .tactical-drawer, .minimal-shell .dispatch-drawer {
+    top: auto; bottom: max(73px, calc(env(safe-area-inset-bottom) + 58px)); left: 10px; right: 10px;
+    width: auto; max-width: none; height: 54dvh; max-height: calc(100dvh - 148px);
+  }
+  .minimal-shell .tactical-drawer .panel-heading { min-height: 44px; }
+  .minimal-shell .panel-heading-actions > .icon-btn { width: 40px; height: 40px; }
+  .minimal-shell .tactical-drawer .incident-tabs > button { min-height: 34px; }
+  .minimal-shell .queue-sort { min-height: 32px; }
+  .minimal-shell .shift-overview > summary { min-height: 36px; }
+  .minimal-shell .tactical-drawer .new-incident { min-height: 36px; }
+  .minimal-shell .tactical-drawer .unit-choice { min-height: 50px; }
+  .minimal-shell .tactical-drawer .dispatch-button { height: 40px !important; }
+  .minimal-shell .dispatch-foldout > summary { min-height: 40px; }
+  .minimal-shell .map-layer-wrap { top: 64px; right: 10px; }
+  .minimal-shell .map-layer-button { width: 38px; height: 38px; }
+  .minimal-shell .map-zoom { right: 10px; bottom: 83px; }
+  .minimal-shell .map-zoom .icon-btn { width: 34px; height: 38px; }
+  .minimal-shell .map-bottom { right: 10px; bottom: max(25px, calc(env(safe-area-inset-bottom) + 10px)); }
+  .minimal-shell .incoming-call { min-height: 40px; padding: 8px 10px; }
+  .minimal-shell .incoming-call > svg { display: none; }
+  .minimal-shell .paused-label { right: 10px; bottom: 218px; }
+  .minimal-shell .layer-menu { top: 46px; width: 218px; }
+  .minimal-shell .geo-regions-menu > button, .minimal-shell .geo-style-control button { min-height: 36px; }
+  .minimal-shell .geo-map-loading, .minimal-shell .geo-map-error { top: 113px; }
+  .minimal-shell .game-workspace { top: auto; bottom: max(73px, calc(env(safe-area-inset-bottom) + 58px)); left: 10px; right: 10px; width: auto; max-width: none; height: 60dvh; max-height: calc(100dvh - 148px); }
+  .minimal-shell .workspace-bar { min-height: 42px; padding: 0 12px; }
+  .minimal-shell .workspace-close { min-height: 40px; min-width: 36px; justify-content: flex-end; }
+  .minimal-shell .game-workspace .management-page { padding: 16px 13px 20px; }
+  .minimal-shell .game-workspace .page-heading h1 { font-size: 23px; }
+  .minimal-shell .game-workspace .page-heading p { font-size: 12px; }
+  .minimal-shell .game-workspace :is(.base-grid, .vehicle-grid, .facility-grid, .qualification-grid) { grid-template-columns: minmax(0, 1fr); }
+  .minimal-shell .training-console, .minimal-shell .arr-builder { grid-template-columns: minmax(0, 1fr); }
+  .minimal-shell .game-workspace .base-illustration { height: 58px; }
+  .minimal-shell .game-workspace .vehicle-art { max-height: 68px; }
+  .minimal-shell .game-workspace .setting-row > div { min-width: 110px; }
+  .minimal-shell :is(.primary-button, .outline-button, .danger-button), .minimal-shell .base-actions button, .minimal-shell .extension-list button, .minimal-shell .facility-card > button { min-height: 40px; }
+  .game-modal { width: calc(100vw - 24px) !important; max-width: 390px !important; max-height: min(76dvh, calc(100dvh - 96px)); padding: 16px !important; }
+  .game-modal .call-choices > button, .game-modal :is(.primary-button, .outline-button, .danger-button) { min-height: 44px; }
+  .game-modal > button.absolute { width: 32px; height: 32px; }
+}
+@media (max-height: 560px) and (min-width: 601px) {
+  .minimal-shell .tactical-drawer, .minimal-shell .dispatch-drawer, .minimal-shell .game-workspace { top: 62px; height: calc(100dvh - 130px); max-height: none; }
+  .minimal-shell .hud-options { max-height: calc(100dvh - 86px); overflow-y: auto; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .minimal-shell { --compact-surface: #171c24; }
+  .minimal-shell .minimal-brand, .minimal-shell .minimal-readout, .minimal-shell .hud-options, .minimal-shell .game-menu, .minimal-shell .layer-menu { backdrop-filter: none; }
+  .minimal-shell .tactical-drawer > :is(.incident-panel, .dispatch-panel) { background: #171c24; }
+}

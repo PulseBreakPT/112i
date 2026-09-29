@@ -42,6 +42,6 @@ export const IncidentPanel = ({ game, selected, onSelect, act, busy, onClose }) 
       {!ordered.length && <div className="empty-state" data-testid="incidents-empty"><CheckCheck size={30} /><strong>{game.incidents.length ? 'Sem ocorrências deste serviço' : 'Sem ocorrências pendentes'}</strong><p>{game.incidents.length ? 'Seleciona Todas para consultar a fila completa.' : 'A central está pronta para a próxima chamada.'}</p></div>}
     </div>
     <button className="new-incident" data-testid="new-incident-button" disabled={busy || atCapacity} onClick={() => act('new_incident')}><Plus size={16} />{atCapacity ? 'Limite de ocorrências atingido' : 'Receber ocorrência'}</button>
-    <div className="shift-summary"><span><CheckCheck size={15} /> ESTE TURNO</span><div><strong data-testid="shift-completed">{game.completed}<small>resolvidas</small></strong><strong className="earnings" data-testid="shift-earnings">+{money(game.earned)}<small>receitas</small></strong></div></div>
+    <details className="shift-overview" data-testid="shift-overview"><summary><CheckCheck size={13} /><span>Resumo do turno</span><ChevronRight size={13} /></summary><div className="shift-summary"><div><strong data-testid="shift-completed">{game.completed}<small>resolvidas</small></strong><strong className="earnings" data-testid="shift-earnings">+{money(game.earned)}<small>receitas</small></strong></div></div></details>
   </section>;
 };

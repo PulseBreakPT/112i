@@ -22,6 +22,7 @@ import './Immersive.css';
 import './Minimal.css';
 import './Polish.css';
 import './Clarity.css';
+import './Compact.css';
 
 function GameApp() {
   const { game, world, error, busy, act, retry } = useGame();
