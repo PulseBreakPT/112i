@@ -40,7 +40,24 @@ export function initializeAdvancedState(game) {
     weekly:WEEKLY_TASKS.map(task=>makeTask(game,task,'weekly')),
   };
   game.seasonal_events=game.seasonal_events||[{id:'civil-protection-week',title:'Semana da Proteção Civil',starts_at:0,ends_at:604800,reward_multiplier:1.1,status:'active'}];
-  game.cooperation=game.cooperation||{name:'Rede Nacional 112',level:1,funds:0,contribution:0,shared_missions:0,members:[{id:'operator-local',name:'Operador 01',role:'Coordenador',online:true}],log:[]};
+  game.cooperation={
+    name:'Rede Nacional 112',
+    level:1,
+    funds:0,
+    contribution:0,
+    shared_missions:0,
+    members:[{id:'operator-local',name:'Operador 01',role:'Coordenador',online:true}],
+    log:[],
+    chat:[],
+    buildings:[],
+    events:[],
+    large_scale_missions:[],
+    ...game.cooperation,
+  };
+  game.cooperation.chat=game.cooperation.chat||[];
+  game.cooperation.buildings=game.cooperation.buildings||[];
+  game.cooperation.events=game.cooperation.events||[];
+  game.cooperation.large_scale_missions=game.cooperation.large_scale_missions||[];
   (game.command_centers||[]).forEach(center=>{center.mission_ranges={default:center.radius_km||35,...(center.mission_ranges||{})};center.spawn_zones=center.spawn_zones||[];});
   (game.bases||[]).forEach(base=>{base.mission_generation_enabled=base.mission_generation_enabled!==false;base.supply_reserve={fuel:1000,medical:500,water:20000,foam:2000,equipment:500,...(base.supply_reserve||{})};});
   (game.facilities||[]).forEach(facility=>{facility.enabled=facility.enabled!==false;facility.queue_limit=facility.queue_limit||facility.capacity||5;});
@@ -138,6 +155,16 @@ export function applyAdvancedAction(game,kind,data,log=()=>{}) {
   }
   if(kind==='contribute_cooperation'){
     const amount=Math.max(100,Math.round(Number(data.amount)||0));assert(game.money>=amount,'Orçamento insuficiente.');game.money-=amount;game.cooperation.funds+=amount;game.cooperation.contribution+=amount;game.cooperation.level=1+Math.floor(game.cooperation.funds/10000);game.cooperation.log.unshift({id:id(),text:`Contribuição operacional de ${amount} €.`,time:game.elapsed});log(game,'Contribuição registada na rede cooperativa.','success');return true;
+  }
+  if(kind==='send_alliance_message'){
+    const text=String(data.text||'').trim().slice(0,180);assert(text,'Escreve uma mensagem para a rede.');game.cooperation.chat.unshift({id:id(),author:'Operador 01',text,time:game.elapsed});game.cooperation.chat=game.cooperation.chat.slice(0,40);game.cooperation.log.unshift({id:id(),text:'Mensagem enviada no canal operacional.',time:game.elapsed});return true;
+  }
+  if(kind==='build_alliance_facility'){
+    const type=String(data.type||'hospital'),name=String(data.name||'').trim().slice(0,48)||({hospital:'Hospital partilhado',prison:'Celas partilhadas',academy:'Escola partilhada'}[type]||'Instalação partilhada');
+    const catalog={hospital:{cost:9000,capacity:8},prison:{cost:7500,capacity:10},academy:{cost:6500,capacity:12}};const definition=catalog[type];assert(definition,'Tipo de instalação inválido.');assert(game.cooperation.funds>=definition.cost,'Fundos cooperativos insuficientes.');game.cooperation.funds-=definition.cost;game.cooperation.buildings.push({id:id(),type,name,capacity:definition.capacity,level:1,enabled:true,created_at:game.elapsed});game.cooperation.log.unshift({id:id(),text:`Instalação coletiva criada: ${name}.`,time:game.elapsed});log(game,`${name} disponível na rede cooperativa.`,'success');return true;
+  }
+  if(kind==='upgrade_alliance_facility'){
+    const building=game.cooperation.buildings.find(item=>item.id===data.building_id);assert(building,'Instalação coletiva inválida.');const cost=3500*(building.level||1);assert(game.cooperation.funds>=cost,'Fundos cooperativos insuficientes.');game.cooperation.funds-=cost;building.level=(building.level||1)+1;building.capacity+=building.type==='academy'?6:4;game.cooperation.log.unshift({id:id(),text:`${building.name} ampliada para nível ${building.level}.`,time:game.elapsed});log(game,`${building.name} ampliada pela rede cooperativa.`,'success');return true;
   }
   if(kind==='rebalance_complex'){
     const complex=game.complexes.find(item=>item.id===data.complex_id);assert(complex,'Complexo inválido.');const bases=game.bases.filter(base=>(complex.base_ids||[]).includes(base.id));assert(bases.length>1,'O complexo necessita de pelo menos duas bases.');for(const service of ['fire','medical','police']){const serviceBases=bases.filter(base=>base.service===service);if(serviceBases.length<2)continue;const people=game.personnel.filter(person=>serviceBases.some(base=>base.id===person.base_id)&&!person.unit_id&&person.status==='available');people.forEach((person,index)=>{person.base_id=serviceBases[index%serviceBases.length].id;});serviceBases.forEach(base=>{base.personnel=game.personnel.filter(person=>person.base_id===base.id).length;});}updateComplexes(game);log(game,`${complex.name}: efetivo livre redistribuído.`,'success');return true;

@@ -15,6 +15,7 @@ import Reports from './game/Reports';
 import Settings from './game/Settings';
 import CommandCenters from './game/CommandCenters';
 import StrategicOperations from './game/StrategicOperations';
+import Cooperation from './game/Cooperation';
 import { beep } from './game/common';
 import { ambientAudio } from './game/ambientAudio';
 import { useAmbientAudio } from './game/useAmbientAudio';
@@ -88,7 +89,7 @@ function GameApp() {
   const incident = game.incidents.find(i => i.id === selected);
   const waitingIncidents = game.incidents.filter(item => item.status === 'waiting');
   const queueTone = waitingIncidents.some(item => item.priority === 1) ? 'danger' : waitingIncidents.length ? 'warning' : game.incidents.length ? 'active' : 'success';
-  const workspaceName = { '/comando':'Áreas operacionais', '/estrategia':'Estratégia operacional', '/bases': 'Rede de bases', '/frota': 'Frota de emergência', '/operacoes': 'Operações e apoio', '/relatorios': 'Relatório do turno', '/definicoes': 'Definições' }[location.pathname] || 'Setor não encontrado';
+  const workspaceName = { '/comando':'Áreas operacionais', '/estrategia':'Estratégia operacional', '/alianca':'Aliança operacional', '/bases': 'Rede de bases', '/frota': 'Frota de emergência', '/operacoes': 'Operações e apoio', '/relatorios': 'Relatório do turno', '/definicoes': 'Definições' }[location.pathname] || 'Setor não encontrado';
 
   return <div className={`app-shell immersive-shell minimal-shell distrito-interface dark ${isCentral ? 'central-open' : 'workspace-open'} ${panel && isCentral ? `panel-open panel-${panel}` : ''}`}>
     <main className="world-stage" aria-label="Mapa operacional" inert={!isCentral || menuOpen}>
@@ -121,6 +122,7 @@ function GameApp() {
         <Routes>
           <Route path="/comando" element={<CommandCenters game={game} world={world} act={act} busy={busy} />} />
           <Route path="/estrategia" element={<StrategicOperations game={game} world={world} act={act} busy={busy} />} />
+          <Route path="/alianca" element={<Cooperation game={game} world={world} act={act} busy={busy} />} />
           <Route path="/bases" element={<Management key="bases" game={game} world={world} act={act} busy={busy} mode="bases" />} />
           <Route path="/frota" element={<Management key="fleet" game={game} world={world} act={act} busy={busy} mode="fleet" />} />
           <Route path="/operacoes" element={<Operations game={game} world={world} act={act} busy={busy} />} />
