@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Latest approved: replace all active app-brand references with Distrito 112, including HUD/loading/legacy header, accessibility, HTML metadata, reports, API identity, internal names and docs; adapt longer wordmark for mobile. Preserve saves/preferences via historical compatibility storage keys. No dependencies, environment, URLs, gameplay, user-authored names or database data changes. No integrations required."
+user_problem_statement: "Latest approved: unboxed minimal permanent HUD, WHITE text/icons with BLACK shadows, game first; dark translucent BLUR menus only when opened. Remove permanent backgrounds/borders/glows, keep essential readouts and discrete controls. Preserve Distrito 112 branding, game logic, service colors within menus/map, saves and existing compact layout. No dependencies/environment fixes or integrations authorized."
 backend:
   - task: "Distrito 112 backend identity"
     implemented: true
@@ -164,6 +164,20 @@ backend:
         agent: "testing"
         comment: "✅ ALL BACKEND SANITY TESTS PASSED (12/12). Fixed missing networkx dependency (already in requirements.txt, just needed installation). Restored missing /app/backend/.env file with standard configuration (MONGO_URL=mongodb://localhost:27017, DB_NAME=nexo112, OSRM_URL, MAP_STYLE_URL, CORS_ORIGINS for both preview aliases). Backend now operational. Created game_api_test.py for sanity checks. Tested: health endpoint (operational), world endpoint (portugal-v1, 13 sites, 4 regions), game creation (disposable game ID: 915aaff0-b04c-4497-bd45-c705136b6487), pause (speed 0), tick while paused (elapsed unchanged), speed change to 1, tick at speed 1 (elapsed +2s), pause after tick, persistence (save/read working correctly with saved_at timestamps). All game API operations working as expected."
 frontend:
+  - task: "Unboxed white HUD and local blur menus"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/Interface.css"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "user"
+        comment: "Approved removing all permanent HUD boxes: white text/icons with black shadow, minimal game-first presentation; menus dark/translucent with blur. No dependency fixes."
+      - working: "NA"
+        agent: "main"
+        comment: "CSS-only change. Permanent brand/readout/launchers/queue/buttons/map controls/incoming/pause have no background, border, box shadow or backdrop, including legacy hover/active. White text and leaf SVG black shadows; no ancestor filters that block options blur. Underline interaction feedback, keyboard ring, mobile 44px invisible targets, 12px budget/time, popup/pause spacing. Shared open menus/dialogs/toasts dark ~80% alpha + local blur24, translucent inner rows, no specular edges. Unsupported-backdrop/reduced-transparency fallback. Map outside menus untouched and sharp. JS/backend/saves/dependencies/env/provider/URLs unchanged. App/server lint + whitespace diff pass. Read-only cascade review found no conflicts, but NOT rendered/CSS parser/build verified. Existing environment blocked; frontend test permission pending."
   - task: "Distrito 112 complete application rebrand"
     implemented: true
     working: "NA"
@@ -241,9 +255,9 @@ frontend:
         agent: "main"
         comment: "Implemented persistent fullscreen world-stage, compact floating GameHUD, operations dock, contextual mutually-exclusive drawers, close/ESC/map-focus interactions, overlay management workspaces with breadcrumb/back action, mobile bottom nav and sheets. Added semantics.css accents, colored map markers with grayscale terrain only, state-driven labels and report results. JS/Python lint and all CSS parsing passed. Backend testing first; frontend permission still pending."
 metadata:
-  latest_design_direction: "Uniform all HUDs and menus with same graphite material, compact map-first. User reiterated no dependency fixes. Preserve service/state accents and existing gameplay."
-  latest_delivery: "Distrito 112 complete active rebrand, shared frontend branding constants, distrito-interface CSS namespace, same historical storage IDs in isolated compatibility module. Static reference audit: only two intentional old-brand identifiers in active source; historical logs retained accurately. No dependencies/env/URLs/gameplay changes."
-  verification_scope: "Distrito 112 static reference audit and backend identity checks pass; active old brand only in 2 compatibility storage keys. Backend/App lint and diff whitespace pass. Wider frontend lint has pre-existing CarFront/empty-catch/Jest-global findings, confirmed baseline and untouched. No new CSS parser/build/browser/screenshot verification. Frontend blocked by missing node_modules/fast-uri; runtime API blocked by missing networkx/backend env. User declined environment/dependency fixes; no repairs/install/restarts/mutations occurred."
+  latest_design_direction: "Permanent HUD unboxed, white text/icons with black shadow; game first. Open menus locally blurred and dark translucent. Supersedes graphite HUD islands. No environment/dependency fixes."
+  latest_delivery: "Interface.css ONLY: strict unboxed permanent controls, black glyph shadows, local blur24 contextual menus/dialogs/toasts, flat/translucent inner surfaces, 44px mobile targets, focus/hover/expanded states and fallbacks. JS/game/backend/saves/providers unchanged."
+  verification_scope: "App/server lint and whitespace checks pass; read-only intermediate CSS cascade review only. No rendered UI, CSS parser or build verification. Preview historically blocked by missing node_modules/fast-uri; API by networkx/env. No repairs/install/restarts/mutations. Backend scope audit requested before frontend permission prompt."
   visual_artifacts: "Historical artifacts only; no new rendered UI screenshots in this task"
   created_by: "main_agent"
   version: "1.0"
@@ -251,13 +265,14 @@ metadata:
   run_ui: false
 test_plan:
   current_focus:
-    - "Distrito 112 backend identity"
-    - "Distrito 112 complete application rebrand"
+    - "Unboxed white HUD and local blur menus"
   stuck_tasks:
     - "Frontend preview: unavailable fast-uri@3.2.2 resolution, user declined dependency changes"
   test_all: false
   test_priority: "high_first"
 agent_communication:
+  - agent: "main"
+    message: "LATEST HUD CSS task: backend source unchanged, only Interface.css + handoff docs edited. Backend agent: read-only scope audit via git diff backend, verify backend routes/contracts untouched. Server lint already PASS. Runtime known unavailable (networkx/env), no need to repeat failed HTTP requests. Do NOT install, create/edit env/config/source/dependencies/scripts, restart, mutate games, invoke providers or run frontend tests. Only this testing log may change. Return static scope result separately from runtime blocker; STOP, no repairs. No auth (read memory/test_credentials.md). User frontend permission pending."
   - agent: "main"
     message: "LATEST REBRAND: Read-only BACKEND verification only. Validate server title/health name and road_routing User-Agent, Python AST if useful, plus existing expected health name. At most one actual GET /api/ using available configured service; known environment blocked. DO NOT install, edit/create env/config/source/package files, restart services, mutate games, call upstream providers or run frontend tests. Only test_result.md may be updated. Report static checks separately from unavailable HTTP runtime; stop on blocked service. No auth: read memory/test_credentials.md. Pre-existing frontend CarFront/empty-catch/Jest lint findings are OUT OF SCOPE."
   - agent: "main"

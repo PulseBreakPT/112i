@@ -1,27 +1,30 @@
-/* Distrito 112 — shared interface material.
-   Import last. Compact.css owns the map-first layout; this file owns the finish.
-   Portalled dialogs use the same root tokens. No map filters or gameplay changes. */
+/* Distrito 112 — game-first interface.
+   Import last. Compact.css owns density; this file separates the unboxed
+   white HUD from contextual blur menus. No map filters or gameplay changes. */
 :root {
   --distrito-font: 'Barlow', sans-serif;
   --distrito-text: #f0f1f3;
   --distrito-secondary: #c1c5cd;
-  --distrito-muted: #a2a8b3;
-  --distrito-edge: #ffffff24;
-  --distrito-divider: #ffffff12;
-  --distrito-focus: #d5e4ff;
-  --distrito-radius: 12px;
-  --distrito-card-radius: 9px;
-  --distrito-control-radius: 7px;
-  --distrito-glass: radial-gradient(ellipse at 8% 0%, #ffffff08, transparent 58%), linear-gradient(135deg, #222429f5, #17191ef7 55%, #111318fa);
-  --distrito-card: linear-gradient(135deg, #27292f, #1e2026 75%);
-  --distrito-inset: linear-gradient(180deg, #13151a, #191b20);
-  --distrito-header: linear-gradient(100deg, #ffffff05, #ffffff01);
-  --distrito-control: linear-gradient(135deg, #31343b, #25282f);
-  --distrito-hover: linear-gradient(125deg, #3b3e47, #2d3038);
-  --distrito-selected: linear-gradient(110deg, #ffffff12, #ffffff06);
+  --distrito-muted: #b3b7c0;
+  --distrito-edge: #ffffff18;
+  --distrito-divider: #ffffff0f;
+  --distrito-focus: #fff;
+  --distrito-radius: 8px;
+  --distrito-card-radius: 6px;
+  --distrito-control-radius: 5px;
+  --distrito-glass: linear-gradient(135deg, #101216cc, #0a0c10d1);
+  --distrito-card: linear-gradient(135deg, #ffffff07, #ffffff03);
+  --distrito-inset: linear-gradient(180deg, #00000030, #0000001a);
+  --distrito-header: linear-gradient(100deg, #ffffff04, transparent);
+  --distrito-control: linear-gradient(135deg, #ffffff10, #ffffff08);
+  --distrito-hover: linear-gradient(125deg, #ffffff1c, #ffffff10);
+  --distrito-selected: linear-gradient(110deg, #ffffff16, #ffffff09);
   --distrito-silver: linear-gradient(120deg, #eef0f4, #c7ccd5);
-  --distrito-shadow: 0 14px 38px #0005, 0 3px 9px #0003, inset 0 1px #ffffff0c;
-  --distrito-card-shadow: 0 3px 10px #0002, inset 0 1px #ffffff06;
+  --distrito-shadow: 0 10px 32px #0004;
+  --distrito-card-shadow: 0 0 0 transparent;
+  --distrito-menu-blur: blur(24px) saturate(.7);
+  --distrito-hud-text-shadow: 0 1px 2px #000, 0 2px 5px #000, 0 0 2px #000;
+  --distrito-hud-icon-shadow: drop-shadow(0 1px 1px #000) drop-shadow(0 2px 3px #000e);
 }
 .minimal-shell.distrito-interface, .game-modal {
   --ui-surface: #191b20;
@@ -42,40 +45,106 @@
   font-family: var(--distrito-font);
 }
 
-/* One identical shell, from the smallest HUD instrument to the largest menu.
-   Background blur is restricted to floating roots, never nested cards. */
+/* Game first: permanent HUD is white ink and black shadow, never a panel.
+   !important on this small surface allowlist prevents legacy active/hover
+   themes from bringing boxes back. Do not include menus or map markers here. */
 .minimal-shell.distrito-interface :is(
-  .minimal-brand, .minimal-readout, .hud-options, .game-menu, .layer-menu,
-  .menu-launcher > button, .map-layer-button, .map-zoom, .game-workspace,
+  .minimal-brand, .minimal-readout, .minimal-readout > .icon-btn,
+  .hud-options-wrap > .minimal-options-toggle, .menu-launcher > button,
+  .queue-count, .map-layer-button, .map-zoom, .map-zoom > .icon-btn,
+  .incoming-call, .incoming-icon, .paused-label
+) {
+  background: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  color: #fff !important;
+  opacity: 1;
+}
+/* No filters/opacity on ancestors of popovers: their blur must sample the map. */
+.minimal-shell.distrito-interface :is(.minimal-brand, .minimal-readout) {
+  padding: 0;
+  filter: none;
+  text-shadow: none;
+}
+.minimal-shell.distrito-interface :is(
+  .minimal-brand > .brand-wordmark, .minimal-brand > .brand-wordmark > span,
+  .minimal-budget, .hud-time b, .minimal-options-toggle > span,
+  .menu-launcher > button > span, .queue-count, .incoming-call strong,
+  .incoming-call small, .paused-label
+) {
+  color: #fff !important;
+  text-shadow: var(--distrito-hud-text-shadow);
+}
+.minimal-shell.distrito-interface :is(
+  .minimal-brand > svg, .minimal-readout > .icon-btn > svg,
+  .minimal-options-toggle > svg, .menu-launcher > button > svg,
+  .map-layer-button > svg, .map-zoom > .icon-btn > svg,
+  .incoming-call > svg, .incoming-icon > svg
+) {
+  color: #fff !important;
+  filter: var(--distrito-hud-icon-shadow);
+  width: 16px;
+  height: 16px;
+  stroke-width: 2;
+}
+.minimal-shell.distrito-interface .hud-time { border: 0; padding-left: 4px; margin-left: 2px; }
+.minimal-shell.distrito-interface .minimal-readout > .icon-btn { margin: 0; }
+.minimal-shell.distrito-interface :is(.minimal-budget, .hud-time b) { font-size: 13px; font-weight: 600; }
+.minimal-shell.distrito-interface .queue-count { min-width: 12px; padding: 0; font-size: 12px; font-weight: 600; }
+.minimal-shell.distrito-interface .incoming-icon { filter: none; }
+.minimal-shell.distrito-interface .incoming-call strong { font-weight: 600; }
+.minimal-shell.distrito-interface .map-zoom > span { display: none; }
+/* Keep generous invisible hit areas. Hover/expanded feedback is a small
+   white underline, not a returning card or glow. Keyboard focus stays explicit. */
+.minimal-shell.distrito-interface :is(.menu-launcher > button, .minimal-options-toggle, .map-layer-button) { position: relative; }
+.minimal-shell.distrito-interface :is(.menu-launcher > button, .minimal-options-toggle, .map-layer-button)::after {
+  content: '';
+  position: absolute;
+  bottom: 3px;
+  left: 8px;
+  right: 8px;
+  height: 1px;
+  background: #fff;
+  box-shadow: 0 1px 3px #000;
+  opacity: 0;
+  pointer-events: none;
+}
+.minimal-shell.distrito-interface :is(.menu-launcher > button[aria-expanded="true"], .minimal-options-toggle.active, .map-layer-button.active)::after { opacity: 1; }
+.minimal-shell.distrito-interface :is(.minimal-brand, .minimal-readout > .icon-btn, .minimal-options-toggle, .menu-launcher > button, .map-layer-button, .map-zoom > .icon-btn, .incoming-call):focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px #000c !important;
+}
+.minimal-shell.distrito-interface .portugal-map :is(.maplibregl-ctrl-attrib, .maplibregl-ctrl-attrib a, .maplibregl-ctrl-scale) {
+  background-color: transparent;
+  color: #fff;
+  text-shadow: var(--distrito-hud-text-shadow);
+  box-shadow: none;
+}
+.minimal-shell.distrito-interface .portugal-map .maplibregl-ctrl-attrib { border-color: transparent; }
+.minimal-shell.distrito-interface .portugal-map .maplibregl-ctrl-scale { border-color: #fff; }
+
+/* Menus appear only on demand. Blur is local to the open surface: the rest
+   of the map stays sharp. Nested rows are translucent, without extra blur. */
+.minimal-shell.distrito-interface :is(
+  .hud-options, .game-menu, .layer-menu, .game-workspace,
   .tactical-drawer > .incident-panel, .tactical-drawer > .dispatch-panel,
-  .incoming-call, .paused-label, .geo-map-loading, .geo-map-error, .connection-notice
+  .geo-map-loading, .geo-map-error, .connection-notice
 ) {
   background: var(--distrito-glass);
   border: 1px solid var(--distrito-edge);
   border-radius: var(--distrito-radius);
   box-shadow: var(--distrito-shadow);
-  -webkit-backdrop-filter: blur(16px) saturate(.65);
-  backdrop-filter: blur(16px) saturate(.65);
+  -webkit-backdrop-filter: var(--distrito-menu-blur);
+  backdrop-filter: var(--distrito-menu-blur);
   text-shadow: none;
 }
-.minimal-shell.distrito-interface :is(.minimal-brand, .minimal-readout, .menu-launcher > button, .map-layer-button, .map-zoom, .incoming-call, .paused-label) {
-  border-radius: var(--distrito-control-radius);
-  box-shadow: 0 5px 18px #0004, inset 0 1px #ffffff0c;
-}
 .minimal-shell.distrito-interface :is(.game-menu, .hud-options, .game-workspace)::before,
+.minimal-shell.distrito-interface :is(.game-menu, .hud-options)::after,
 .minimal-shell.distrito-interface .tactical-drawer > :is(.incident-panel, .dispatch-panel)::before,
-.game-modal::before {
-  display: block;
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 16px;
-  right: 16px;
-  height: 1px;
-  pointer-events: none;
-  background: linear-gradient(90deg, transparent, #ffffff38, #ffffff0a, transparent);
-}
-.minimal-shell.distrito-interface :is(.game-menu, .hud-options)::after { display: none; }
+.game-modal::before { display: none; }
 .minimal-shell.distrito-interface .game-workspace { container: distrito-workspace / inline-size; }
 .minimal-shell.distrito-interface .game-workspace .management-page { background: transparent; border: 0; }
 .minimal-shell.distrito-interface :is(.management-page, .incidents-scroll, .dispatch-content, .game-menu, .hud-options),
@@ -145,7 +214,7 @@
 .wordmark.brand-wordmark { font-size: 26px; letter-spacing: -.5px; }
 .loading-screen > .brand-wordmark { font-size: clamp(28px, 7vw, 42px); letter-spacing: -.8px; max-width: 100%; }
 .minimal-shell.distrito-interface .minimal-brand > .brand-wordmark { font-size: 18px; font-weight: 600; letter-spacing: .2px; }
-.minimal-shell.distrito-interface .minimal-brand > span > span { color: #aeb4bf; margin-left: 0; }
+.minimal-shell.distrito-interface .minimal-brand > span > span { color: #fff; margin-left: 0; }
 .minimal-shell.distrito-interface .hud-time { border-color: var(--distrito-edge); }
 .minimal-shell.distrito-interface .option-line { color: var(--distrito-secondary); }
 .minimal-shell.distrito-interface .option-line > strong { color: var(--distrito-text); }
@@ -424,8 +493,8 @@
   border-radius: var(--distrito-radius) !important;
   color: var(--distrito-text) !important;
   box-shadow: var(--distrito-shadow) !important;
-  -webkit-backdrop-filter: blur(16px) saturate(.65);
-  backdrop-filter: blur(16px) saturate(.65);
+  -webkit-backdrop-filter: var(--distrito-menu-blur);
+  backdrop-filter: var(--distrito-menu-blur);
   padding: 24px !important;
   gap: 14px;
 }
@@ -443,7 +512,7 @@
 .game-modal .call-result.correct { background: var(--distrito-card); border-color: #8ae2b559; box-shadow: inset 2px 0 #8ae2b5; }
 .game-modal .call-result.incorrect { background: var(--distrito-card); border-color: #ffa19a59; box-shadow: inset 2px 0 #ffa19a; }
 .game-modal > button.absolute { display: grid; place-items: center; width: 34px; height: 34px; top: 10px; right: 10px; border: 1px solid var(--distrito-edge); background: var(--distrito-control); color: var(--distrito-secondary); border-radius: var(--distrito-control-radius); }
-[data-sonner-toast] { background: var(--distrito-glass) !important; color: var(--distrito-text) !important; border: 1px solid var(--distrito-edge) !important; border-radius: var(--distrito-card-radius) !important; box-shadow: var(--distrito-shadow) !important; }
+[data-sonner-toast] { background: var(--distrito-glass) !important; color: var(--distrito-text) !important; border: 1px solid var(--distrito-edge) !important; border-radius: var(--distrito-card-radius) !important; box-shadow: var(--distrito-shadow) !important; -webkit-backdrop-filter: var(--distrito-menu-blur); backdrop-filter: var(--distrito-menu-blur); }
 [data-sonner-toast] [data-description] { color: var(--distrito-secondary) !important; }
 [data-sonner-toast][data-type="error"] { border-left-color: #ffa19a !important; }
 [data-sonner-toast][data-type="success"] { border-left-color: #8ae2b5 !important; }
@@ -462,15 +531,13 @@
 .game-modal :is(button, input, select) { transition: border-color .16s ease, background-color .16s ease, color .16s ease, box-shadow .16s ease; }
 @media (hover: hover) {
   .minimal-shell.distrito-interface :is(.game-menu .rail-link, .menu-operations > button, .game-menu .rail-bottom > .icon-btn, .geo-regions-menu > button):hover { color: var(--distrito-text); background: #ffffff08; border-color: #ffffff1a; box-shadow: none; }
-  .minimal-shell.distrito-interface :is(.menu-launcher > button, .minimal-options-toggle, .map-layer-button):hover { background: var(--distrito-hover); border-color: #ffffff40; }
+  .minimal-shell.distrito-interface :is(.menu-launcher > button, .minimal-options-toggle, .map-layer-button):hover::after { opacity: 1; }
   .minimal-shell.distrito-interface .tactical-drawer :is(.incident-card, .unit-choice):hover:not(:disabled),
   .minimal-shell.distrito-interface :is(.option-actions > button, .base-actions button, .extension-list button, .facility-card > button, .command-edit button, .command-card header > button, .strategy-form button, .recruitment-grid button, .cooperation-card > button, .task-list button, .new-incident, .route-estimate-action, .patrol-list button, .arr-dispatch button, .hospital-specialties label button, .case-action button, .unit-control-grid header button):hover:not(:disabled),
   .game-modal .call-choices > button:hover:not(:disabled) { background: var(--distrito-hover); border-color: #ffffff55; color: var(--distrito-text); }
   .minimal-shell.distrito-interface .outline-button:hover:not(:disabled), .game-modal .outline-button:hover:not(:disabled) { background: var(--distrito-hover) !important; border-color: #ffffff55 !important; }
   .minimal-shell.distrito-interface :is(.primary-button, .dispatch-button):hover:not(:disabled), .game-modal .primary-button:hover:not(:disabled) { background: linear-gradient(120deg, #fff, #e1e5ec) !important; box-shadow: inset 0 1px #fff, 0 3px 12px #0004; }
 }
-.minimal-shell.distrito-interface .menu-launcher > button[aria-expanded="true"],
-.minimal-shell.distrito-interface .minimal-options-toggle.active { background: var(--distrito-hover); border-color: #ffffff55; }
 .minimal-shell.distrito-interface :is(button, a, summary, input, select, textarea):focus-visible,
 .game-modal :is(button, a, summary, input, select, textarea):focus-visible {
   outline: 2px solid var(--distrito-focus);
@@ -522,11 +589,14 @@
 @media (max-width: 600px) {
   .minimal-shell.distrito-interface .minimal-brand > .brand-wordmark { font-size: 16px; letter-spacing: 0; }
   .minimal-shell.distrito-interface .minimal-hud { height: 44px; }
-  .minimal-shell.distrito-interface .minimal-readout { gap: 4px; padding-left: 7px; }
+  .minimal-shell.distrito-interface .minimal-readout { gap: 4px; padding-left: 4px; }
   .minimal-shell.distrito-interface .hud-budget { flex-shrink: 1; }
-  .minimal-shell.distrito-interface .minimal-budget { max-width: 90px; font-size: 11px; }
-  .minimal-shell.distrito-interface .hud-time b { font-size: 11px; }
-  .minimal-shell.distrito-interface :is(.minimal-readout > .icon-btn, .minimal-options-toggle) { width: 36px; height: 40px; min-height: 40px; }
+  .minimal-shell.distrito-interface .minimal-budget { max-width: 90px; font-size: 12px; }
+  .minimal-shell.distrito-interface .hud-time b { font-size: 12px; }
+  .minimal-shell.distrito-interface :is(.minimal-readout > .icon-btn, .minimal-options-toggle, .map-layer-button, .map-zoom > .icon-btn) { width: 44px; height: 44px; min-height: 44px; }
+  .minimal-shell.distrito-interface :is(.menu-launcher > button, .incoming-call) { min-height: 44px; }
+  .minimal-shell.distrito-interface .layer-menu { top: 48px; }
+  .minimal-shell.distrito-interface .paused-label { bottom: 234px; }
   .minimal-shell.distrito-interface .hud-options { right: -2px; max-width: calc(100vw - 24px); }
   .minimal-shell.distrito-interface .game-menu { max-width: calc(100vw - 20px); }
   .minimal-shell.distrito-interface :is(.game-menu .rail-link, .menu-operations > button, .game-menu .rail-bottom > .icon-btn) { min-height: 44px; }
@@ -547,10 +617,13 @@
   .game-modal > button.absolute { width: 36px; height: 36px; }
   .game-modal h2 { font-size: 22px !important; }
 }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root { --distrito-glass: #121418; }
+}
 @media (prefers-reduced-transparency: reduce) {
-  :root { --distrito-glass: linear-gradient(135deg, #23252a, #17191e 55%, #111318); }
-  .minimal-shell.distrito-interface :is(.minimal-brand, .minimal-readout, .hud-options, .game-menu, .layer-menu, .menu-launcher > button, .map-layer-button, .map-zoom, .game-workspace, .tactical-drawer > .incident-panel, .tactical-drawer > .dispatch-panel, .incoming-call, .paused-label, .geo-map-loading, .geo-map-error, .connection-notice),
-  .game-modal { -webkit-backdrop-filter: none; backdrop-filter: none; }
+  :root { --distrito-glass: #121418; --distrito-menu-blur: none; }
+  .minimal-shell.distrito-interface :is(.hud-options, .game-menu, .layer-menu, .game-workspace, .tactical-drawer > .incident-panel, .tactical-drawer > .dispatch-panel, .geo-map-loading, .geo-map-error, .connection-notice),
+  .game-modal, [data-sonner-toast] { -webkit-backdrop-filter: none; backdrop-filter: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .minimal-shell.distrito-interface *, .minimal-shell.distrito-interface *::before, .minimal-shell.distrito-interface *::after,

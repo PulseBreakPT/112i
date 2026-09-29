@@ -1,6 +1,21 @@
 # Distrito 112 — Current Design Handoff
 
-## Latest task — complete rebrand to Distrito 112
+## Latest task — unboxed white HUD, local blur menus (approved)
+User explicitly confirmed removing ALL permanent HUD boxes/backgrounds/borders. Game-first, GTA6/Rockstar-inspired restraint: white information/icons with BLACK shadow; dark translucent blur ONLY on open menus. This supersedes earlier graphite HUD-card styling. Do not restore permanent glass islands.
+
+### Delivery
+- ONLY `frontend/src/Interface.css` changed in product code. Targeted permanent-HUD allowlist enforces no background/border/box-shadow/backdrop on brand, readout, pause/options buttons, launchers/count, map controls, incoming call and pause indicator, including hover/expanded states.
+- White copy and leaf SVGs get shared black shadow tokens. No ancestor filter or opacity on the HUD, so its child options popover can blur the actual map. Hover/expanded feedback is a small underline; keyboard focus remains explicit. Counter no longer looks like a badge. Default secondary labels stay screen-reader accessible per existing Compact rules.
+- Shared menu material is ~80% dark translucent with 24px blur: navigation, turn controls, map layers, tactical drawers, workspaces, portalled dialogs and toasts. Flat/translucent interior rows and minimal borders; removed reflected edge highlights. No full-screen blur; map remains sharp outside open menus.
+- Mobile controls keep 44px invisible hit areas, 12px budget/time and 16px wordmark. Region popup offset accommodates taller controls; pause label offset leaves room for zoom controls. Attribution remains present and readable with white/shadow treatment.
+- Readability fallback for unsupported backdrop-filter and reduced-transparency. Reduced-motion remains respected. No new dependencies, integrations, environment/URL changes, game logic, JSX, renderer, save/key or provider changes.
+
+### Verification / limits
+- App.js/server.py lint and whitespace diff check pass; read-only cascade review found no conflicts in the new HUD surface split. Not a build/CSS-parser/browser verification.
+- Known preview blockers remain untouched: missing node_modules / unavailable fast-uri; backend missing networkx/env. No environment fix authorized. Browser screenshots/interaction testing NOT performed; request permission after backend scope check.
+- When authorized and runnable, verify populated game over bright/dark map at 1920x800 and 390x844: no boxes even on hover/active, crisp black icon/text shadows, options/menu/layers blur locally, dialogs/tactical/workspaces consistent, keyboard focus/outside-click/ESC, 44px targets without overlap, long budget and brand fit. Do not create an alternative preview or install anything without permission.
+
+## Previous task — complete rebrand to Distrito 112
 User explicitly approved replacing all active brand references, including internal identity, API, docs and exports, with compatibility exceptions for existing saves/preferences. Earlier prohibition on dependency/environment fixes remains in force.
 
 ### Rebrand implementation
