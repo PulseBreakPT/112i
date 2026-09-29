@@ -44,7 +44,7 @@ export function useGame() {
         type='dispatch';
       }
       if(type==='dispatch_recommended'){
-        data={incident_id:data.incident_id,unit_ids:selectRecommendedUnitIds(current.current,data.incident_id),via_arr:true};
+        data={incident_id:data.incident_id,unit_ids:selectRecommendedUnitIds(current.current,data.incident_id,data.mode),via_arr:true};
         type='dispatch';
       }
       if(type==='dispatch_group'){
