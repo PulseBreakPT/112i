@@ -6,7 +6,7 @@ import requests
 import time
 import json
 
-BACKEND_URL = "https://minimal-contrast-hub.preview.emergentagent.com/api"
+BACKEND_URL = "https://menu-standardization.preview.emergentagent.com/api"
 
 test_results = {
     "passed": [],

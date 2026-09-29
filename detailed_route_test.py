@@ -2,7 +2,7 @@
 import requests
 import json
 
-BACKEND_URL = "https://minimal-contrast-hub.preview.emergentagent.com/api"
+BACKEND_URL = "https://menu-standardization.preview.emergentagent.com/api"
 
 def detailed_route_check(origin_id, destination_id, route_name):
     """Check detailed route requirements"""
