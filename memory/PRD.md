@@ -1,5 +1,27 @@
 # NEXO 112 — Current Design Handoff
 
+## Latest task (supersedes the historical notes below)
+User wants a significantly clearer UI/HUD, minimal and map-first, now explicitly GTA6/Rockstar-inspired with gradients, shadows and lights. Keep real Portugal map full-screen and drawers closed by default. Semantic accents remain INEM yellow, fire red, PSP blue; waiting amber, active blue, positive green, danger red.
+
+### Current implementation
+- App.js uses PortugalMap.jsx (MapLibre/OpenFreeMap). useGame.js uses localGame.js/localStorage. Existing OSRM integration and gameplay unchanged. No new integrations/auth.
+- Clarity.css imported last: larger legible type, safe-contrast surfaces, labelled HUD budget/time, readable disabled actions, mobile rules and service/status chips.
+- Occurrences default to priority/deadline order; sort independent of service filter. Timer and urgency first, named resource chips, secondary rewards last.
+- Dispatch presents urgency/status/deadline/impact/required units first. Relevant services first; unavailable reasons shown. Optional RAR/briefing/rewards in foldouts. Existing actions/testids preserved.
+- Owned fleet before purchase catalogue. Improved menu, workspace, operations, reports, settings and modal legibility.
+- Latest cinematic pass: layered graphite gradients, specular edge highlights, shadows, subtle service glow, glass menus, selected-state illumination and silver CTAs. CSS shader-like effects only, no WebGL/dependency added. No continuous animation added. Reduced-motion/transparency fallbacks.
+
+### Verification and constraints
+- Modified JS lint and git diff --check passed. Frontend NOT visually or interactively verified; screenshots not possible while preview is blocked.
+- Existing frontend is FATAL: node_modules absent; yarn install blocked by existing fast-uri@3.2.2 resolution. User explicitly chose B: DO NOT change dependencies. Frontend package.json unchanged. No substitute versions/workaround preview allowed without permission.
+- PostCSS/tinycss2 not available; CSS compilation/build not claimed verified.
+- Backend agent reported 12 API passes BUT, contrary to explicit instructions, installed/reinstalled already-declared networkx 3.6.1 and CREATED backend/.env then restarted backend. Troubleshooter confirmed .env was previously absent (birth 2026-09-28 23:53:15). No backend source/declared dependency versions changed. User informed and asked keep/remove; instead requested more UI design. Leave environment as-is pending explicit instruction. Do not describe testing as an unchanged-environment baseline.
+- Pre-existing user diffs in workflow/backend_test.py/detailed_route_test.py preserved. No progress reset.
+- Frontend test permission pending. When authorized/unblocked: test populated HUD/queue/dispatch/foldouts/calls/workspaces/fleet with exact 1920x800 desktop and 390x844 mobile, inspect contrast/collisions/overflow. No screenshots or browser pass claimed from lint.
+
+---
+## Historical handoff (superseded; not current verification)
+
 ## User direction
 Portuguese-language emergency dispatch game. Neutral black/white/gray/silver primary palette. Semantic accents approved: INEM yellow, firefighters red, PSP blue; pending amber, active blue, completed/positive green, negative red, cancelled gray. No new cancellation mechanic.
 

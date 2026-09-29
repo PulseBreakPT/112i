@@ -408,6 +408,202 @@
 .game-modal :is(.primary-button, .outline-button, .danger-button) { min-height: 44px; font-size: 14px !important; }
 .game-modal > button.absolute { opacity: 1; width: 32px; height: 32px; display: grid; place-items: center; color: #e4eeff; background: #2c3b51; border-radius: 6px; }
 
+/* Cinematic material pass: graphite glass, light falloff and restrained reflections.
+   These are CSS shader-like surfaces, not a second WebGL renderer. Nothing runs
+   continuously: the map keeps the motion and the interface keeps the information. */
+.minimal-shell, .game-modal {
+  --glass-edge: #ffffff30;
+  --glass-highlight: #ffffff12;
+  --cinema-shadow: 0 18px 52px #0007, 0 4px 12px #0003, inset 0 1px #ffffff0b;
+  --cinema-glass: radial-gradient(ellipse at 4% 0%, #ffffff0c, transparent 58%), linear-gradient(135deg, #22252bf5 0%, #181b20f5 46%, #101216fa 100%);
+}
+.minimal-shell .minimal-brand, .minimal-shell .minimal-readout {
+  position: relative;
+  background: radial-gradient(ellipse at 12% 0%, #ffffff13, transparent 64%), linear-gradient(125deg, #25282eed, #121418f7 75%);
+  border-color: #ffffff36;
+  box-shadow: 0 7px 24px #0005, 0 1px 3px #0005, inset 0 1px #ffffff12, inset 0 -1px #0006;
+  backdrop-filter: blur(18px) saturate(.7);
+}
+.minimal-shell .minimal-brand > svg { filter: drop-shadow(0 0 7px #ffffff28); }
+.minimal-shell .minimal-brand > span { text-shadow: 0 1px 7px #0008; }
+.minimal-shell .minimal-readout { color: #edf0f5; }
+.minimal-shell .hud-time { border-color: #ffffff27; }
+.minimal-shell .hud-options, .minimal-shell .game-menu, .minimal-shell .layer-menu {
+  background: var(--cinema-glass);
+  border-color: #858b965e;
+  box-shadow: var(--cinema-shadow);
+  backdrop-filter: blur(22px) saturate(.65);
+}
+.minimal-shell .game-menu-heading, .minimal-shell .hud-options-heading { border-color: #ffffff1d; }
+.minimal-shell .menu-operations { border-color: #ffffff1d; }
+.minimal-shell .menu-operations > button, .minimal-shell .game-menu .rail-link {
+  transition: background .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+.minimal-shell .menu-operations > button:hover, .minimal-shell .game-menu .rail-link:hover {
+  background: linear-gradient(100deg, #ffffff0e, #ffffff03);
+  box-shadow: inset 0 1px #ffffff05;
+}
+.minimal-shell .game-menu .rail-link.active {
+  background: radial-gradient(ellipse at 0 50%, #e1e7f514, transparent 90%), linear-gradient(110deg, #34373d, #25282e);
+  border-color: #a0a6b544;
+  box-shadow: inset 2px 0 #d5d9e3, inset 0 1px #ffffff0b, 0 2px 7px #0003;
+}
+.minimal-shell .menu-launcher > button {
+  background: radial-gradient(ellipse at 50% 0, #ffffff0e, transparent 75%), linear-gradient(135deg, #272a30f2, #14161bf7);
+  border-color: #ffffff35;
+  box-shadow: 0 5px 18px #0006, inset 0 1px #ffffff0f, inset 0 -1px #0005;
+  transition: background .18s, border-color .18s, box-shadow .18s;
+}
+.minimal-shell .menu-launcher > button:hover, .minimal-shell .menu-launcher > button[aria-expanded="true"] {
+  background: linear-gradient(135deg, #363a42f5, #24272ef7);
+  border-color: #b1b8c978;
+  box-shadow: 0 7px 23px #0006, inset 0 1px #ffffff17;
+}
+.minimal-shell .queue-count { box-shadow: inset 0 1px #ffffff08, 0 0 12px color-mix(in srgb, var(--queue-color) 9%, transparent); }
+.minimal-shell .tactical-drawer > :is(.incident-panel, .dispatch-panel) {
+  position: relative;
+  background: radial-gradient(ellipse at 0 0, #ffffff06, transparent 65%), linear-gradient(150deg, #1d2026fa, #111419fc);
+  border-color: #a6b0c15e;
+  box-shadow: var(--cinema-shadow);
+}
+.minimal-shell .tactical-drawer .panel-heading {
+  background: radial-gradient(ellipse at 18% 0%, #ffffff10, transparent 75%), linear-gradient(115deg, #2b2e35, #1d2027);
+  border-color: #ffffff20;
+  box-shadow: 0 3px 12px #0002, inset 0 1px #ffffff09;
+}
+.minimal-shell .tactical-drawer .incident-card {
+  background: radial-gradient(ellipse at 0 0, color-mix(in srgb, var(--service-color) 5%, transparent), transparent 65%), linear-gradient(135deg, #262930, #1b1e25);
+  border-color: #ffffff28;
+  box-shadow: inset 0 1px #ffffff06, 0 3px 9px #0002;
+  transition: border-color .18s, background .18s, box-shadow .18s;
+}
+.minimal-shell .tactical-drawer .incident-card:hover {
+  background: radial-gradient(ellipse at 0 0, color-mix(in srgb, var(--service-color) 8%, transparent), transparent 65%), linear-gradient(135deg, #30343c, #232730);
+  border-color: #a6b4c67a;
+  box-shadow: inset 0 1px #ffffff12, 0 5px 16px #0004;
+}
+.minimal-shell .tactical-drawer .incident-card.selected {
+  background: radial-gradient(ellipse at 0 0, color-mix(in srgb, var(--service-color) 8%, transparent), transparent 80%), linear-gradient(120deg, #343840, #252931);
+  border-color: #c4cddd9c;
+  box-shadow: inset 3px 0 #e0e5ef, inset 0 1px #ffffff0f, 0 5px 18px #0004;
+}
+.minimal-shell .incident-top .priority, .minimal-shell .service-tag, .minimal-shell .requirements > div > span { box-shadow: inset 0 1px #ffffff07; }
+.minimal-shell .tactical-drawer .incident-tabs, .minimal-shell .hud-options .speed-group { background: linear-gradient(180deg, #0e1117, #191c22); border-color: #ffffff21; box-shadow: inset 0 2px 5px #0003; }
+.minimal-shell .tactical-drawer .incident-tabs > button.selected { background: linear-gradient(130deg, #3a3e47, #292d35); box-shadow: inset 0 1px #ffffff10, 0 2px 6px #0004; }
+.minimal-shell .tactical-drawer .incident-tabs > button[data-service]:not([data-service="all"]).selected { color: var(--service-color); background: linear-gradient(135deg, color-mix(in srgb, var(--service-color) 16%, #21242a), #20232a); border-color: color-mix(in srgb, var(--service-color) 44%, #20232a); }
+.minimal-shell .tactical-drawer .new-incident, .minimal-shell .option-actions > button {
+  background: linear-gradient(135deg, #2c3038, #20242b);
+  border-color: #78839670;
+  box-shadow: inset 0 1px #ffffff08, 0 2px 6px #0002;
+}
+.minimal-shell .tactical-drawer .new-incident:disabled { background: #1b1e25; box-shadow: none; border-color: #4a515e; }
+.minimal-shell .tactical-drawer .shift-summary { background: linear-gradient(110deg, #1e2229, #14171d); border-color: #ffffff20; }
+.minimal-shell .dispatch-detail { background: radial-gradient(ellipse at 90% 0%, #d4dbe807, transparent 70%); }
+.minimal-shell .tactical-drawer .requirements { background: linear-gradient(130deg, #11151bcc, #171b22cc); border-color: #ffffff1d; box-shadow: inset 0 1px #0005; }
+.minimal-shell .tactical-drawer .unit-choice { background: linear-gradient(120deg, #242830, #1b1f27); border-color: #ffffff22; box-shadow: inset 0 1px #ffffff04; transition: border-color .18s, background .18s; }
+.minimal-shell .tactical-drawer .unit-choice:hover:not(:disabled) { background: linear-gradient(120deg, #303641, #252b36); border-color: #b8c5dc7d; }
+.minimal-shell .tactical-drawer .unit-choice.selected { background: radial-gradient(ellipse at 10% 0, #d4e1fb0d, transparent 80%), linear-gradient(125deg, #343d4b, #272f3b); border-color: #c5d6ee; box-shadow: inset 2px 0 #dce8fa, inset 0 1px #ffffff12, 0 4px 12px #0003; }
+.minimal-shell .tactical-drawer .unit-choice:disabled { background: linear-gradient(120deg, #1b1f25, #181c22); border-color: #ffffff18; box-shadow: none; }
+.minimal-shell .unit-icon { background: radial-gradient(ellipse at 50% 0, color-mix(in srgb, currentColor 12%, transparent), transparent 95%), linear-gradient(145deg, #292d35, #1b1e25); box-shadow: inset 0 1px #ffffff09, 0 2px 6px #0003; }
+.minimal-shell .dispatch-foldout { border-color: #ffffff1f; }
+.minimal-shell .dispatch-foldout > summary:hover { color: #f1f4fa; }
+.minimal-shell .dispatch-foldout[open] { background: linear-gradient(120deg, #ffffff03, transparent); }
+.minimal-shell .arr-dispatch button { background: linear-gradient(130deg, #292f39, #20252e); border-color: #66768e77; box-shadow: inset 0 1px #ffffff06; }
+.minimal-shell .arr-dispatch button:disabled { background: #1a1e25; border-color: #3b424d; box-shadow: none; }
+.minimal-shell .tactical-drawer .dispatch-bottom { background: radial-gradient(ellipse at 50% 100%, #dce9ff08, transparent 75%), linear-gradient(180deg, #1b2029, #11161e); border-color: #9dacbf4d; box-shadow: 0 -9px 26px #0004, inset 0 1px #ffffff06; }
+.minimal-shell .call-mini, .minimal-shell .incoming-call {
+  background: radial-gradient(ellipse at 0% 0%, #f8ca780d, transparent 75%), linear-gradient(130deg, #2b271ff5, #1d1b17fa);
+  border-color: #f8ca7866;
+  box-shadow: 0 4px 16px #0004, inset 0 1px #ffe5b80c;
+}
+.minimal-shell .call-mini:hover, .minimal-shell .incoming-call:hover { background: radial-gradient(ellipse at 0 0, #f8ca7812, transparent 75%), linear-gradient(130deg, #393025, #25211b); border-color: #f8ca7899; }
+.minimal-shell .incoming-icon, .minimal-shell .call-mini > svg:first-child { filter: drop-shadow(0 0 6px #f8ca7830); }
+.minimal-shell .map-layer-button, .minimal-shell .map-zoom { background: radial-gradient(ellipse at 0 0, #ffffff0b, transparent 75%), linear-gradient(130deg, #272b33f2, #13171df7); border-color: #a7b4c75e; box-shadow: 0 5px 19px #0004, inset 0 1px #ffffff0b; }
+.minimal-shell .paused-label { background: linear-gradient(120deg, #25231eef, #161819f7); box-shadow: 0 3px 12px #0004, inset 0 1px #ffffff07; }
+
+/* A narrow reflection, rather than a bright glow, defines the floating silhouette. */
+.minimal-shell .game-menu::before, .minimal-shell .hud-options::before,
+.minimal-shell .tactical-drawer > .incident-panel::before,
+.minimal-shell .tactical-drawer > .dispatch-panel::before,
+.minimal-shell .game-workspace::before, .game-modal::before {
+  content: ''; position: absolute; top: 0; left: 18px; right: 18px; height: 1px;
+  background: linear-gradient(90deg, transparent, #edf3ff55 30%, #edf3ff1c 75%, transparent);
+  pointer-events: none; z-index: 2;
+}
+.minimal-shell .game-menu::after, .minimal-shell .hud-options::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: repeating-linear-gradient(115deg, #ffffff01 0 1px, transparent 1px 4px);
+}
+.minimal-shell .workspace-shade { background: #05070b70; backdrop-filter: blur(4px) saturate(.8); }
+.minimal-shell .game-workspace { background: #12151a; border-color: #a8b0bf5c; box-shadow: 0 30px 100px #0008, 0 8px 25px #0004, inset 0 1px #ffffff0d; }
+.minimal-shell .workspace-bar { background: radial-gradient(ellipse at 15% 0%, #ffffff0e, transparent 75%), linear-gradient(115deg, #2c3038, #1c2027); border-color: #ffffff25; box-shadow: 0 4px 15px #0003; }
+.minimal-shell .game-workspace .management-page { background: radial-gradient(ellipse at 0% 0%, #ffffff04, transparent 48%), linear-gradient(145deg, #1a1d23, #11151b); }
+.minimal-shell .game-workspace :is(.base-card, .vehicle-card, .facility-card, .report-metric, .career-rank, .settings-section) {
+  background: radial-gradient(ellipse at 0 0, color-mix(in srgb, var(--service-color, #d4dde8) 5%, transparent), transparent 65%), linear-gradient(140deg, #282c33, #1b1f26 75%);
+  border-color: #98a3b440;
+  box-shadow: 0 6px 20px #0003, inset 0 1px #ffffff08;
+}
+.minimal-shell .game-workspace :is(.base-card, .vehicle-card):hover {
+  border-color: color-mix(in srgb, var(--service-color, #d4dde8) 43%, #414752);
+  box-shadow: 0 10px 28px #0004, inset 0 1px #ffffff13;
+}
+.minimal-shell .game-workspace .base-illustration {
+  background: radial-gradient(ellipse at 50% 58%, color-mix(in srgb, var(--service-color) 7%, transparent), transparent 70%), repeating-linear-gradient(0deg, transparent 0 25px, #ffffff04 25px 26px), repeating-linear-gradient(90deg, transparent 0 25px, #ffffff04 25px 26px), linear-gradient(145deg, #252931, #171b22);
+  border-color: #ffffff1a;
+}
+.minimal-shell .base-illustration > svg { background: linear-gradient(145deg, #373c46, #242933); border-color: color-mix(in srgb, var(--service-color) 35%, #414954); box-shadow: 0 12px 28px #0006, 0 0 30px color-mix(in srgb, var(--service-color) 6%, transparent), inset 0 1px #ffffff17; }
+.minimal-shell .vehicle-art { filter: saturate(.5) drop-shadow(0 7px 10px #0004); }
+.minimal-shell .base-actions button, .minimal-shell .extension-list button, .minimal-shell .facility-card > button, .minimal-shell .patrol-list button { background: linear-gradient(130deg, #303641, #232933); border-color: #78869d66; box-shadow: inset 0 1px #ffffff08, 0 2px 5px #0002; }
+.minimal-shell .base-actions button:disabled, .minimal-shell .extension-list button:disabled, .minimal-shell .facility-card > button:disabled, .minimal-shell .patrol-list button:disabled { background: linear-gradient(130deg, #20252d, #1b2028); border-color: #4b576b66; box-shadow: none; }
+.minimal-shell .extension-list button.active { background: linear-gradient(125deg, #8ae2b50f, #8ae2b503); border-color: #8ae2b552; }
+.minimal-shell .extension-list button.installed:not(.active) { background: linear-gradient(125deg, #f8ca780d, #f8ca7803); border-color: #f8ca784d; }
+.minimal-shell .progression-ribbon, .minimal-shell .operations-summary { background: #45505e; border-color: #8593a552; box-shadow: 0 4px 16px #0003, inset 0 1px #ffffff09; }
+.minimal-shell .progression-ribbon > div, .minimal-shell .operations-summary > div { background: radial-gradient(ellipse at 0 0, #ffffff06, transparent 90%), linear-gradient(135deg, #292e37, #1e232c); }
+.minimal-shell .fleet-table { border-color: #77859a5c; box-shadow: 0 5px 20px #0003; }
+.minimal-shell .fleet-row { background: linear-gradient(120deg, #222831, #1b212a); border-color: #72819830; }
+.minimal-shell .fleet-row:nth-child(odd):not(.fleet-table-header) { background: linear-gradient(120deg, #252b35, #1d232d); }
+.minimal-shell .fleet-row.fleet-table-header { background: linear-gradient(120deg, #343b47, #29313e); }
+.minimal-shell .fleet-status, .minimal-shell .case-status { background: linear-gradient(110deg, #ffffff06, transparent); }
+.minimal-shell .operations-tabs { background: linear-gradient(180deg, #151a22, #1c222d); border-color: #7b8ca35c; box-shadow: inset 0 2px 6px #0004; }
+.minimal-shell .operations-tabs button.active { background: radial-gradient(ellipse at 20% 0, #ffffff0c, transparent 90%), linear-gradient(135deg, #3a4454, #2b3341); border-color: #a5b7cf80; box-shadow: 0 2px 7px #0004, inset 0 1px #ffffff11; }
+.minimal-shell .game-workspace :is(.expansion-strip, .specialist-strip),
+.minimal-shell .training-console, .minimal-shell .arr-builder,
+.minimal-shell :is(.training-list, .qualification-grid, .patrol-list, .arr-list) article,
+.minimal-shell .case-list article { background: radial-gradient(ellipse at 0 0, #dce6f805, transparent 80%), linear-gradient(140deg, #282f3b, #1d2532); border-color: #8498b352; box-shadow: inset 0 1px #ffffff07, 0 4px 12px #0002; }
+.minimal-shell .report-empty, .minimal-shell .operations-empty, .minimal-shell .full-logs { background: linear-gradient(140deg, #1b222d, #151c27); border-color: #7b91ae4d; box-shadow: inset 0 2px 9px #0002; }
+.minimal-shell .case-action select, .minimal-shell .training-console select, .minimal-shell .training-console input, .minimal-shell .arr-builder input, .minimal-shell .base-development select, .minimal-shell .section-line select, .game-modal .field-label select { background: linear-gradient(180deg, #151b24, #1b222e); border-color: #8398b766; box-shadow: inset 0 2px 5px #0003, 0 1px #ffffff04; }
+.minimal-shell .outline-button { background: linear-gradient(135deg, #363e4c, #262f3d) !important; border-color: #a0b1cc77 !important; box-shadow: inset 0 1px #ffffff0d, 0 3px 8px #0003; }
+.minimal-shell .outline-button:hover:not(:disabled) { background: linear-gradient(135deg, #465365, #343f51) !important; border-color: #bccfeaba !important; }
+.minimal-shell .primary-button, .game-modal .primary-button, .minimal-shell .dispatch-button:not(:disabled) {
+  background: radial-gradient(ellipse at 18% 0, #fff, transparent 60%), linear-gradient(115deg, #f2f4f8 0%, #d9dee8 52%, #bdc6d5 100%) !important;
+  color: #111720 !important;
+  border-color: #f3f6fc !important;
+  box-shadow: inset 0 1px #fff, inset 0 -1px #7c8ca84d, 0 4px 15px #0005, 0 0 18px #d5e4ff0a;
+}
+.minimal-shell .primary-button:hover:not(:disabled), .game-modal .primary-button:hover:not(:disabled), .minimal-shell .dispatch-button:hover:not(:disabled) { background: linear-gradient(110deg, #fff, #e8eef9) !important; box-shadow: inset 0 1px #fff, 0 6px 20px #0005, 0 0 22px #d5e4ff18; }
+.minimal-shell :is(.primary-button, .outline-button, .dispatch-button):disabled, .game-modal :is(.primary-button, .outline-button):disabled { background: linear-gradient(130deg, #303743, #242c38) !important; color: #b8c6db !important; border-color: #65769177 !important; box-shadow: inset 0 1px #ffffff05; }
+.minimal-shell .danger-button, .game-modal .danger-button { background: linear-gradient(125deg, #ffa19a13, #ffa19a06) !important; border-color: #ffa19a65 !important; box-shadow: inset 0 1px #ffa19a0a; }
+.game-modal {
+  background: radial-gradient(ellipse at 0 0, #ffffff0b, transparent 60%), linear-gradient(135deg, #2a2e37, #1a1f29 78%) !important;
+  border-color: #b9c7db66 !important;
+  box-shadow: 0 35px 110px #000a, 0 8px 28px #0006, inset 0 1px #ffffff13 !important;
+}
+.game-modal .caller-avatar, .game-modal .help-steps > div > span { background: linear-gradient(135deg, #e5e9f1, #b8c2d3); border-color: #e5ecf9; color: #182131; box-shadow: inset 0 1px #fff, 0 5px 14px #0004; }
+.game-modal .audio-wave i { background: linear-gradient(180deg, #dce9ff, #91a7c9); box-shadow: 0 0 5px #c1d8ff15; }
+.game-modal .call-choices > button { background: radial-gradient(ellipse at 0 0, #ffffff06, transparent 75%), linear-gradient(130deg, #303a4b, #252e3e); border-color: #9daec66e; box-shadow: inset 0 1px #ffffff07, 0 3px 9px #0003; }
+.game-modal .call-choices > button:hover { background: linear-gradient(130deg, #414e64, #2c394f); border-color: #b7cbe8; box-shadow: inset 0 1px #ffffff14, 0 4px 13px #0004; }
+.game-modal .call-result.correct { background: radial-gradient(ellipse at 0 0, #8ae2b510, transparent 85%), #8ae2b505; border-color: #8ae2b55c; }
+.game-modal .call-result.incorrect { background: radial-gradient(ellipse at 0 0, #ffa19a10, transparent 85%), #ffa19a05; border-color: #ffa19a66; }
+[data-sonner-toast] { background: radial-gradient(ellipse at 0 0, #ffffff0b, transparent 80%), linear-gradient(125deg, #2b313d, #1b2330) !important; border-color: #a4b6ce66 !important; box-shadow: 0 10px 35px #0006, inset 0 1px #ffffff0d !important; }
+@media (prefers-reduced-transparency: reduce) {
+  .minimal-shell .minimal-brand, .minimal-shell .minimal-readout, .minimal-shell .hud-options,
+  .minimal-shell .game-menu, .minimal-shell .layer-menu, .minimal-shell .map-zoom,
+  .minimal-shell .map-layer-button, .minimal-shell .menu-launcher > button {
+    backdrop-filter: none;
+    background: linear-gradient(135deg, #262a32, #14181f);
+  }
+}
+
 /* Stable semantic colours win over generic typography, including disabled states. */
 .minimal-shell [data-testid="city-trust"][data-tone="positive"],
 .minimal-shell .report-metric:is([data-metric="completed"], [data-metric="earnings"], [data-tone="positive"]) > strong { color: var(--status-success); }
