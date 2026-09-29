@@ -1,4 +1,4 @@
-import { Radio, Clock3, ChevronRight, SlidersHorizontal, Plus, CheckCheck, X, MapPin, HeartPulse, Shield } from 'lucide-react';
+import { Radio, Clock3, ChevronRight, SlidersHorizontal, Plus, CheckCheck, X, MapPin, HeartPulse, Shield, GraduationCap } from 'lucide-react';
 import { useState } from 'react';
 import { SERVICE, ServiceIcon, STATUS, duration, money } from './common';
 
@@ -34,7 +34,7 @@ export const IncidentPanel = ({ game, selected, onSelect, act, busy, onClose }) 
           <p className="incident-address" data-testid={`incident-address-${inc.number}`}><MapPin size={13} />{inc.address}</p>
           <div className="incident-meta"><span className={`incident-state ${inc.status}`} data-testid={`incident-status-${inc.number}`}><i />{STATUS[inc.status] || inc.status}</span><span className="incident-number">#{inc.number}</span></div>
           <div className="incident-bottom">
-            <div className="required-mini" aria-label="Meios necessários">{Object.entries(inc.needs).map(([service, count]) => <span key={service} title={`${count} ${SERVICE[service].name}`} style={{ '--chip-color': SERVICE[service].color }}><ServiceIcon service={service} size={13} /><b>{count}</b><span>{service === 'fire' ? 'BOMB.' : SERVICE[service].short}</span></span>)}{!!inc.required_vehicle_types?.length && <span className="special-requirement" title="Requer veículo especializado">ESP</span>}</div>
+            <div className="required-mini" aria-label="Meios necessários">{Object.entries(inc.needs).map(([service, count]) => <span key={service} title={`${count} ${SERVICE[service].name}`} style={{ '--chip-color': SERVICE[service].color }}><ServiceIcon service={service} size={13} /><b>{count}</b><span>{service === 'fire' ? 'BOMB.' : SERVICE[service].short}</span></span>)}{!!inc.required_vehicle_types?.length && <span className="special-requirement" title="Requer veículo especializado">ESP</span>}{!!inc.required_trainings?.length && <span className="special-requirement" title="Requer formação especializada"><GraduationCap size={11} /> FOR</span>}{inc.escalated && <span className="special-requirement" title="Ocorrência agravada">AGR</span>}</div>
           </div>
           <div className="incident-secondary"><div className="incident-impact"><span>{inc.difficulty || 'Média'}</span>{inc.casualties > 0 && <span data-tone="warning"><HeartPulse size={12} />{inc.casualties} ferido{inc.casualties !== 1 ? 's' : ''}</span>}{inc.detainees > 0 && <span data-tone="active"><Shield size={12} />{inc.detainees} detido{inc.detainees !== 1 ? 's' : ''}</span>}</div><span className="incident-reward">{money(inc.reward)}<ChevronRight size={14} /></span></div>
         </button>;

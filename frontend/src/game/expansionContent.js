@@ -162,6 +162,17 @@ const CALLS = {
   },
 };
 
+const CURATED_PORTUGAL_MISSIONS = [
+  { title:'Incêndio rural com vento forte', service:'fire', tier:2, difficulty:'Média', needs:{fire:2,medical:1,police:1}, vehicle:['wildfire-unit','tanker'], extension:['wildfire'], poi:'forest', victims:[0,2], prisoners:[0,0], weight:9, description:'Frente de fogo rural com vento variável, habitações dispersas em risco e acessos estreitos.' },
+  { title:'Despiste na EN125 com encarcerado', service:'multi', tier:2, difficulty:'Média', needs:{fire:2,medical:1,police:1}, vehicle:['heavy-rescue','traffic-unit'], poi:'retail', victims:[1,3], prisoners:[0,0], weight:8, description:'Despiste numa via nacional com vítima encarcerada, combustível no piso e trânsito a acumular.' },
+  { title:'Queda em obra com ferido grave', service:'medical', tier:2, difficulty:'Média', needs:{medical:2,fire:1}, vehicle:['vmer'], extension:['advanced-care'], poi:'industrial', victims:[1,2], prisoners:[0,0], weight:8, description:'Trabalhador caiu de uma estrutura elevada. Acesso ao local condicionado por materiais de obra.' },
+  { title:'Afogamento na praia fluvial', service:'multi', tier:3, difficulty:'Difícil', needs:{fire:2,medical:2,police:1}, vehicle:['vmer','command-unit'], extension:['advanced-care'], poi:'port', victims:[1,3], prisoners:[0,0], weight:5, description:'Pessoa retirada da água em estado crítico, com multidão junto ao acesso principal.' },
+  { title:'Violência doméstica com risco ativo', service:'police', tier:2, difficulty:'Média', needs:{police:2,medical:1}, vehicle:['patrol'], poi:'retail', victims:[0,1], prisoners:[1,2], weight:8, description:'Ocorrência sensível em habitação com risco para vítima e equipas. Requer perímetro e transporte de detido.' },
+  { title:'Alarme falso em escola', service:'multi', tier:1, difficulty:'Fácil', needs:{fire:1,police:1}, vehicle:[], poi:'school', victims:[0,0], prisoners:[0,0], weight:10, false_alarm_chance:.45, description:'Alarme automático ativado numa escola. É preciso confirmar segurança e repor normalidade.' },
+  { title:'Acidente de mota em rotunda', service:'multi', tier:2, difficulty:'Média', needs:{medical:2,police:1,fire:1}, vehicle:['traffic-unit'], poi:'retail', victims:[1,2], prisoners:[0,0], weight:8, description:'Motociclista projetado para a via, com risco de novo acidente e necessidade de gestão de trânsito.' },
+  { title:'Incêndio em apartamento com escadas cheias de fumo', service:'fire', tier:3, difficulty:'Difícil', needs:{fire:3,medical:1,police:1}, vehicle:['ladder'], extension:['aerial'], poi:'retail', victims:[1,4], prisoners:[0,0], weight:5, description:'Fumo em caixa de escadas, moradores nas janelas e necessidade de acesso em altura.' },
+];
+
 const pick = (items,index) => items[index % items.length];
 const range = (tier,service,type) => {
   if(type==='victims'){
@@ -213,6 +224,38 @@ GROUPS.forEach(group => group.titles.forEach((title,localIndex)=>{
     caller:call.caller,choices:call.choices,correct:call.correct,feedback:call.feedback,
   });
 }));
+
+CURATED_PORTUGAL_MISSIONS.forEach((mission,localIndex) => {
+  const scenario=11+missionIndex++;
+  const call=CALLS[mission.service === 'multi' ? 'multi' : mission.service];
+  NEW_MISSION_DEFINITIONS.push({
+    scenario,
+    name:mission.title,
+    difficulty:mission.difficulty,
+    tier:mission.tier,
+    min:buildingsFor(mission.tier,mission.service),
+    extension:mission.extension || [...new Set((mission.vehicle||[]).map(id=>EXTENSION_FOR[id]).filter(Boolean))],
+    vehicle:mission.vehicle || [],
+    poi:mission.poi,
+    victims:mission.victims,
+    prisoners:mission.prisoners,
+    weight:mission.weight,
+    false_alarm_chance:mission.false_alarm_chance,
+  });
+  NEW_SCENARIOS.push({
+    title:mission.title,
+    service:mission.service === 'multi' ? 'fire' : mission.service,
+    priority:mission.tier>=3?1:mission.tier===2?2:3,
+    needs:mission.needs,
+    reward:[1200,2600,6200,11000][mission.tier-1]+localIndex*180,
+    xp:[55,115,230,380][mission.tier-1]+localIndex*5,
+    description:mission.description,
+    caller:call.caller,
+    choices:call.choices,
+    correct:call.correct,
+    feedback:call.feedback,
+  });
+});
 
 export const EXPANSION_COUNTS = {
   vehicles:Object.values(NEW_VEHICLES).flat().length,
