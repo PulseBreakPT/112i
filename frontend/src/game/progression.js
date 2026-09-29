@@ -87,12 +87,23 @@ export const MISSION_DEFINITIONS = [
   ...NEW_MISSION_DEFINITIONS,
 ];
 
-export function buildingCounts(game) {
-  return game.bases.reduce((out, base) => ({ ...out, [base.service]: (out[base.service] || 0) + 1 }), {});
+export function basesForCommand(game, commandCenterId = null) {
+  const operational = game.bases.filter(base => !base.operational_at || base.operational_at <= (game.elapsed || 0));
+  if (!commandCenterId) return operational;
+  return operational.filter(base => base.command_center_id === commandCenterId);
 }
 
-export function missionCap(game) {
-  const counts = Object.values(buildingCounts(game));
+export function unitsForCommand(game, commandCenterId = null) {
+  const baseIds = new Set(basesForCommand(game, commandCenterId).map(base => base.id));
+  return game.units.filter(unit => baseIds.has(unit.base_id));
+}
+
+export function buildingCounts(game, commandCenterId = null) {
+  return basesForCommand(game, commandCenterId).reduce((out, base) => ({ ...out, [base.service]: (out[base.service] || 0) + 1 }), {});
+}
+
+export function missionCap(game, commandCenterId = null) {
+  const counts = Object.values(buildingCounts(game, commandCenterId));
   return Math.max(3, Math.max(1, ...(counts.length ? counts : [0])) + 1);
 }
 
@@ -102,40 +113,56 @@ export function nextBuildingCost(game, service, basePrice) {
   return Math.round(100000 + 200000 * Math.log2(Math.max(2, total - 22)));
 }
 
-export function activeExtensions(game) {
-  return new Set(game.bases.flatMap(base => (base.extensions || []).filter(ext => ext.active).map(ext => ext.id)));
+export function activeExtensions(game, commandCenterId = null) {
+  return new Set(basesForCommand(game, commandCenterId).flatMap(base => (base.extensions || []).filter(ext => ext.active).map(ext => ext.id)));
 }
 
-export function eligibleMissions(game) {
-  const counts = buildingCounts(game);
-  const extensions = activeExtensions(game);
-  const vehicleTypes = new Set(game.units.map(unit => unit.vehicle_type));
-  const coveredCities = new Set(game.bases.map(base => base.city));
+export function eligibleMissions(game, commandCenterId = null) {
+  const areaBases = basesForCommand(game, commandCenterId);
+  const counts = buildingCounts(game, commandCenterId);
+  const extensions = activeExtensions(game, commandCenterId);
+  const vehicleTypes = new Set(unitsForCommand(game, commandCenterId).map(unit => unit.vehicle_type));
+  const coveredCities = new Set(areaBases.map(base => base.city));
+  const pois = [...POIS, ...(game.player_pois || [])];
   return MISSION_DEFINITIONS.filter(def => {
     const enoughBuildings = Object.entries(def.min || {}).every(([service, count]) => (counts[service] || 0) >= count);
     const hasExtensions = (def.extension || []).every(id => extensions.has(id));
     const hasVehicles = (def.vehicle || []).every(id => vehicleTypes.has(id));
-    const hasPoi = !def.poi || POIS.some(poi => poi.type === def.poi && coveredCities.has(poi.city));
+    const hasPoi = !def.poi || pois.some(poi => poi.type === def.poi && (poi.command_center_id ? poi.command_center_id === commandCenterId : coveredCities.has(poi.city)));
     return enoughBuildings && hasExtensions && hasVehicles && hasPoi;
   });
 }
 
-export function weightedMission(game) {
-  const pool = eligibleMissions(game);
+export function weightedMission(game, commandCenterId = null) {
+  const pool = eligibleMissions(game, commandCenterId);
   if (!pool.length) return MISSION_DEFINITIONS[1];
-  const weight = item => item.weight * (item.specialization && game.bases.some(base => base.specialization === item.specialization) ? 2.25 : 1);
+  const areaBases = basesForCommand(game, commandCenterId);
+  const weight = item => item.weight * (item.specialization && areaBases.some(base => base.specialization === item.specialization) ? 2.25 : 1);
   const total = pool.reduce((sum, item) => sum + weight(item), 0);
   let roll = Math.random() * total;
   return pool.find(item => (roll -= weight(item)) <= 0) || pool[pool.length - 1];
 }
 
 export function progressionSnapshot(game, services) {
-  const eligible = eligibleMissions(game);
+  const centers = (game.command_centers || []).filter(center => center.active !== false);
+  const byCommand = Object.fromEntries(centers.map(center => {
+    const eligible = eligibleMissions(game, center.id);
+    return [center.id, {
+      mission_cap: missionCap(game, center.id),
+      unlocked_missions: eligible.map(item => item.scenario),
+      building_counts: buildingCounts(game, center.id),
+    }];
+  }));
+  const eligible = centers.length
+    ? MISSION_DEFINITIONS.filter(item => centers.some(center => byCommand[center.id].unlocked_missions.includes(item.scenario)))
+    : eligibleMissions(game);
+  const regionalCap = centers.length ? Object.values(byCommand).reduce((sum, area) => sum + area.mission_cap, 0) : missionCap(game);
   return {
-    mission_cap: Math.max(missionCap(game), game.incidents?.length || 0),
+    mission_cap: Math.max(regionalCap, game.incidents?.length || 0),
     unlocked_missions: eligible.map(item => item.scenario),
     next_building_costs: Object.fromEntries(Object.entries(services).map(([id, service]) => [id, nextBuildingCost(game, id, service.base_price)])),
     building_counts: buildingCounts(game),
+    command_centers: byCommand,
   };
 }
 

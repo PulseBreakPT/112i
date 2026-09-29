@@ -170,9 +170,10 @@ export const PortugalMap = ({ world, game, selected, onSelect, onCall, focusKey,
       map.on('idle', () => { if (map.areTilesLoaded()) setError(''); });
       const observer = new ResizeObserver(() => map.resize());
       observer.observe(container.current);
+      const activeMarkers = markers.current;
       return () => {
         observer.disconnect();
-        markers.current.forEach(marker => marker.remove()); markers.current.clear();
+        activeMarkers.forEach(marker => marker.remove()); activeMarkers.clear();
         map.remove(); mapRef.current = null;
       };
     } catch (_) {

@@ -40,7 +40,16 @@ export function useGame() {
     try {
       let type=requestedType,data={...requestedData};
       if(type==='dispatch_arr'){
-        data={incident_id:data.incident_id,unit_ids:selectArrUnitIds(current.current,data.incident_id,data.arr_id)};
+        data={incident_id:data.incident_id,unit_ids:selectArrUnitIds(current.current,data.incident_id,data.arr_id),via_arr:true};
+        type='dispatch';
+      }
+      if(type==='dispatch_group'){
+        const group=current.current.unit_groups?.find(item=>item.id===data.group_id);
+        if(!group)throw new Error('Grupo de meios inválido.');
+        const incident=current.current.incidents.find(item=>item.id===data.incident_id);
+        const unitIds=group.unit_ids.filter(id=>current.current.units.some(unit=>unit.id===id&&unit.enabled!==false&&['available','patrol','staged'].includes(unit.status)&&unit.land===incident?.land));
+        if(!unitIds.length)throw new Error('Nenhuma viatura deste grupo está disponível.');
+        data={incident_id:data.incident_id,unit_ids:unitIds,via_arr:true};
         type='dispatch';
       }
       if(type==='dispatch'){
@@ -50,9 +59,51 @@ export function useGame() {
         const plans=await Promise.all((data.unit_ids||[]).map(async id=>{
           const unit=current.current.units.find(item=>item.id===id);
           if(!unit)throw new Error('Unidade indisponível.');
-          return [id,prepared[id]||await fetchRoadRoute(unit.node,incident.node,current.current.conditions)];
+          const base=current.current.bases.find(item=>item.id===unit.base_id);
+          let outward=prepared[id]||await fetchRoadRoute({lng:unit.lng,lat:unit.lat},incident.node,current.current.conditions);
+          const delay=Number(unit.response_delay)||0;if(delay)outward={...outward,duration:outward.duration+delay,times:outward.times.map(value=>value+delay)};
+          const back=await fetchRoadRoute(incident.node,base.node,current.current.conditions);
+          return [id,outward,back];
         }));
-        data={...data,routes:Object.fromEntries(plans)};
+        data={...data,routes:Object.fromEntries(plans.map(([id,outward])=>[id,outward])),return_routes:Object.fromEntries(plans.map(([id,,back])=>[id,back]))};
+      }
+      if(type==='transport_patient'||type==='transport_prisoner'){
+        const isPatient=type==='transport_patient';
+        const task=(isPatient?current.current.patients:current.current.prisoners).find(item=>item.id===data[isPatient?'patient_id':'prisoner_id']);
+        const facility=current.current.facilities.find(item=>item.id===data.facility_id);
+        const service=isPatient?'medical':'police';
+        const unit=current.current.units.find(item=>item.id===data.unit_id)||current.current.units.find(item=>item.service===service&&['available','patrol'].includes(item.status)&&item.land===facility?.land);
+        if(!task||!facility||!unit)throw new Error(isPatient?'Sem ambulâncias disponíveis.':'Sem viaturas policiais disponíveis.');
+        const base=current.current.bases.find(item=>item.id===unit.base_id);
+        const [pickup,delivery,back]=await Promise.all([
+          fetchRoadRoute({lng:unit.lng,lat:unit.lat},task.source_node,current.current.conditions),
+          fetchRoadRoute(task.source_node,facility.node,current.current.conditions),
+          fetchRoadRoute(facility.node,base.node,current.current.conditions),
+        ]);
+        data={...data,unit_id:unit.id,routes:{pickup,delivery,back}};
+      }
+      if(type==='toggle_patrol'){
+        const unit=current.current.units.find(item=>item.id===data.unit_id),base=unit&&current.current.bases.find(item=>item.id===unit.base_id);
+        if(!unit||!base)throw new Error('Viatura policial indisponível.');
+        if(unit.status==='patrol')data={...data,return_route:await fetchRoadRoute({lng:unit.lng,lat:unit.lat},base.node,current.current.conditions)};
+        else{
+          const points=WORLD.command_center_sites.filter(point=>point.city===base.city&&point.id!==base.node).slice(0,4);
+          if(!points.length)throw new Error('Não existem pontos de patrulha nesta cidade.');
+          const waypointIds=points.map(point=>point.id),legs=[],nodes=[base.node,...waypointIds];
+          for(let index=0;index<waypointIds.length;index++)legs.push(await fetchRoadRoute(nodes[index],nodes[index+1],current.current.conditions));
+          legs.push(await fetchRoadRoute(waypointIds[waypointIds.length-1],waypointIds[0],current.current.conditions));
+          data={...data,waypoint_ids:[...waypointIds,waypointIds[0]],routes:legs};
+        }
+      }
+      if(type==='deploy_to_staging'){
+        const unit=current.current.units.find(item=>item.id===data.unit_id),staging=current.current.staging_areas?.find(item=>item.id===data.staging_id);
+        if(!unit||!staging)throw new Error('Zona ou unidade indisponível.');
+        data={...data,route:await fetchRoadRoute({lng:unit.lng,lat:unit.lat},{lng:staging.lng,lat:staging.lat},current.current.conditions)};
+      }
+      if(type==='return_from_staging'){
+        const unit=current.current.units.find(item=>item.id===data.unit_id),base=unit&&current.current.bases.find(item=>item.id===unit.base_id);
+        if(!unit||!base)throw new Error('A viatura não está numa zona de concentração.');
+        data={...data,route:await fetchRoadRoute({lng:unit.lng,lat:unit.lat},base.node,current.current.conditions)};
       }
       return update(applyAction(current.current, type, data), requestedType);
     } catch (error) {

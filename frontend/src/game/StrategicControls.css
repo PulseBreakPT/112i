@@ -1,0 +1,2 @@
+.unit-control-grid header > div { flex: 1; }
+.unit-control-grid header button { display: flex; gap: 5px; align-items: center; border: 1px solid #4a594d; background: #202a23; color: #a8b7aa; font-size: 8px; }

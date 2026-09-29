@@ -725,3 +725,29 @@
 @media (prefers-reduced-motion: reduce) {
   .minimal-shell *, .minimal-shell *::before, .minimal-shell *::after { animation: none !important; transition: none !important; }
 }
+
+.personnel-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.personnel-grid article { display: grid; grid-template-columns: 8px minmax(0, 1fr) 30px; gap: 10px; align-items: center; padding: 12px 14px; border: 1px solid #344b3c; background: #19251f; }
+.personnel-grid article > div { min-width: 0; }
+.personnel-grid strong { display: block; color: #cbdcce; font-size: 11px; font-weight: 500; }
+.personnel-grid small { display: block; margin-top: 4px; color: #7f9787; font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.person-status { width: 7px; height: 7px; border-radius: 50%; background: #779083; box-shadow: 0 0 0 3px #7790831d; }
+.person-status.available { background: #82be91; box-shadow: 0 0 0 3px #82be9120; }
+.person-status.assigned { background: #78aee4; box-shadow: 0 0 0 3px #78aee420; }
+.person-status.training { background: #c7a86b; box-shadow: 0 0 0 3px #c7a86b20; }
+.personnel-grid button { width: 28px; height: 28px; display: grid; place-items: center; color: #c47b70; border: 1px solid #5b3f39; background: #2b201d; }
+.personnel-grid button:disabled { opacity: .25; }
+@media (max-width: 720px) { .personnel-grid { grid-template-columns: 1fr; } }
+.hospital-specialties { margin: 14px 0; padding: 12px; border: 1px solid #344d3e; background: #15221a; }
+.hospital-specialties > div { display: flex; flex-wrap: wrap; gap: 5px; }
+.hospital-specialties > div span { padding: 4px 6px; color: #9fc8af; border: 1px solid #43604f; background: #21362a; font: 7px var(--mono); }
+.hospital-specialties label { display: grid; grid-template-columns: 1fr auto; gap: 6px; margin-top: 10px; color: #789283; font-size: 8px; }
+.hospital-specialties select { grid-column: 1; min-width: 0; padding: 7px; color: #b7cdbd; border: 1px solid #3a5444; background: #19271f; font-size: 9px; }
+.hospital-specialties label button { grid-column: 2; grid-row: 1 / 3; display: flex; align-items: center; gap: 5px; padding: 0 9px; color: #afd2ba; border: 1px solid #496755; background: #24382d; font-size: 8px; }
+.arr-builder.advanced { align-items: end; }
+.arr-vehicle-builder { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; padding: 12px; border: 1px solid #344c3e; background: #16231b; }
+.arr-vehicle-builder > strong { grid-column: 1 / -1; color: #779380; font: 7px var(--mono); letter-spacing: .08em; }
+.arr-vehicle-builder label { display: grid; grid-template-columns: 1fr 42px; gap: 5px; align-items: center; color: #8ca394; font-size: 8px; }
+.arr-vehicle-builder input { width: 42px; min-width: 0; padding: 5px; }
+@media (max-width: 900px) { .arr-vehicle-builder { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .arr-vehicle-builder { grid-template-columns: 1fr; } }

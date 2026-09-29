@@ -42,11 +42,11 @@ export function detectGameFeedback(previous, next, action = 'tick') {
 
   if (next.bases.length > previous.bases.length) {
     const base = next.bases.find(item => !previous.bases.some(old => old.id === item.id));
-    return event('construction', 'positive', 'Base construída', `${base?.name || 'Nova base'} já integra a rede operacional`, 80);
+    return event('construction', 'positive', base?.operational_at ? 'Obras iniciadas' : 'Base construída', base?.operational_at ? `${base?.name || 'Nova base'} entra em construção` : `${base?.name || 'Nova base'} já integra a rede operacional`, 80);
   }
   if ((next.facilities || []).length > (previous.facilities || []).length) {
     const facility = next.facilities.find(item => !(previous.facilities || []).some(old => old.id === item.id));
-    return event('construction', 'positive', 'Instalação construída', `${facility?.name || 'Nova instalação'} está operacional`, 80);
+    return event('construction', 'positive', facility?.operational_at ? 'Obras iniciadas' : 'Instalação construída', facility?.operational_at ? `${facility?.name || 'Nova instalação'} entra em construção` : `${facility?.name || 'Nova instalação'} está operacional`, 80);
   }
   if (next.units.length > previous.units.length) {
     const unit = next.units.find(item => !previous.units.some(old => old.id === item.id));
@@ -78,6 +78,9 @@ export function detectGameFeedback(previous, next, action = 'tick') {
 
   const repaired = logs.find(item => item.kind === 'success' && item.text.includes('reparada e novamente disponível'));
   if (repaired) return event('vehicle', 'positive', 'Viatura reparada', repaired.text, 65);
+
+  const completedConstruction = logs.find(item => item.kind === 'success' && (item.text.includes('entrou ao serviço') || item.text.includes('concluída em')));
+  if (completedConstruction) return event('construction', 'positive', 'Construção concluída', completedConstruction.text, 65);
 
   const reward = (next.earned || 0) - (previous.earned || 0);
   if (reward > 0) return event('reward', 'positive', 'Recompensa recebida', `+${currency(reward)} adicionados ao orçamento`, 60);

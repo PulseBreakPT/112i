@@ -9,18 +9,18 @@ export const DispatchPanel = ({ game, world, incident, act, busy, onCall, onFocu
   const [estimates, setEstimates] = useState({}), [estimating, setEstimating] = useState(false);
   const estimateRequest = useRef(0);
   useEffect(() => { setPicked([]); setEstimates({}); setEstimating(false); estimateRequest.current += 1; }, [incident?.id]);
-  useEffect(() => setPicked(p => p.filter(id => game.units.some(u => u.id === id && ['available','patrol'].includes(u.status)))), [game.units]);
-  const available = game.units.filter(u => ['available','patrol'].includes(u.status)).sort((a, b) => Number(Boolean(incident?.needs[b.service]) && b.land === incident?.land) - Number(Boolean(incident?.needs[a.service]) && a.land === incident?.land));
+  useEffect(() => setPicked(p => p.filter(id => game.units.some(u => u.id === id && u.enabled !== false && ['available','patrol','staged'].includes(u.status)))), [game.units]);
+  const available = game.units.filter(u => u.enabled !== false && ['available','patrol','staged'].includes(u.status)).sort((a, b) => Number(Boolean(incident?.needs[b.service]) && b.land === incident?.land) - Number(Boolean(incident?.needs[a.service]) && a.land === incident?.land));
   const assigned = game.units.filter(u => u.incident_id === incident?.id);
   const needed = s => Math.max(0, (incident?.needs[s] || 0) - assigned.filter(u => u.service === s).length);
-  const send = async () => { const routes=Object.fromEntries(picked.filter(id=>estimates[game.units.find(unit=>unit.id===id)?.node]).map(id=>[id,estimates[game.units.find(unit=>unit.id===id)?.node]]));const result = await act('dispatch', { incident_id: incident.id, unit_ids: picked, routes }); if (result) setPicked([]); };
+  const send = async () => { const routes=Object.fromEntries(picked.filter(id=>estimates[id]).map(id=>[id,estimates[id]]));const result = await act('dispatch', { incident_id: incident.id, unit_ids: picked, routes }); if (result) setPicked([]); };
   const estimateRoutes = async () => {
     const request = ++estimateRequest.current;
     setEstimating(true);
-    const origins = [...new Set(available.filter(u => needed(u.service) && u.land === incident.land).map(u => u.node))];
-    const routes = await Promise.all(origins.map(async node => {
-      try { return [node, await fetchRoadRoute(node, incident.node, game.conditions)]; }
-      catch (error) { return [node, { error: operationalText(error?.message || 'Estimativa indisponível. Tenta novamente.') }]; }
+    const origins = available.filter(u => needed(u.service) && u.land === incident.land);
+    const routes = await Promise.all(origins.map(async unit => {
+      try { return [unit.id, await fetchRoadRoute({lng:unit.lng,lat:unit.lat}, incident.node, game.conditions)]; }
+      catch (error) { return [unit.id, { error: operationalText(error?.message || 'Estimativa indisponível. Tenta novamente.') }]; }
     }));
     if (request === estimateRequest.current) {
       setEstimates(Object.fromEntries(routes));
@@ -53,11 +53,12 @@ export const DispatchPanel = ({ game, world, incident, act, busy, onCall, onFocu
         const state = disconnected ? 'Sem ligação' : selected ? 'Selecionada' : !incident.needs[u.service] ? 'Não necessária' : !needed(u.service) || full ? 'Meios suficientes' : u.status === 'patrol' ? 'Em patrulha' : 'Disponível';
         return <button key={u.id} data-testid={`select-unit-${u.name}`} disabled={disabled} aria-pressed={selected} className={`unit-choice ${selected ? 'selected' : ''}`} onClick={() => setPicked(p => selected ? p.filter(id => id !== u.id) : [...p, u.id])}>
           <span className="unit-icon" style={{ color: SERVICE[u.service].color }}><ServiceIcon service={u.service} size={20} /></span>
-          <span className="unit-choice-text"><strong>{u.name}</strong><small title={game.bases.find(b => b.id === u.base_id)?.name}>{game.bases.find(b => b.id === u.base_id)?.name}</small>{estimates[u.node] && !estimates[u.node].error && <span className="unit-road-eta" data-testid={`route-estimate-${u.name}`}>{duration(estimates[u.node].duration)} · {(estimates[u.node].distance / 1000).toFixed(1)} km</span>}</span>
+          <span className="unit-choice-text"><strong>{u.name}</strong><small title={game.bases.find(b => b.id === u.base_id)?.name}>{u.status==='staged'?'Zona de concentração':game.bases.find(b => b.id === u.base_id)?.name}</small>{estimates[u.id] && !estimates[u.id].error && <span className="unit-road-eta" data-testid={`route-estimate-${u.name}`}>{duration(estimates[u.id].duration)} · {(estimates[u.id].distance / 1000).toFixed(1)} km</span>}</span>
           <span className="unit-choice-right"><span className="unit-ready" data-unavailable={disabled}>{state}</span><span className={`checkbox ${selected ? 'checked' : ''}`}>{selected && <Check size={14} />}</span></span>
         </button>;
       })}{available.length === 0 && <p className="subtle" data-testid="no-available-units">Não há meios disponíveis para mobilização.</p>}</div>
       {!!game.arrs?.length && <details className="dispatch-foldout arr-dispatch" key={`arr-${incident.id}`}><summary><ClipboardList size={15} />Mobilização por regulamento<ChevronDown size={15} /></summary><div>{game.arrs.map(arr => <button key={arr.id} disabled={busy || !Object.entries(incident.needs).some(([service, count]) => count > assigned.filter(unit => unit.service === service).length && (arr.resources[service] || 0) > 0)} onClick={() => act('dispatch_arr', { incident_id: incident.id, arr_id: arr.id })}><strong>{arr.name}</strong><small>{Object.entries(arr.resources).filter(([,count]) => count).map(([service,count]) => `${count} ${SERVICE[service].short}`).join(' · ')}</small></button>)}</div></details>}
+      {!!game.unit_groups?.length && <details className="dispatch-foldout arr-dispatch" key={`groups-${incident.id}`}><summary><CarFront size={15} />Grupos de meios<ChevronDown size={15} /></summary><div>{game.unit_groups.map(group => <button key={group.id} disabled={busy || !group.unit_ids.some(id=>available.some(unit=>unit.id===id))} onClick={() => act('dispatch_group', { incident_id:incident.id, group_id:group.id })}><strong>{group.name}</strong><small>{group.unit_ids.length} viatura(s) específica(s)</small></button>)}</div></details>}
       <details className="dispatch-foldout mission-briefing" key={`briefing-${incident.id}`}><summary><Radio size={15} />Detalhes da ocorrência<ChevronDown size={15} /></summary>
         <p data-testid="selected-incident-description">{incident.description}</p>
         <div className="mission-facts"><span><Gauge size={13} />{incident.difficulty || 'Média'}</span><span data-tone={incident.casualties > 0 ? 'warning' : undefined}><HeartPulse size={13} />{incident.casualties || 0} feridos</span><span data-tone={incident.detainees > 0 ? 'active' : undefined}><Shield size={13} />{incident.detainees || 0} detidos</span></div>
