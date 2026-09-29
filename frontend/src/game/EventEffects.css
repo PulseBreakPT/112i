@@ -1,0 +1,99 @@
+.event-fx {
+  --fx: #9cddb0;
+  --fx-bright: #e6ffdf;
+  --fx-deep: #17482b;
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  overflow: hidden;
+  isolation: isolate;
+}
+.event-fx[data-tone="negative"] { --fx: #ff776e; --fx-bright: #ffe1d9; --fx-deep: #631f20; }
+.event-fx[data-tone="warning"] { --fx: #efc461; --fx-bright: #fff0b5; --fx-deep: #61420f; }
+.event-fx[data-variant="mission"] { --fx: #d8d58a; --fx-bright: #fffbd2; --fx-deep: #51501b; }
+.event-fx[data-variant="reward"] { --fx: #f1bd55; --fx-bright: #fff0a4; --fx-deep: #664311; }
+.event-fx[data-variant="construction"] { --fx: #8dc5e9; --fx-bright: #dff4ff; --fx-deep: #174a67; }
+.event-fx[data-variant="training"] { --fx: #b4a4f2; --fx-bright: #eee8ff; --fx-deep: #3f337a; }
+.event-fx[data-variant="hire"] { --fx: #72d8ad; --fx-bright: #d9fff0; --fx-deep: #15563e; }
+.event-fx[data-variant="dismissal"] { --fx: #f28b72; --fx-bright: #ffe5dc; --fx-deep: #64281c; }
+.event-fx[data-variant="vehicle"] { --fx: #72bff4; --fx-bright: #dff3ff; --fx-deep: #164d73; }
+.event-fx[data-variant="upgrade"] { --fx: #9ed77c; --fx-bright: #e8ffd7; --fx-deep: #315a1b; }
+.event-fx[data-variant="triage"] { --fx: #73d5d3; --fx-bright: #d9ffff; --fx-deep: #155d60; }
+.event-fx-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 46%, color-mix(in srgb, var(--fx) 18%, transparent), transparent 34%), linear-gradient(180deg, transparent 25%, color-mix(in srgb, var(--fx-deep) 32%, transparent));
+  animation: event-vignette 2.8s ease both;
+}
+.event-fx-card {
+  width: min(88vw, 440px);
+  position: relative;
+  padding: 28px 34px 25px;
+  text-align: center;
+  color: var(--fx-bright);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--fx-deep) 72%, #0c1411), #0e1714f2);
+  border: 1px solid color-mix(in srgb, var(--fx) 62%, transparent);
+  clip-path: polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%, 0 16px);
+  box-shadow: 0 24px 90px #000c, 0 0 42px color-mix(in srgb, var(--fx) 22%, transparent), inset 0 0 0 1px #ffffff0a;
+  animation: event-card-in 2.8s cubic-bezier(.18,.86,.2,1) both;
+}
+.event-fx-kicker { color: var(--fx); font: 600 8px 'IBM Plex Mono', monospace; letter-spacing: .19em; }
+.event-fx-icon { width: 68px; height: 68px; margin: 17px auto 13px; display: grid; place-items: center; color: var(--fx-bright); border: 1px solid color-mix(in srgb, var(--fx) 68%, transparent); background: color-mix(in srgb, var(--fx) 11%, transparent); transform: rotate(45deg); box-shadow: 0 0 28px color-mix(in srgb, var(--fx) 24%, transparent); }
+.event-fx-icon svg { transform: rotate(-45deg); }
+.event-fx h2 { margin: 0; color: var(--fx-bright); font: 600 clamp(26px, 5vw, 38px)/1 'Barlow Condensed', sans-serif; letter-spacing: .015em; }
+.event-fx p { max-width: 340px; margin: 11px auto 0; color: color-mix(in srgb, var(--fx-bright) 72%, #8b9990); font: 11px/1.55 'Barlow', sans-serif; }
+.event-fx-timer { height: 2px; margin-top: 21px; overflow: hidden; background: color-mix(in srgb, var(--fx) 16%, transparent); }
+.event-fx-timer i { display: block; width: 100%; height: 100%; transform-origin: left; background: var(--fx); animation: event-timer 2.65s linear both; }
+.event-fx-signature { position: absolute; width: min(94vw, 640px); aspect-ratio: 1; animation: event-signature-in 2.7s ease-out both; }
+.event-fx-signature i { position: absolute; inset: calc(var(--ring, 0) * 11%); border: 1px solid color-mix(in srgb, var(--fx) 18%, transparent); transform: rotate(45deg); }
+.event-fx-signature i:nth-child(1) { --ring: 1; }
+.event-fx-signature i:nth-child(2) { --ring: 2; }
+.event-fx-signature i:nth-child(3) { --ring: 3; }
+.event-fx-signature i:nth-child(4) { --ring: 4; }
+.event-fx-particles { position: absolute; inset: 0; }
+.event-fx-particles i { --angle: calc(var(--i) * 25.7deg); position: absolute; left: 50%; top: 48%; width: 4px; height: 22px; border-radius: 3px; background: var(--fx); opacity: 0; transform: rotate(var(--angle)) translateY(-70px); animation: event-particle 1.25s calc(var(--i) * 22ms) ease-out both; }
+
+.event-fx[data-variant="reward"] .event-fx-particles i { width: 9px; height: 9px; border-radius: 50%; box-shadow: inset 0 0 0 2px #fff7; animation-name: event-coin; }
+.event-fx[data-variant="construction"] .event-fx-signature { background: linear-gradient(color-mix(in srgb, var(--fx) 10%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--fx) 10%, transparent) 1px, transparent 1px); background-size: 28px 28px; transform: perspective(420px) rotateX(62deg); }
+.event-fx[data-variant="training"] .event-fx-signature i { border-radius: 50%; animation: event-ring 1.7s calc(var(--ring) * 80ms) ease-out both; }
+.event-fx[data-variant="hire"] .event-fx-particles i { width: 8px; height: 8px; border-radius: 50% 50% 2px 2px; animation-name: event-gather; }
+.event-fx[data-variant="dismissal"] .event-fx-particles i { width: 8px; height: 8px; border-radius: 50% 50% 2px 2px; animation-name: event-scatter; }
+.event-fx[data-variant="vehicle"] .event-fx-particles i { left: -15%; top: calc(28% + var(--i) * 3%); width: 34%; height: 2px; transform: none; animation: event-road-streak 1.1s calc(var(--i) * 30ms) ease-out both; }
+.event-fx[data-variant="upgrade"] .event-fx-signature i { clip-path: polygon(50% 0, 100% 48%, 82% 48%, 50% 18%, 18% 48%, 0 48%); background: color-mix(in srgb, var(--fx) 7%, transparent); border: 0; animation: event-rise 1.7s calc(var(--ring) * 90ms) ease-out both; }
+.event-fx[data-tone="negative"] .event-fx-card { animation-name: event-card-fail; }
+.event-fx[data-variant="mission-failed"] .event-fx-signature { border-left: 2px solid #ff665a33; border-right: 2px solid #ff665a33; animation: event-collapse 2.9s ease-in both; }
+.event-fx[data-variant="bad-call"] .event-fx-particles i { width: 2px; height: 25px; transform: translate(calc((var(--i) - 7) * 15px), -50%); animation: event-wave .7s calc(var(--i) * 28ms) ease-in-out 3 alternate; }
+.event-fx[data-variant="bad-call"] .event-fx-particles i:nth-child(3n) { height: 47px; }
+.event-fx[data-variant="bad-call"] .event-fx-particles i:nth-child(3n + 1) { height: 12px; }
+.event-fx[data-variant="breakdown"] .event-fx-particles i { width: 3px; height: 13px; background: #ffc36d; animation-name: event-spark; }
+.event-fx[data-variant="escalation"] .event-fx-vignette { background: repeating-linear-gradient(120deg, transparent 0 28px, color-mix(in srgb, var(--fx) 7%, transparent) 28px 42px), radial-gradient(circle, #7b53143b, transparent 55%); }
+
+@keyframes event-card-in { 0% { opacity: 0; transform: translateY(28px) scale(.9); } 13%, 82% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-10px) scale(.98); } }
+@keyframes event-card-fail { 0% { opacity: 0; transform: scale(1.12); filter: blur(5px); } 8% { opacity: 1; transform: translateX(-8px); filter: none; } 12% { transform: translateX(7px); } 16%, 85% { opacity: 1; transform: none; } 100% { opacity: 0; transform: scale(.98); } }
+@keyframes event-vignette { 0%, 100% { opacity: 0; } 12%, 78% { opacity: 1; } }
+@keyframes event-signature-in { 0% { opacity: 0; transform: rotate(-18deg) scale(.5); } 25% { opacity: 1; } 100% { opacity: 0; transform: rotate(12deg) scale(1.3); } }
+@keyframes event-particle { 0% { opacity: 0; } 15% { opacity: .8; } 100% { opacity: 0; transform: rotate(var(--angle)) translateY(-310px) scale(.2); } }
+@keyframes event-coin { 0% { opacity: 0; transform: translate(calc((var(--i) - 7) * 23px), -190px) rotateY(0); } 20% { opacity: 1; } 100% { opacity: 0; transform: translate(calc((var(--i) - 7) * 29px), 260px) rotateY(720deg); } }
+@keyframes event-gather { 0% { opacity: 0; transform: rotate(var(--angle)) translateY(-290px) scale(.4); } 60% { opacity: .9; } 100% { opacity: 0; transform: rotate(var(--angle)) translateY(-72px); } }
+@keyframes event-scatter { 0% { opacity: .8; transform: rotate(var(--angle)) translateY(-72px); } 100% { opacity: 0; transform: rotate(var(--angle)) translateY(-310px) scale(.25); } }
+@keyframes event-road-streak { 0% { opacity: 0; transform: translateX(0) skewX(-25deg); } 35% { opacity: .75; } 100% { opacity: 0; transform: translateX(430%) skewX(-25deg); } }
+@keyframes event-ring { 0% { opacity: 0; transform: scale(.2); } 30% { opacity: .8; } 100% { opacity: 0; transform: scale(1.45); } }
+@keyframes event-rise { 0% { opacity: 0; transform: translateY(180px); } 45% { opacity: .45; } 100% { opacity: 0; transform: translateY(-130px); } }
+@keyframes event-collapse { 0% { opacity: 0; transform: scaleX(1.8); } 25%, 70% { opacity: .75; } 100% { opacity: 0; transform: scaleX(.16); } }
+@keyframes event-wave { from { opacity: .2; transform: translate(calc((var(--i) - 7) * 15px), -50%) scaleY(.4); } to { opacity: .9; transform: translate(calc((var(--i) - 7) * 15px), -50%) scaleY(1.5); } }
+@keyframes event-spark { 0% { opacity: 0; } 12% { opacity: 1; } 100% { opacity: 0; transform: rotate(var(--angle)) translateY(-260px) translateX(70px) scale(.15); } }
+@keyframes event-timer { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+
+@media (max-width: 620px) {
+  .event-fx-card { width: min(88vw, 370px); padding: 24px 22px 22px; }
+  .event-fx-signature { width: 118vw; }
+  .event-fx h2 { font-size: 30px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .event-fx-vignette, .event-fx-card { animation: none !important; }
+  .event-fx-particles, .event-fx-signature { display: none; }
+  .event-fx-timer i { animation-duration: 2.7s !important; }
+}

@@ -2,20 +2,29 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { WORLD, applyAction, fetchRoadRoute, loadLocalGame, saveLocalGame, selectArrUnitIds, tickGame } from './localGame';
 import { operationalText, presentGameCopy, presentWorldCopy } from './operationalLanguage';
+import { detectGameFeedback, failureFeedback } from './eventFeedback';
 
 const DISPLAY_WORLD = presentWorldCopy(WORLD);
 
 export function useGame() {
   const [game, setGame] = useState(() => loadLocalGame());
   const [busy, setBusy] = useState(false);
+  const [feedback, setFeedback] = useState(null);
   const current = useRef(game);
+  const feedbackSequence = useRef(0);
 
-  const update = useCallback(next => {
+  const publishFeedback = useCallback(item => {
+    if (item) setFeedback({ ...item, id: ++feedbackSequence.current });
+  }, []);
+
+  const update = useCallback((next, action = 'tick') => {
+    const previous = current.current;
     const saved = saveLocalGame(next);
     current.current = saved;
     setGame(saved);
+    publishFeedback(detectGameFeedback(previous, saved, action));
     return saved;
-  }, []);
+  }, [publishFeedback]);
 
   useEffect(() => { current.current = game; }, [game]);
   useEffect(() => {
@@ -45,13 +54,16 @@ export function useGame() {
         }));
         data={...data,routes:Object.fromEntries(plans)};
       }
-      return update(applyAction(current.current, type, data));
+      return update(applyAction(current.current, type, data), requestedType);
     } catch (error) {
-      toast.error(operationalText(error?.message || 'Não foi possível concluir a ação. Tenta novamente.'), { 'data-testid': 'action-error-toast' });
+      const message = operationalText(error?.message || 'Não foi possível concluir a ação. Tenta novamente.');
+      toast.error(message, { 'data-testid': 'action-error-toast' });
+      publishFeedback(failureFeedback(message, requestedType));
       return null;
     } finally { setBusy(false); }
-  }, [update]);
+  }, [publishFeedback, update]);
 
   const displayGame = useMemo(() => presentGameCopy(game), [game]);
-  return { game: displayGame, world: DISPLAY_WORLD, error: '', busy, act, retry: () => {} };
+  const clearFeedback = useCallback(id => setFeedback(currentFeedback => currentFeedback?.id === id ? null : currentFeedback), []);
+  return { game: displayGame, world: DISPLAY_WORLD, error: '', busy, act, retry: () => {}, feedback, clearFeedback };
 }

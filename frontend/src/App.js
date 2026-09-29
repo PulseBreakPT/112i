@@ -16,6 +16,7 @@ import Settings from './game/Settings';
 import { beep } from './game/common';
 import { ambientAudio } from './game/ambientAudio';
 import { useAmbientAudio } from './game/useAmbientAudio';
+import EventEffects from './game/EventEffects';
 import './Silver.css';
 import './game/semantics.css';
 import './Immersive.css';
@@ -25,7 +26,7 @@ import './Clarity.css';
 import './Compact.css';
 
 function GameApp() {
-  const { game, world, error, busy, act, retry } = useGame();
+  const { game, world, error, busy, act, retry, feedback, clearFeedback } = useGame();
   const location = useLocation();
   const navigate = useNavigate();
   const isCentral = location.pathname === '/';
@@ -36,7 +37,7 @@ function GameApp() {
   const [panel, setPanel] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [sound, setSoundState] = useState(() => localStorage.getItem('nexo-sound') !== 'false');
-  const sequence = useRef(null), completed = useRef(null);
+  const sequence = useRef(null);
   const audioActive = !!game && !!game.speed && isCentral;
   useAmbientAudio(sound, audioActive);
   const setSound = value => {
@@ -50,13 +51,13 @@ function GameApp() {
     if (!game) return;
     if (!game.incidents.some(i => i.id === selected)) setSelected(game.incidents[0]?.id || null);
     if (sequence.current !== null && game.sequence > sequence.current) beep(sound, 780);
-    if (completed.current !== null && game.completed > completed.current) {
-      toast.success('Ocorrência resolvida. Receita registada.', { id: 'mission-complete' });
-      beep(sound, 1000);
-    }
     sequence.current = game.sequence;
-    completed.current = game.completed;
   }, [game, selected, sound]);
+
+  useEffect(() => {
+    if (!feedback) return;
+    beep(sound, feedback.tone === 'positive' ? 1040 : feedback.tone === 'warning' ? 620 : 210);
+  }, [feedback, sound]);
 
   useEffect(() => { if (!isCentral) setPanel(null); setMenuOpen(false); }, [isCentral, location.pathname]);
   useEffect(() => {
@@ -124,6 +125,7 @@ function GameApp() {
     <Footer game={game} error={error} />
     <CallModal incident={game.incidents.find(i => i.id === callId)} open={!!callId} onClose={closeCall} act={act} busy={busy} />
     <HelpModal open={help} onClose={() => setHelp(false)} />
+    <EventEffects event={feedback} onDone={clearFeedback} />
     <Toaster theme="dark" position="top-center" richColors />
   </div>;
 }
