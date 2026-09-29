@@ -1,12 +1,14 @@
 import { Radio, Clock3, ChevronRight, SlidersHorizontal, Plus, CheckCheck, X, MapPin, HeartPulse, Shield, GraduationCap } from 'lucide-react';
 import { useState } from 'react';
 import { SERVICE, ServiceIcon, STATUS, duration, money } from './common';
+import { useVirtualList } from './engines/virtualList';
 
 export const IncidentPanel = ({ game, selected, onSelect, act, busy, onClose }) => {
   const [filter, setFilter] = useState('all');
   const [priorityFirst, setPriorityFirst] = useState(true);
   const list = game.incidents.filter(item => filter === 'all' || item.service === filter);
   const ordered = [...list].sort((a, b) => priorityFirst ? a.priority - b.priority || a.deadline - b.deadline : b.number - a.number);
+  const virtual = useVirtualList(ordered.length);
   const waiting = game.incidents.filter(item => item.status === 'waiting').length;
   const atCapacity = game.incidents.length >= (game.progression?.mission_cap || 3);
 
@@ -22,8 +24,9 @@ export const IncidentPanel = ({ game, selected, onSelect, act, busy, onClose }) 
       <span className={`queue-pending ${waiting ? 'has-waiting' : ''}`} data-testid="waiting-count"><i />{waiting} {waiting === 1 ? 'pendente' : 'pendentes'}</span>
       <button className="queue-sort" title={priorityFirst ? 'Mudar para mais recentes' : 'Ordenar por prioridade'} aria-label="Ordenar por prioridade" aria-pressed={priorityFirst} data-testid="sort-priority" onClick={() => setPriorityFirst(value => !value)}><SlidersHorizontal size={13} />{priorityFirst ? 'Prioridade' : 'Mais recentes'}</button>
     </div>
-    <div className="incidents-scroll">
-      {ordered.map(inc => {
+    <div className="incidents-scroll" ref={virtual.containerRef} onScroll={virtual.onScroll}>
+      {!!virtual.paddingTop && <div style={{ height: virtual.paddingTop, flex: '0 0 auto' }} />}
+      {ordered.slice(virtual.start, virtual.end).map(inc => {
         const remaining = inc.deadline - game.elapsed;
         return <button className={`incident-card ${selected === inc.id ? 'selected' : ''}`} key={inc.id} data-priority={inc.priority} data-testid={`incident-${inc.number}`} onClick={() => onSelect(inc.id)} style={{ '--service-color': SERVICE[inc.service].color }}>
           <div className="incident-top">
@@ -39,6 +42,7 @@ export const IncidentPanel = ({ game, selected, onSelect, act, busy, onClose }) 
           <div className="incident-secondary"><div className="incident-impact"><span>{inc.difficulty || 'Média'}</span>{inc.operational_phases?.[inc.active_phase] && <span>{inc.operational_phases[inc.active_phase]}</span>}{inc.casualties > 0 && <span data-tone="warning"><HeartPulse size={12} />{inc.casualties} ferido{inc.casualties !== 1 ? 's' : ''}</span>}{inc.detainees > 0 && <span data-tone="active"><Shield size={12} />{inc.detainees} detido{inc.detainees !== 1 ? 's' : ''}</span>}</div><span className="incident-reward">{money(inc.reward)}<ChevronRight size={14} /></span></div>
         </button>;
       })}
+      {!!virtual.paddingBottom && <div style={{ height: virtual.paddingBottom, flex: '0 0 auto' }} />}
       {!ordered.length && <div className="empty-state" data-testid="incidents-empty"><CheckCheck size={30} /><strong>{game.incidents.length ? 'Sem ocorrências deste serviço' : 'Sem ocorrências pendentes'}</strong><p>{game.incidents.length ? 'Seleciona Todas para consultar a fila completa.' : 'A central está pronta para a próxima chamada.'}</p></div>}
     </div>
     <button className="new-incident" data-testid="new-incident-button" disabled={busy || atCapacity} onClick={() => act('new_incident')}><Plus size={16} />{atCapacity ? 'Limite de ocorrências atingido' : 'Receber ocorrência'}</button>
