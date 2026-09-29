@@ -1,0 +1,70 @@
+.vehicle-art.vehicle-photo {
+  position: relative;
+  width: 100%;
+  height: clamp(118px, 9vw, 164px);
+  max-height: none;
+  margin: 13px 0 10px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  isolation: isolate;
+  border: 1px solid color-mix(in srgb, var(--service-color) 22%, #ffffff16);
+  border-radius: 9px;
+  background:
+    radial-gradient(ellipse at 50% 72%, color-mix(in srgb, var(--service-color) 15%, transparent), transparent 58%),
+    linear-gradient(145deg, #ffffff08, transparent 55%),
+    repeating-linear-gradient(0deg, transparent 0 23px, #ffffff05 23px 24px),
+    #13181d;
+  filter: none;
+}
+
+.vehicle-art.vehicle-photo::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  left: 17%;
+  right: 17%;
+  bottom: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: #0009;
+  filter: blur(8px);
+}
+
+.vehicle-art.vehicle-photo > img {
+  width: 94%;
+  height: 91%;
+  object-fit: contain;
+  object-position: center;
+  user-select: none;
+  filter: drop-shadow(0 11px 9px #0009) saturate(.92) contrast(1.04);
+  transition: transform .25s ease, filter .25s ease;
+}
+
+.vehicle-card:hover .vehicle-photo > img {
+  transform: translateY(-2px) scale(1.025);
+  filter: drop-shadow(0 14px 11px #000a) saturate(1) contrast(1.05);
+}
+
+.vehicle-art.vehicle-photo > span {
+  position: absolute;
+  left: 8px;
+  bottom: 7px;
+  padding: 3px 5px;
+  border: 1px solid #ffffff1c;
+  border-radius: 3px;
+  background: #0b0e11cc;
+  color: #a9b3bd;
+  font: 600 6px var(--mono);
+  letter-spacing: .7px;
+}
+
+.game-modal .vehicle-art.vehicle-photo {
+  height: 190px;
+  margin: 5px 0 12px;
+}
+
+@media (max-width: 650px) {
+  .vehicle-art.vehicle-photo { height: 150px; }
+  .game-modal .vehicle-art.vehicle-photo { height: 155px; }
+}

@@ -26,6 +26,7 @@ import './Minimal.css';
 import './Polish.css';
 import './Clarity.css';
 import './Compact.css';
+import './VehicleMedia.css';
 
 function GameApp() {
   const { game, world, error, busy, act, retry, feedback, clearFeedback } = useGame();
