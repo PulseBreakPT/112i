@@ -11,6 +11,13 @@ User wants a significantly clearer UI/HUD, minimal and map-first, now explicitly
 - Owned fleet before purchase catalogue. Improved menu, workspace, operations, reports, settings and modal legibility.
 - Latest cinematic pass: layered graphite gradients, specular edge highlights, shadows, subtle service glow, glass menus, selected-state illumination and silver CTAs. CSS shader-like effects only, no WebGL/dependency added. No continuous animation added. Reduced-motion/transparency fallbacks.
 
+### Language update — latest request
+- Uniform neutral PT-PT operational language; address the player as tu, keep radio logs/status labels impersonal. See memory/language-guide.md.
+- Terminology: Bombeiros/INEM/PSP, mobilização de meios, viaturas, equipas, ocorrência, em deslocação/no local/em regresso; receitas instead of promotional rewards in labels. RAR expanded as regulamento de alarme e resposta. Celas corrected in support UI and displayed errors.
+- Revised HUD, queue/dispatch, management, operations/support, settings, reports, toasts, help and call options. Removed promotional praise/English labels; HTML lang=pt-PT, title/description/noscript Portuguese.
+- operationalLanguage.js centralizes display mappings. useGame exposes memoized presentGameCopy(game) plus a stable module-level DISPLAY_WORLD; raw game state and saved progress untouched. Existing saves receive updated display wording; action IDs, answer indices, route data and numeric game state unchanged. Custom RAR names retained.
+- Backend source, frontend package.json and environment NOT changed in this language phase. Frontend browser testing still not authorized/unblocked.
+
 ### Verification and constraints
 - Modified JS lint and git diff --check passed. Frontend NOT visually or interactively verified; screenshots not possible while preview is blocked.
 - Existing frontend is FATAL: node_modules absent; yarn install blocked by existing fast-uri@3.2.2 resolution. User explicitly chose B: DO NOT change dependencies. Frontend package.json unchanged. No substitute versions/workaround preview allowed without permission.

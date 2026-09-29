@@ -1,6 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { WORLD, applyAction, fetchRoadRoute, loadLocalGame, saveLocalGame, selectArrUnitIds, tickGame } from './localGame';
+import { operationalText, presentGameCopy, presentWorldCopy } from './operationalLanguage';
+
+const DISPLAY_WORLD = presentWorldCopy(WORLD);
 
 export function useGame() {
   const [game, setGame] = useState(() => loadLocalGame());
@@ -44,10 +47,11 @@ export function useGame() {
       }
       return update(applyAction(current.current, type, data));
     } catch (error) {
-      toast.error(error?.message || 'Não foi possível concluir a ação. Tenta novamente.', { 'data-testid': 'action-error-toast' });
+      toast.error(operationalText(error?.message || 'Não foi possível concluir a ação. Tenta novamente.'), { 'data-testid': 'action-error-toast' });
       return null;
     } finally { setBusy(false); }
   }, [update]);
 
-  return { game, world: WORLD, error: '', busy, act, retry: () => {} };
+  const displayGame = useMemo(() => presentGameCopy(game), [game]);
+  return { game: displayGame, world: DISPLAY_WORLD, error: '', busy, act, retry: () => {} };
 }

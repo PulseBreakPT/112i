@@ -56,7 +56,7 @@ export default function Operations({ game, world, act, busy }) {
 
   return <main className="management-page operations-page">
     <div className="page-heading">
-      <div><span className="page-eyebrow">COORDENAÇÃO DE RETAGUARDA</span><h1>Operações e apoio</h1><p>Hospitais, custódia, formação, patrulhamento e despacho automático.</p></div>
+      <div><span className="page-eyebrow">APOIO OPERACIONAL</span><h1>Operações e apoio</h1><p>Coordena o transporte de vítimas e detidos, a formação, o patrulhamento e a mobilização de meios.</p></div>
       <Button className="primary-button" onClick={() => setBuildOpen(true)}><Plus size={16} /> Construir instalação</Button>
     </div>
 
@@ -79,17 +79,17 @@ export default function Operations({ game, world, act, busy }) {
         return <article className="facility-card" key={facility.id}>
           <div className="facility-card-top"><span><Icon size={16} />{FACILITY_LABELS[facility.type].eyebrow}</span><b>NÍVEL {facility.level}</b></div>
           <h3>{facility.name}</h3><p>{facility.city} · {info.name}</p>
-          <div className="facility-meter"><span>{facility.type === 'hospital' ? 'Camas ocupadas' : facility.type === 'prison' ? 'Células ocupadas' : 'Lugares em uso'}</span><strong>{occupancy(facility)}/{facility.capacity}</strong><i><b style={{ width:`${Math.min(100, occupancy(facility) / facility.capacity * 100)}%` }} /></i></div>
+          <div className="facility-meter"><span>{facility.type === 'hospital' ? 'Camas ocupadas' : facility.type === 'prison' ? 'Celas ocupadas' : 'Lugares em uso'}</span><strong>{occupancy(facility)}/{facility.capacity}</strong><i><b style={{ width:`${Math.min(100, occupancy(facility) / facility.capacity * 100)}%` }} /></i></div>
           <button disabled={busy || game.money < 3500 * facility.level} onClick={() => run('upgrade_facility', { facility_id:facility.id }, 'Instalação ampliada.')}><ArrowUpRight size={14} /> Ampliar · {money(3500 * facility.level)}</button>
         </article>;
-      })}{!facilities.length && <div className="operations-empty"><Building2 size={28} /><strong>A rede ainda não tem instalações de apoio</strong><p>Constrói um hospital, uma prisão ou uma escola para abrir novos fluxos operacionais.</p></div>}</div>
+      })}{!facilities.length && <div className="operations-empty"><Building2 size={28} /><strong>A rede ainda não tem instalações de apoio</strong><p>Constrói instalações de apoio para o transporte hospitalar, a custódia de detidos e a formação de equipas.</p></div>}</div>
     </>}
 
     {tab === 'aftercare' && <>
       <div className="queue-board">
         <section><div className="section-line"><h2>Vítimas</h2><span>{patients.filter(patient => !['discharged'].includes(patient.status)).length} ATIVAS</span></div>
           <div className="case-list">{patients.filter(patient => patient.status !== 'discharged').map(patient => <article key={patient.id}>
-            <span className={`case-severity s${patient.severity}`}>G{patient.severity}</span><div><strong>{patient.incident}</strong><small>{patient.city} · {patient.needs_doctor ? 'Necessita médico' : 'Transporte normal'} · {patient.specialty === 'trauma' ? 'Trauma' : 'Urgência'}</small></div>
+            <span className={`case-severity s${patient.severity}`}>G{patient.severity}</span><div><strong>{patient.incident}</strong><small>{patient.city} · {patient.needs_doctor ? 'Apoio médico necessário' : 'Transporte hospitalar'} · {patient.specialty === 'trauma' ? 'Trauma' : 'Urgência'}</small></div>
             <span className={`case-status ${patient.status}`}>{patient.status === 'waiting' ? 'Aguarda transporte' : patient.status === 'transporting' ? 'Em transporte' : 'Internada'}</span>
             {patient.status === 'waiting' && <div className="case-action"><select value={destinationFor(patient,hospitals)} onChange={event => setDestinations(current => ({...current,[patient.id]:event.target.value}))}>{hospitals.map(hospital => <option value={hospital.id} key={hospital.id}>{hospital.name}</option>)}</select><Button disabled={busy || !hospitals.length} onClick={() => run('transport_patient', { patient_id:patient.id, facility_id:destinationFor(patient,hospitals) }, 'Transporte hospitalar iniciado.')}><CarFront size={14} /> Transportar</Button></div>}
           </article>)}{!patients.some(patient => patient.status !== 'discharged') && <div className="operations-empty compact"><HeartPulse size={23} /><p>Sem vítimas a aguardar.</p></div>}</div>
@@ -106,7 +106,7 @@ export default function Operations({ game, world, act, busy }) {
 
     {tab === 'training' && <>
       <div className="training-console">
-        <div><span className="page-eyebrow">PLANO DE FORMAÇÃO</span><h2>Qualificar pessoal</h2><p>Os elementos em curso ficam indisponíveis. As qualificações passam a ser exigidas pelas unidades especializadas.</p></div>
+        <div><span className="page-eyebrow">PLANO DE FORMAÇÃO</span><h2>Formação de equipas</h2><p>Inscreve os elementos nos cursos necessários aos meios especializados. Durante a formação, ficam indisponíveis para o serviço.</p></div>
         <label>Curso<select value={course} onChange={event => chooseCourse(event.target.value)}>{world.training_catalog.map(item => <option value={item.id} key={item.id}>{item.name} · {SERVICE[item.service].name}</option>)}</select></label>
         <label>Base<select value={trainingBase} onChange={event => setTrainingBase(event.target.value)}>{compatibleBases.map(base => <option value={base.id} key={base.id}>{base.name}</option>)}</select></label>
         <label>Elementos<input type="number" min="1" max="5" value={trainingCount} onChange={event => setTrainingCount(event.target.value)} /></label>
@@ -122,7 +122,7 @@ export default function Operations({ game, world, act, busy }) {
       <section><div className="section-line"><h2>Patrulhas</h2><span>POSICIONAMENTO DINÂMICO</span></div><p className="section-copy">Uma patrulha responde a partir do ponto onde está posicionada, reduzindo o tempo de chegada nessa zona.</p>
         <div className="patrol-list">{game.units.filter(unit => unit.service === 'police').map(unit => <article key={unit.id}><CarFront size={17} /><div><strong>{unit.name}</strong><small>{STATUS[unit.status] || unit.status} · {game.bases.find(base => base.id === unit.base_id)?.name}</small></div><button disabled={busy || !['available','patrol'].includes(unit.status)} className={unit.status === 'patrol' ? 'active' : ''} onClick={() => run('toggle_patrol', { unit_id:unit.id }, unit.status === 'patrol' ? 'Viatura recolhida.' : 'Patrulha iniciada.')}>{unit.status === 'patrol' ? 'Recolher' : 'Patrulhar'}</button></article>)}</div>
       </section>
-      <section><div className="section-line"><h2>Regulamentos de alarme</h2><span>RAR</span></div><p className="section-copy">No despacho, um toque seleciona automaticamente os meios definidos.</p>
+      <section><div className="section-line"><h2>Regulamentos de alarme e resposta</h2><span>RAR</span></div><p className="section-copy">Define conjuntos de meios e mobiliza-os através do regulamento adequado à ocorrência.</p>
         <div className="arr-list">{(game.arrs || []).map(item => <article key={item.id}><Target size={16} /><div><strong>{item.name}</strong><small>{Object.entries(item.resources).filter(([,count]) => count).map(([service,count]) => `${count} ${SERVICE[service].short}`).join(' · ')}</small></div>{!String(item.id).startsWith('arr-') && <button aria-label={`Eliminar ${item.name}`} onClick={() => act('delete_arr',{arr_id:item.id})}><Trash2 size={14} /></button>}</article>)}</div>
         <div className="arr-builder"><input placeholder="Nome do regulamento" value={arr.name} onChange={event => setArr(current => ({...current,name:event.target.value}))} />{Object.keys(SERVICE).map(service => <label key={service}>{SERVICE[service].short}<input type="number" min="0" max="9" value={arr[service]} onChange={event => setArr(current => ({...current,[service]:event.target.value}))} /></label>)}<Button disabled={busy} onClick={async () => {if(await run('save_arr',{...arr},'RAR guardado.'))setArr({name:'',fire:1,medical:0,police:0});}}><Plus size={14} /> Guardar RAR</Button></div>
       </section>

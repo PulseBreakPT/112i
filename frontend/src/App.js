@@ -50,7 +50,7 @@ function GameApp() {
     if (!game.incidents.some(i => i.id === selected)) setSelected(game.incidents[0]?.id || null);
     if (sequence.current !== null && game.sequence > sequence.current) beep(sound, 780);
     if (completed.current !== null && game.completed > completed.current) {
-      toast.success('Ocorrência resolvida. Recompensa recebida!', { id: 'mission-complete' });
+      toast.success('Ocorrência resolvida. Receita registada.', { id: 'mission-complete' });
       beep(sound, 1000);
     }
     sequence.current = game.sequence;
@@ -69,7 +69,7 @@ function GameApp() {
     return () => window.removeEventListener('keydown', closeOnEscape);
   }, [isCentral, navigate]);
 
-  const save = async () => { if (await act('save')) toast.success('Progresso guardado. Bom trabalho, operador.'); };
+  const save = async () => { if (await act('save')) toast.success('Progresso guardado neste navegador.'); };
   const selectIncident = id => { setSelected(id); setPanel('dispatch'); if (!isCentral) navigate('/'); beep(sound, 490); };
   const call = id => { setCallId(id); setSelected(id); beep(sound, 800); };
   const closeCall = () => { setCallId(null); setPanel('dispatch'); };
@@ -89,7 +89,7 @@ function GameApp() {
     <GameHUD game={game} act={act} sound={sound} setSound={setSound} onSave={save} error={error} />
     <div className="menu-launcher">
       <button className={menuOpen ? 'active' : ''} data-testid="game-menu-toggle" aria-label={menuOpen ? 'Fechar menu do jogo' : 'Abrir menu do jogo'} aria-expanded={menuOpen} aria-controls="game-menu" onClick={() => { setMenuOpen(value => !value); setPanel(null); }}>{menuOpen ? <X size={17} /> : <Menu size={17} />}<span>Menu</span></button>
-      {isCentral && <button className="quick-incidents" data-tone={queueTone} data-testid="quick-incidents" aria-label={`${game.incidents.length} ocorrências, ${waitingIncidents.length} a aguardar despacho — abrir fila`} aria-expanded={panel === 'incidents'} aria-controls="incident-drawer" onClick={() => openPanel(panel === 'incidents' ? null : 'incidents')}><Radio size={17} /><span className="quick-incidents-label">Ocorrências</span><b className="queue-count">{game.incidents.length}</b></button>}
+      {isCentral && <button className="quick-incidents" data-tone={queueTone} data-testid="quick-incidents" aria-label={`${game.incidents.length} ocorrências, ${waitingIncidents.length} a aguardar mobilização — abrir fila`} aria-expanded={panel === 'incidents'} aria-controls="incident-drawer" onClick={() => openPanel(panel === 'incidents' ? null : 'incidents')}><Radio size={17} /><span className="quick-incidents-label">Ocorrências</span><b className="queue-count">{game.incidents.length}</b></button>}
     </div>
     {menuOpen && <>
       <button className="menu-dismiss" aria-label="Fechar menu" data-testid="menu-dismiss" onClick={() => setMenuOpen(false)} />

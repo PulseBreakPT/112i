@@ -150,6 +150,20 @@ backend:
         agent: "testing"
         comment: "✅ ALL BACKEND SANITY TESTS PASSED (12/12). Fixed missing networkx dependency (already in requirements.txt, just needed installation). Restored missing /app/backend/.env file with standard configuration (MONGO_URL=mongodb://localhost:27017, DB_NAME=nexo112, OSRM_URL, MAP_STYLE_URL, CORS_ORIGINS for both preview aliases). Backend now operational. Created game_api_test.py for sanity checks. Tested: health endpoint (operational), world endpoint (portugal-v1, 13 sites, 4 regions), game creation (disposable game ID: 915aaff0-b04c-4497-bd45-c705136b6487), pause (speed 0), tick while paused (elapsed unchanged), speed change to 1, tick at speed 1 (elapsed +2s), pause after tick, persistence (save/read working correctly with saved_at timestamps). All game API operations working as expected."
 frontend:
+  - task: "Uniform PT-PT operational language and tu address"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/game/operationalLanguage.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "user"
+        comment: "Aplica linguagem de polícia, INEM e bombeiros a todo o jogo, em português de Portugal, linguagem uniforme e neutra, e trata o utilizador por tu."
+      - working: "NA"
+        agent: "main"
+        comment: "Uniform copy across active HUD/menus/queue/dispatch/fleet/bases/operations/calls/help/settings/reports/errors and HTML metadata. Shared SERVICE/STATUS names. operationalLanguage.js maps only display fields; useGame memoizes display game and stable DISPLAY_WORLD while current raw state still drives actions/persistence. Existing saved scenarios/choices updated on presentation without changing indices, IDs, numeric rules or player RAR names. No backend or dependency/environment edits this phase. Read-only adapter audit found no mutation/loop concern. Browser tests still not authorized; preview remains blocked. Full game folder lint found 3 PRE-EXISTING unrelated errors (CityMap.jsx apostrophe; empty catch in PortugalMap.jsx/localGame.js), not fixed outside scope."
   - task: "Clarity HUD typography, contrast and operational hierarchy"
     implemented: true
     working: "NA"
@@ -198,7 +212,7 @@ metadata:
   run_ui: false
 test_plan:
   current_focus:
-    - "Unchanged backend sanity check for UI-only delivery"
+    - "Uniform PT-PT operational language and tu address"
     - "Clarity HUD typography, contrast and operational hierarchy"
   stuck_tasks:
     - "Frontend preview: unavailable fast-uri@3.2.2 resolution, user declined dependency changes"
