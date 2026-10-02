@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import * as maplibregl from 'maplibre-gl';
-import { Plus, Minus, LocateFixed, Layers3, ArrowUpRight, Flame, TreePine, CarFront, HeartPulse, Lungs, Handcuffs, Search, ShieldAlert, Waves, FlaskConical, Bomb, CloudLightning, Baby, Brain, HardHat, BusFront, Bike, TrainFront, Plane, Users, CircleAlert } from 'lucide-react';
+import { Plus, Minus, LocateFixed, Layers3, ArrowUpRight, Flame, TreePine, CarFront, HeartPulse, Wind, Handcuffs, Search, ShieldAlert, Waves, FlaskConical, Bomb, CloudLightning, Baby, Brain, HardHat, BusFront, Bike, TrainFront, Plane, Users, CircleAlert } from 'lucide-react';
 import { getMapThemePalette } from './timeTheme';
 import { SERVICE } from './common';
 import { vehicleImage } from './vehicleMedia';
@@ -105,7 +105,7 @@ const INCIDENT_ICONS = {
   wildfire: TreePine,
   road: CarFront,
   medical: HeartPulse,
-  asphyxia: Lungs,
+  asphyxia: Wind,
   cardiac: HeartPulse,
   neurology: Brain,
   obstetric: Baby,
