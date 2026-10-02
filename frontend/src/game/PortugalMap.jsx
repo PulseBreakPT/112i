@@ -227,7 +227,7 @@ export const PortugalMap = ({ world, game, selected, onSelect, onCall, focusKey,
       }
     }
     markers.current.forEach((marker, id) => { if (!keep.has(id)) { marker.remove(); markers.current.delete(id); } });
-    map.getSource('operational-routes')?.setData({ type: 'FeatureCollection', features: game.units.filter(u => u.route?.length > 1 && ['enroute', 'returning'].includes(u.status)).map(u => ({ type: 'Feature', properties: { color: SERVICE[u.service].color, service: u.service, status: u.status, selected: u.incident_id === selected }, geometry: { type: 'LineString', coordinates: u.route } })) });
+    map.getSource('operational-routes')?.setData({ type: 'FeatureCollection', features: game.units.filter(u => u.route?.length > 1 && ['enroute', 'returning', 'base_transfer'].includes(u.status)).map(u => ({ type: 'Feature', properties: { color: SERVICE[u.service].color, service: u.service, status: u.status, selected: u.incident_id === selected }, geometry: { type: 'LineString', coordinates: u.route } })) });
   }, [game, selected, loaded, unitsVisible]);
 
   useEffect(() => {
@@ -239,7 +239,7 @@ export const PortugalMap = ({ world, game, selected, onSelect, onCall, focusKey,
         const elapsed = Math.min(2, (now - snapshot.received) / 1000) * snapshot.game.speed;
         snapshot.game.units.forEach(unit => {
           const marker = markers.current.get(`vehicle-${unit.id}`);
-          if (!marker || !['enroute', 'returning'].includes(unit.status)) return;
+          if (!marker || !['enroute', 'returning', 'base_transfer'].includes(unit.status)) return;
           const { position, bearing } = positionAt(unit, Math.min(unit.travel_total, unit.travel + elapsed));
           marker.setLngLat(position);
           const element = marker.getElement();
