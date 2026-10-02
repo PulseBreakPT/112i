@@ -1045,3 +1045,83 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+
+/* Central action: occurrences is the one persistent operational shortcut.
+   It sits centered over the map and replaces the retired floating 112 module. */
+.minimal-shell.distrito-interface .central-incidents-launcher {
+  position: absolute;
+  left: 50%;
+  bottom: 24px;
+  z-index: 27;
+  transform: translateX(-50%);
+  min-height: 38px;
+  padding: 8px 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  color: #fff;
+  text-shadow: var(--distrito-hud-text-shadow);
+  font: 600 12px/1.2 var(--distrito-font);
+}
+.minimal-shell.distrito-interface .central-incidents-launcher > svg {
+  width: 17px;
+  height: 17px;
+  filter: var(--distrito-hud-icon-shadow);
+}
+.minimal-shell.distrito-interface .central-incidents-launcher > b {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: #ffffff12;
+  color: #fff;
+  font: 600 10px/20px var(--distrito-font);
+  box-shadow: 0 1px 4px #0007;
+}
+.minimal-shell.distrito-interface .central-incidents-launcher[data-tone="warning"] > b { background: #d6a84b36; }
+.minimal-shell.distrito-interface .central-incidents-launcher[data-tone="danger"] > b { background: #d94b4b3d; }
+.minimal-shell.distrito-interface .central-incidents-launcher::after {
+  content: '';
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 2px;
+  height: 1px;
+  background: #fff;
+  box-shadow: 0 1px 3px #000;
+  opacity: 0;
+}
+.minimal-shell.distrito-interface .central-incidents-launcher:hover::after,
+.minimal-shell.distrito-interface .central-incidents-launcher:focus-visible::after,
+.minimal-shell.distrito-interface .central-incidents-launcher.active::after { opacity: .8; }
+
+/* Opening the main menu gets the same visual priority as opening a workspace:
+   map shortcut icons disappear instead of remaining behind/around the menu. */
+.minimal-shell.distrito-interface.menu-open :is(
+  .central-management-rail,
+  .central-incidents-launcher,
+  .map-layer-wrap,
+  .map-zoom
+) {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* The retired 112 launcher must never reserve map space. */
+.minimal-shell.distrito-interface .map-bottom:empty { display: none; }
+
+@media (max-width: 600px) {
+  .minimal-shell.distrito-interface .central-incidents-launcher {
+    bottom: max(20px, env(safe-area-inset-bottom));
+    min-height: 44px;
+    padding: 10px 12px;
+  }
+}
