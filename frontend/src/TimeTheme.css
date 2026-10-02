@@ -1,12 +1,12 @@
-/* Distrito 112 — adaptive daylight interface.
-   Imported last so the same interface can move between light morning,
-   warm afternoon and dark night without duplicating components. */
+/* Distrito 112 — adaptive daylight palette.
+   Night remains the visual architecture. Morning and afternoon only alter
+   colour temperature, luminance and map treatment; layout/material logic
+   stays owned by Interface.css. */
 
 html, body, #root {
-  background: var(--theme-page-bg, #070a0f);
+  background: var(--theme-page-bg, #05070a);
+  color-scheme: dark;
 }
-html[data-time-theme-dark="false"] { color-scheme: light; }
-html[data-time-theme-dark="true"] { color-scheme: dark; }
 
 .minimal-shell.distrito-interface {
   --ui-surface: var(--theme-surface);
@@ -22,27 +22,21 @@ html[data-time-theme-dark="true"] { color-scheme: dark; }
   --compact-surface: var(--distrito-glass);
   --compact-line: var(--distrito-edge);
   --cinema-glass: var(--distrito-glass);
-  background: var(--theme-shell-bg) !important;
+  background: var(--theme-shell-bg);
   color: var(--distrito-text);
+  color-scheme: dark;
   transition: background-color 1.2s ease, color 1.2s ease;
 }
 
-.minimal-shell.distrito-interface :is(
-  .minimal-brand, .minimal-readout, .minimal-readout > .icon-btn,
-  .hud-options-wrap > .minimal-options-toggle, .menu-launcher > button,
-  .queue-count, .map-layer-button, .map-zoom, .map-zoom > .icon-btn,
-  .incoming-call, .incoming-icon, .paused-label
-) {
-  color: var(--theme-hud-color) !important;
-}
-
+/* Keep the permanent HUD exactly like night: white ink, black optical shadow,
+   no cards. Only the shadow temperature changes through the palette tokens. */
 .minimal-shell.distrito-interface :is(
   .minimal-brand > .brand-wordmark, .minimal-brand > .brand-wordmark > span,
   .minimal-budget, .hud-time b, .minimal-options-toggle > span,
   .menu-launcher > button > span, .queue-count, .incoming-call strong,
-  .incoming-call small, .paused-label
+  .incoming-call small, .paused-label, .central-incidents-launcher
 ) {
-  color: var(--theme-hud-color) !important;
+  color: #fff !important;
   text-shadow: var(--distrito-hud-text-shadow) !important;
 }
 
@@ -53,76 +47,11 @@ html[data-time-theme-dark="true"] { color-scheme: dark; }
   .incoming-call > svg, .incoming-icon > svg,
   .central-incidents-launcher > svg
 ) {
-  color: var(--theme-hud-color) !important;
+  color: #fff !important;
   filter: var(--distrito-hud-icon-shadow) !important;
 }
 
-.minimal-shell.distrito-interface .central-incidents-launcher {
-  color: var(--theme-hud-color);
-  text-shadow: var(--distrito-hud-text-shadow);
-}
-.minimal-shell.distrito-interface .central-incidents-launcher > b {
-  color: var(--theme-hud-color);
-  background: color-mix(in srgb, var(--theme-hud-color) 10%, transparent);
-  box-shadow: 0 1px 4px color-mix(in srgb, var(--theme-hud-color) 22%, transparent);
-}
-.minimal-shell.distrito-interface .central-incidents-launcher::after,
-.minimal-shell.distrito-interface :is(.menu-launcher > button, .minimal-options-toggle, .map-layer-button)::after {
-  background: var(--theme-hud-color);
-  box-shadow: none;
-}
-
-.minimal-shell.distrito-interface .central-quick-rail > button,
-.minimal-shell.distrito-interface .map-layer-button {
-  background: var(--theme-quick-bg) !important;
-  border-color: var(--distrito-edge) !important;
-  color: var(--distrito-text) !important;
-  text-shadow: none;
-  box-shadow: 0 6px 22px color-mix(in srgb, var(--distrito-text) 12%, transparent) !important;
-}
-.minimal-shell.distrito-interface .central-quick-rail > button:hover,
-.minimal-shell.distrito-interface .central-quick-rail > button.active,
-.minimal-shell.distrito-interface .map-layer-button:hover,
-.minimal-shell.distrito-interface .map-layer-button.active {
-  border-color: color-mix(in srgb, var(--theme-accent) 42%, var(--distrito-edge)) !important;
-  background: var(--distrito-hover) !important;
-}
-.minimal-shell.distrito-interface .central-quick-rail > button > svg,
-.minimal-shell.distrito-interface .map-layer-button > svg {
-  color: var(--distrito-text) !important;
-  filter: none !important;
-}
-
-.minimal-shell.distrito-interface :is(
-  .game-menu, .hud-options, .layer-menu, .game-workspace,
-  .tactical-drawer > .incident-panel, .tactical-drawer > .dispatch-panel,
-  .geo-map-loading, .geo-map-error, .connection-notice
-) {
-  background: var(--distrito-glass) !important;
-  border-color: var(--distrito-edge) !important;
-  color: var(--distrito-text);
-  transition: background 1.2s ease, border-color 1.2s ease, color 1.2s ease;
-}
-
-.minimal-shell.distrito-interface :is(.workspace-bar, .tactical-drawer .panel-heading) {
-  background: var(--distrito-header) !important;
-}
-
-.minimal-shell.distrito-interface :is(
-  .incident-card, .unit-choice, .settings-section, .report-metric,
-  .fleet-row, .base-card, .vehicle-card, .personnel-card,
-  .command-card, .cooperation-card, .strategy-card
-) {
-  border-color: var(--distrito-edge);
-}
-
-.minimal-shell.distrito-interface :is(
-  .game-menu button, .hud-options button, .game-workspace button,
-  .tactical-drawer button
-):focus-visible {
-  outline-color: var(--theme-accent) !important;
-}
-
+/* The map is the main daylight canvas. Geometry and UI stay untouched. */
 .minimal-shell.distrito-interface .portugal-map .maplibregl-canvas {
   filter: var(--theme-map-filter) !important;
   transition: filter 2s ease !important;
@@ -131,20 +60,17 @@ html[data-time-theme-dark="true"] { color-scheme: dark; }
   background: var(--theme-map-overlay) !important;
   transition: background 2s ease;
 }
+
+/* Markers keep the same night construction, with only their material tint
+   following the period of day. */
 .minimal-shell.distrito-interface :is(.geo-base, .geo-incident, .geo-vehicle-label) {
   background: var(--theme-marker-bg);
-  color: var(--distrito-text);
 }
-.minimal-shell.distrito-interface .geo-priority { border-color: var(--theme-marker-bg); }
-.minimal-shell.distrito-interface .portugal-map :is(.maplibregl-ctrl-attrib, .maplibregl-ctrl-scale),
-.minimal-shell.distrito-interface .geo-map-loading,
-.minimal-shell.distrito-interface .geo-map-error {
-  background: var(--theme-map-control-bg) !important;
-  color: var(--distrito-secondary) !important;
-  border-color: var(--distrito-edge) !important;
+.minimal-shell.distrito-interface .geo-priority {
+  border-color: var(--theme-marker-bg);
 }
-.minimal-shell.distrito-interface .portugal-map .maplibregl-ctrl-attrib a { color: var(--distrito-text) !important; }
 
+/* Theme preview lives inside the existing night-style HUD popover. */
 .time-theme-control {
   padding: 12px 0 4px;
   margin-top: 2px;
@@ -187,8 +113,8 @@ html[data-time-theme-dark="true"] { color-scheme: dark; }
   background: var(--distrito-hover);
 }
 .time-theme-buttons > button[aria-pressed="true"] {
-  color: var(--distrito-text);
-  border-color: color-mix(in srgb, var(--theme-accent) 55%, var(--distrito-edge));
+  color: #fff;
+  border-color: color-mix(in srgb, var(--theme-accent) 48%, var(--distrito-edge));
   background: var(--distrito-selected);
   box-shadow: inset 0 -2px var(--theme-accent);
 }
@@ -200,23 +126,7 @@ html[data-time-theme-dark="true"] { color-scheme: dark; }
   font: 8px/1.4 var(--distrito-font);
 }
 
-@media (max-width: 600px) {
-  .time-theme-buttons > button { height: 34px; font-size: 8px; padding: 0 3px; }
-  .time-theme-buttons svg { width: 11px; height: 11px; }
-  .time-theme-detail { font-size: 7px; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .minimal-shell.distrito-interface,
-  .minimal-shell.distrito-interface .portugal-map .maplibregl-canvas,
-  .minimal-shell.distrito-interface .portugal-map.map-clean::before {
-    transition: none !important;
-  }
-}
-
-
-/* Dialogs can be rendered outside .app-shell, so they inherit the active
-   root palette explicitly instead of falling back to the legacy dark skin. */
+/* Portal dialogs use the same glass material as night, merely recoloured. */
 .game-modal {
   --ui-surface: var(--theme-surface);
   --ui-raised: var(--theme-raised);
@@ -234,10 +144,24 @@ html[data-time-theme-dark="true"] { color-scheme: dark; }
   background: var(--distrito-glass) !important;
   border-color: var(--distrito-edge) !important;
   color: var(--distrito-text) !important;
-  color-scheme: inherit;
+  color-scheme: dark;
 }
 .game-modal :is(button, input, select, textarea) { color: var(--distrito-text); }
 .game-modal :is(input, select, textarea) {
   background: var(--distrito-control);
   border-color: var(--distrito-edge);
+}
+
+@media (max-width: 600px) {
+  .time-theme-buttons > button { height: 34px; font-size: 8px; padding: 0 3px; }
+  .time-theme-buttons svg { width: 11px; height: 11px; }
+  .time-theme-detail { font-size: 7px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .minimal-shell.distrito-interface,
+  .minimal-shell.distrito-interface .portugal-map .maplibregl-canvas,
+  .minimal-shell.distrito-interface .portugal-map.map-clean::before {
+    transition: none !important;
+  }
 }
