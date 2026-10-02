@@ -6,6 +6,10 @@ import { toast } from 'sonner';
 import { SERVICE, ServiceIcon, money, STATUS, duration } from './common';
 import { vehicleImage, VehicleThumbnail } from './vehicleMedia';
 import { fetchRoadRoute } from './localGame';
+import PERSONNEL_ATLAS_0 from './personnelAtlasPart0';
+import PERSONNEL_ATLAS_1 from './personnelAtlasPart1';
+
+const PersonnelAvatar = ({ person }) => { const index=Number.isInteger(person?.avatar_index)?person.avatar_index:0; const atlas=index<50?PERSONNEL_ATLAS_0:PERSONNEL_ATLAS_1; const local=index%50,col=local%10,row=Math.floor(local/10); return <span className="personnel-avatar" style={{backgroundImage:`url(${atlas})`,backgroundPosition:`${col*100/9}% ${row*100/4}%`}} aria-hidden="true" />; };
 
 const VehicleArt = ({ service, vehicleType, name }) => {
   const [failed, setFailed] = useState(false);
@@ -228,10 +232,10 @@ export default function Management({ game, world, act, busy, mode }) {
             <header><Users size={15} /><div><h3>Tripulação</h3><p>{selectedCrew.length}/{crewLimit} lugares ocupados{requiredTrainingName ? ` · requer ${requiredTrainingName}` : ''}.</p></div></header>
             {!canManageCrew && selectedUnit.status !== 'base_transfer' && <p className="vehicle-command-warning">A gestão da equipa só está disponível com a viatura parada na sua base.</p>}
             <div className="crew-columns">
-              <div><h4>ATRIBUÍDOS</h4><div className="crew-list">{selectedCrew.length ? selectedCrew.map(person => <div className="crew-row" key={person.id}><span><b>{person.name}</b><small>{person.rank || 'Operacional'} · fadiga {Math.round(person.fatigue || 0)}%</small></span><button aria-label={`Remover ${person.name}`} disabled={busy || !canManageCrew} onClick={() => removePerson(person.id)}><UserMinus size={14} /> Remover</button></div>) : <p className="crew-empty">Sem elementos atribuídos.</p>}</div></div>
+              <div><h4>ATRIBUÍDOS</h4><div className="crew-list">{selectedCrew.length ? selectedCrew.map(person => <div className="crew-row" key={person.id}><PersonnelAvatar person={person} /><span><b>{person.name}</b><small>{person.rank || 'Operacional'} · fadiga {Math.round(person.fatigue || 0)}%</small></span><button aria-label={`Remover ${person.name}`} disabled={busy || !canManageCrew} onClick={() => removePerson(person.id)}><UserMinus size={14} /> Remover</button></div>) : <p className="crew-empty">Sem elementos atribuídos.</p>}</div></div>
               <div><h4>DISPONÍVEIS NA BASE</h4><div className="crew-list">{freeBaseCrew.length ? freeBaseCrew.map(person => {
                 const qualified = !requiredTraining || (person.qualifications || []).includes(requiredTraining);
-                return <div className="crew-row" key={person.id}><span><b>{person.name}</b><small>{person.rank || 'Operacional'}{qualified ? ' · disponível' : ` · falta ${requiredTrainingName}`}</small></span><button aria-label={`Atribuir ${person.name}`} disabled={busy || !canManageCrew || selectedCrew.length >= crewLimit || !qualified} onClick={() => assignPerson(person.id)}><UserPlus size={14} /> Atribuir</button></div>;
+                return <div className="crew-row" key={person.id}><PersonnelAvatar person={person} /><span><b>{person.name}</b><small>{person.rank || 'Operacional'}{qualified ? ' · disponível' : ` · falta ${requiredTrainingName}`}</small></span><button aria-label={`Atribuir ${person.name}`} disabled={busy || !canManageCrew || selectedCrew.length >= crewLimit || !qualified} onClick={() => assignPerson(person.id)}><UserPlus size={14} /> Atribuir</button></div>;
               }) : <p className="crew-empty">Não há elementos livres nesta base.</p>}</div></div>
             </div>
           </section>
