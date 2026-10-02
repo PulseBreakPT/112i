@@ -12,7 +12,7 @@ const VehicleArt = ({ service, vehicleType, name }) => {
   const [failed, setFailed] = useState(false);
   const label = name || (service === 'fire' ? 'Viatura dos bombeiros' : service === 'medical' ? 'Viatura médica' : 'Viatura da polícia');
   return <div className={`vehicle-art vehicle-photo ${service}`} role="img" aria-label={`${label}, imagem completa`}>
-    {!failed ? <img src={vehicleImage(vehicleType)} alt="" loading="lazy" decoding="async" draggable="false" onError={() => setFailed(true)} /> : <ServiceIcon service={service} size={56} color={SERVICE[service].color} />}
+    {!failed ? <img src={vehicleImage(vehicleType)} alt="" loading="lazy" decoding="async" draggable="false" onError={() => setFailed(true)} /> : <ServiceIcon service={service} size={56} color={SERVICE[service].ink} />}
   </div>;
 };
 
@@ -132,7 +132,7 @@ export default function Management({ game, world, act, busy, mode }) {
         const count = unitCount(base);
         const staffUsed = assigned(base);
         const specializations = world.specializations[base.service] || [];
-        return <article className="base-card developed-base" key={base.id} data-testid={`base-card-${index}`} style={{ '--service-color': SERVICE[base.service].color }}>
+        return <article className="base-card developed-base" key={base.id} data-testid={`base-card-${index}`} style={{ '--service-color': SERVICE[base.service].ink }}>
           <div className="base-illustration"><div className="base-skyline"><span /><span /><span /><span /><span /></div><Building2 size={62} strokeWidth={1} /><div className="base-service-label"><ServiceIcon service={base.service} size={13} />{SERVICE[base.service].short}</div></div>
           <div className="base-info">
             <span className="operational-tag"><i /> {base.operational_at > game.elapsed ? `EM CONSTRUÇÃO · ${Math.ceil((base.operational_at-game.elapsed)/60)} MIN` : `OPERACIONAL · NÍVEL ${base.level || 1}`}</span>
@@ -167,7 +167,7 @@ export default function Management({ game, world, act, busy, mode }) {
       <div className="fleet-grid">{game.units.filter(unit => filter === 'all' || filter === unit.service).map(unit => {
         const base = game.bases.find(item => item.id === unit.base_id);
         const transferBase = unit.transfer_target_base_id ? game.bases.find(item => item.id === unit.transfer_target_base_id) : null;
-        return <article className="fleet-card" key={unit.id} role="button" tabIndex={0} aria-label={`Abrir gestão de ${unit.callsign || unit.name}`} data-testid={`fleet-unit-${unit.name}`} style={{ '--service-color': SERVICE[unit.service].color }} onClick={() => openUnit(unit)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openUnit(unit); } }}>
+        return <article className="fleet-card" key={unit.id} role="button" tabIndex={0} aria-label={`Abrir gestão de ${unit.callsign || unit.name}`} data-testid={`fleet-unit-${unit.name}`} style={{ '--service-color': SERVICE[unit.service].ink }} onClick={() => openUnit(unit)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openUnit(unit); } }}>
           <header><VehicleThumbnail unit={unit} className="fleet-card-thumbnail" /><div><small>{SERVICE[unit.service].short}</small><strong>{unit.callsign || unit.name}</strong></div></header>
           <div className="fleet-card-base"><MapPin size={13} /><span><small>{unit.status === 'base_transfer' ? 'TRANSFERÊNCIA' : 'BASE OPERACIONAL'}</small><b>{unit.status === 'base_transfer' ? `${base?.name || 'Origem'} → ${transferBase?.name || 'Destino'}` : base?.name || 'Base por definir'}</b></span></div>
           <div className="fleet-card-details"><span className={`fleet-status ${unit.status}`}><i />{STATUS[unit.status] || (unit.status === 'uncrewed' ? 'Sem equipa' : unit.status)}</span><span><small>CONDIÇÃO</small><b>{Math.round(unit.condition || 100)}%</b></span><span><small>EQUIPA</small><b>{unit.crew_assigned || 0}/{unit.crew_required || 0}</b></span><span><small>{unit.status === 'base_transfer' ? 'CHEGADA' : 'FADIGA'}</small><b>{unit.status === 'base_transfer' ? duration(Math.max(0, (unit.travel_total || 0) - (unit.travel || 0))) : `${Math.round(unit.fatigue || 0)}%`}</b></span></div>
@@ -178,7 +178,7 @@ export default function Management({ game, world, act, busy, mode }) {
       <div className="vehicle-grid expanded-catalog">{Object.entries(world.vehicle_catalog).flatMap(([serviceId, vehicles]) => vehicles.map((vehicle, vehicleIndex) => {
         const extensionName = vehicle.extension && (world.extensions[serviceId] || []).find(extension => extension.id === vehicle.extension)?.name;
         const eligible = game.bases.some(base => base.service === serviceId && (base.level || 1) >= vehicle.level && (!vehicle.extension || installed(base, vehicle.extension)?.active) && (!vehicle.training || (base.qualifications?.[vehicle.training] || 0) >= vehicle.crew));
-        return <article key={vehicle.id} className="vehicle-card" data-testid={vehicleIndex === 0 ? `vehicle-shop-${serviceId}` : `vehicle-shop-${vehicle.id}`} style={{ '--service-color': SERVICE[serviceId].color }}>
+        return <article key={vehicle.id} className="vehicle-card" data-testid={vehicleIndex === 0 ? `vehicle-shop-${serviceId}` : `vehicle-shop-${vehicle.id}`} style={{ '--service-color': SERVICE[serviceId].ink }}>
           <div className="vehicle-category"><ServiceIcon service={serviceId} size={17} />{SERVICE[serviceId].short}<span>{vehicle.level > 1 ? 'ESPECIALIZADA' : 'CONVENCIONAL'}</span></div>
           <VehicleArt service={serviceId} vehicleType={vehicle.id} name={vehicle.name} /><h3>{vehicle.name}</h3>
           <p>{vehicle.crew} elementos · Base nível {vehicle.level}{extensionName ? ` · ${extensionName}` : ''}{vehicle.training ? ' · Formação obrigatória' : ''}</p>
@@ -194,7 +194,7 @@ export default function Management({ game, world, act, busy, mode }) {
           <div className="modal-eyebrow"><CarFront size={15} /> GESTÃO DA VIATURA</div>
           <DialogTitle>{selectedUnit.callsign || selectedUnit.name}</DialogTitle>
           <DialogDescription>{SERVICE[selectedUnit.service].name} · {selectedDefinition?.name || selectedUnit.vehicle_type} · ID {selectedUnit.name}</DialogDescription>
-          <div className="vehicle-command-hero" style={{ '--service-color': SERVICE[selectedUnit.service].color }}>
+          <div className="vehicle-command-hero" style={{ '--service-color': SERVICE[selectedUnit.service].ink }}>
             <VehicleThumbnail unit={selectedUnit} className="vehicle-command-thumbnail" />
             <div><span className={`fleet-status ${selectedUnit.status}`}><i />{STATUS[selectedUnit.status] || selectedUnit.status}</span><strong>{selectedBase?.name || 'Base por definir'}</strong><small>{Math.round(selectedUnit.condition || 100)}% condição · {Math.round(selectedUnit.fatigue || 0)}% fadiga · {selectedUnit.crew_assigned || 0}/{selectedUnit.crew_required || 0} elementos</small></div>
           </div>

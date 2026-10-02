@@ -37,6 +37,7 @@ import './Compact.css';
 import './VehicleMedia.css';
 import './Interface.css';
 import './TimeTheme.css';
+import './ThemeComponents.css';
 
 function GameApp() {
   const { game, world, error, busy, act, retry, feedback, clearFeedback } = useGame();
@@ -186,7 +187,7 @@ function GameApp() {
     <CallModal incident={game.incidents.find(i => i.id === callId)} open={!!callId} onClose={closeCall} act={act} busy={busy} />
     <HelpModal open={help} onClose={() => setHelp(false)} />
     <EventEffects event={feedback} onDone={clearFeedback} />
-    <Toaster theme="dark" position="top-center" richColors />
+    <Toaster theme={theme.dark ? 'dark' : 'light'} position="top-center" richColors />
   </div>;
 }
 export default function App() { return <HashRouter><GameApp /></HashRouter>; }

@@ -91,7 +91,7 @@ function positionAt(unit, travel) {
 function markerElement(kind, item) {
   const el = document.createElement(kind === 'incident' ? 'button' : 'div');
   el.className = `geo-marker geo-${kind}`;
-  el.style.setProperty('--marker-color', SERVICE[item.service].color);
+  el.style.setProperty('--marker-color', SERVICE[item.service].ink);
   el.dataset.testid = kind === 'incident' ? `map-incident-${item.number}` : kind === 'base' ? `map-base-${item.service}-${item.id}` : `moving-unit-${item.name}`;
   el.title = item.title || item.callsign || item.name;
   if (kind === 'incident') {
@@ -201,7 +201,11 @@ export const PortugalMap = ({ world, game, selected, onSelect, focusKey, theme, 
   useEffect(() => {
     if (loaded && mapRef.current) {
       const map = mapRef.current;
-      calmCartography(map, detailed, getMapThemePalette(themeFrom, themeTo, themeBlend));
+      const palette = getMapThemePalette(themeFrom, themeTo, themeBlend);
+      calmCartography(map, detailed, palette);
+      // Route outlines and direction halos follow the canvas while service ink stays semantic.
+      if (map.getLayer('route-casing')) map.setPaintProperty('route-casing', 'line-color', palette.background);
+      if (map.getLayer('route-direction')) map.setPaintProperty('route-direction', 'text-halo-color', palette.background);
     }
   }, [loaded, detailed, themeFrom, themeTo, themeBlend]);
 
@@ -240,8 +244,8 @@ export const PortugalMap = ({ world, game, selected, onSelect, focusKey, theme, 
       }
     }
     markers.current.forEach((marker, id) => { if (!keep.has(id)) { marker.remove(); markers.current.delete(id); } });
-    map.getSource('operational-routes')?.setData({ type: 'FeatureCollection', features: game.units.filter(u => u.route?.length > 1 && ['enroute', 'returning', 'base_transfer'].includes(u.status)).map(u => ({ type: 'Feature', properties: { color: SERVICE[u.service].color, service: u.service, status: u.status, selected: u.incident_id === selected }, geometry: { type: 'LineString', coordinates: u.route } })) });
-  }, [game, selected, loaded, unitsVisible]);
+    map.getSource('operational-routes')?.setData({ type: 'FeatureCollection', features: game.units.filter(u => u.route?.length > 1 && ['enroute', 'returning', 'base_transfer'].includes(u.status)).map(u => ({ type: 'Feature', properties: { color: theme?.cssVars?.['--service-' + u.service] || SERVICE[u.service].color, service: u.service, status: u.status, selected: u.incident_id === selected }, geometry: { type: 'LineString', coordinates: u.route } })) });
+  }, [game, selected, loaded, unitsVisible, theme?.cssVars]);
 
   useEffect(() => {
     if (!loaded || !active || !game.speed) return;

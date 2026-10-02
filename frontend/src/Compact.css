@@ -1,9 +1,9 @@
 /* Map-first density. Compact the layout, never scale the canvas or shrink hit targets.
    Essentials stay visible; secondary information remains in contextual details. */
 .minimal-shell {
-  --compact-surface: linear-gradient(135deg, #1b1e24f5, #13161cf7);
-  --compact-line: #737d8d50;
-  --compact-shadow: 0 4px 16px #0004;
+  --compact-surface: var(--distrito-glass);
+  --compact-line: var(--distrito-edge);
+  --compact-shadow: 0 4px 16px color-mix(in srgb, var(--theme-shadow) 26.7%, transparent);
   --workspace-top: 66px;
 }
 
@@ -14,7 +14,7 @@
   border-radius: 7px; box-shadow: var(--compact-shadow); backdrop-filter: blur(10px);
 }
 .minimal-shell .minimal-brand { padding: 0 10px; gap: 6px; }
-.minimal-shell .minimal-brand > svg { width: 15px; height: 15px; filter: none; color: #c7ced9; }
+.minimal-shell .minimal-brand > svg { width: 15px; height: 15px; filter: none; color: var(--distrito-text); }
 .minimal-shell .minimal-brand > span { font-size: 18px; font-weight: 550; letter-spacing: -.5px; text-shadow: none; }
 .minimal-shell .minimal-brand > span > span { margin-left: 3px; }
 .minimal-shell .minimal-readout { padding: 2px 4px 2px 11px; gap: 8px; }
@@ -30,7 +30,7 @@
 .minimal-shell .minimal-readout > .icon-btn svg { width: 14px; height: 14px; }
 .minimal-shell .minimal-options-toggle { width: auto; min-height: 30px; height: 30px; padding: 4px 6px; gap: 5px; font-size: 10px; border-radius: 5px; }
 .minimal-shell .minimal-options-toggle > svg { width: 14px; height: 14px; }
-.minimal-shell .minimal-options-toggle:hover, .minimal-shell .minimal-options-toggle.active { background: #292e37; border-color: #67738470; }
+.minimal-shell .minimal-options-toggle:hover, .minimal-shell .minimal-options-toggle.active { background: var(--theme-surface); border-color: color-mix(in srgb, var(--theme-info) 43.9%, transparent); }
 .minimal-shell .hud-options { top: 39px; width: 270px; padding: 14px; border-radius: 9px; }
 .minimal-shell .hud-options-heading { font-size: 10px; letter-spacing: .65px; padding-bottom: 9px; }
 .minimal-shell .option-line { padding: 8px 0; font-size: 12px; gap: 10px; }
@@ -65,22 +65,22 @@
 }
 .minimal-shell .incidents-drawer { left: 16px; right: auto; }
 .minimal-shell .dispatch-drawer { right: 16px; left: auto; width: 328px; height: min(74dvh, 610px); }
-.minimal-shell .tactical-drawer > :is(.incident-panel, .dispatch-panel) { border-radius: 9px; background: #161a20f7; border-color: var(--compact-line); box-shadow: 0 6px 22px #0005; }
-.minimal-shell .tactical-drawer .panel-heading { min-height: 44px; padding: 0 12px; background: #1d222a; border-color: #ffffff16; box-shadow: none; }
+.minimal-shell .tactical-drawer > :is(.incident-panel, .dispatch-panel) { border-radius: 9px; background: color-mix(in srgb, var(--theme-inset) 96.9%, transparent); border-color: var(--compact-line); box-shadow: 0 6px 22px color-mix(in srgb, var(--theme-shadow) 33.3%, transparent); }
+.minimal-shell .tactical-drawer .panel-heading { min-height: 44px; padding: 0 12px; background: var(--theme-surface); border-color: color-mix(in srgb, var(--theme-border-ink) 8.6%, transparent); box-shadow: none; }
 .minimal-shell .tactical-drawer .panel-heading h2 { font-size: 14px; gap: 7px; font-weight: 500; }
 .minimal-shell .panel-heading h2 > svg { width: 14px; height: 14px; }
 .minimal-shell .panel-heading-actions > .icon-btn { width: 30px; height: 30px; }
 .minimal-shell .panel-heading-actions > .icon-btn > svg { width: 15px; height: 15px; }
-.minimal-shell .count-badge { height: 20px; padding: 0 5px; font-size: 10px; border-color: #75819760; background: #282f3a; }
+.minimal-shell .count-badge { height: 20px; padding: 0 5px; font-size: 10px; border-color: color-mix(in srgb, var(--theme-info) 37.6%, transparent); background: var(--theme-surface); }
 .minimal-shell .tactical-drawer .incident-tabs { margin: 9px 10px 0; padding: 2px; gap: 2px; border-radius: 6px; }
 .minimal-shell .tactical-drawer .incident-tabs > button { min-height: 29px; font-size: 11px; padding: 4px; }
 .minimal-shell .queue-label { padding: 5px 12px; gap: 8px; }
 .minimal-shell .queue-pending, .minimal-shell .queue-sort { font-size: 11px; }
 .minimal-shell .queue-sort { min-height: 28px; padding: 3px 4px; }
 .minimal-shell .incidents-scroll { min-height: 0; padding: 0 10px 2px; }
-.minimal-shell .tactical-drawer .incident-card { padding: 10px 11px; margin-bottom: 7px; border-radius: 6px; background: #1d222a; border-color: #64708442; box-shadow: none; }
-.minimal-shell .tactical-drawer .incident-card:hover { background: #252c36; border-color: #8a9ab166; box-shadow: none; }
-.minimal-shell .tactical-drawer .incident-card.selected { background: #262e39; border-color: #b2bfd180; box-shadow: inset 2px 0 #c9d4e5; }
+.minimal-shell .tactical-drawer .incident-card { padding: 10px 11px; margin-bottom: 7px; border-radius: 6px; background: var(--theme-surface); border-color: color-mix(in srgb, var(--theme-info) 25.9%, transparent); box-shadow: none; }
+.minimal-shell .tactical-drawer .incident-card:hover { background: var(--theme-surface); border-color: color-mix(in srgb, var(--theme-info) 40.0%, transparent); box-shadow: none; }
+.minimal-shell .tactical-drawer .incident-card.selected { background: var(--theme-surface); border-color: color-mix(in srgb, var(--theme-border-ink) 50.2%, transparent); box-shadow: inset 2px 0 var(--theme-highlight); }
 .minimal-shell .incident-top { margin-bottom: 8px; gap: 8px; }
 .minimal-shell .priority { font-size: 10px; padding: 3px 5px; border-radius: 4px; letter-spacing: 0; box-shadow: none; }
 .minimal-shell .incident-timer { font-size: 11px; gap: 4px; }
@@ -96,8 +96,8 @@
 .minimal-shell .incident-card :is(.incident-bottom, .incident-secondary) { display: none; }
 .minimal-shell .tactical-drawer .new-incident { min-height: 34px; margin: 7px 10px; font-size: 12px; border-radius: 6px; box-shadow: none; }
 .minimal-shell .new-incident > svg { width: 13px; height: 13px; }
-.minimal-shell .shift-overview { flex-shrink: 0; border-top: 1px solid #ffffff16; background: #14181f; }
-.minimal-shell .shift-overview > summary { display: flex; align-items: center; gap: 7px; padding: 8px 12px; min-height: 32px; list-style: none; cursor: pointer; font-size: 11px; color: #bac3d1; }
+.minimal-shell .shift-overview { flex-shrink: 0; border-top: 1px solid color-mix(in srgb, var(--theme-border-ink) 8.6%, transparent); background: var(--theme-inset); }
+.minimal-shell .shift-overview > summary { display: flex; align-items: center; gap: 7px; padding: 8px 12px; min-height: 32px; list-style: none; cursor: pointer; font-size: 11px; color: var(--distrito-secondary); }
 .minimal-shell .shift-overview > summary::-webkit-details-marker { display: none; }
 .minimal-shell .shift-overview > summary > svg:last-child { margin-left: auto; }
 .minimal-shell .shift-overview[open] > summary > svg:last-child { transform: rotate(90deg); }
@@ -117,7 +117,7 @@
 .minimal-shell .service-tag { font-size: 10px; padding: 3px 5px; }
 .minimal-shell .tactical-drawer .dispatch-detail > h2 { font-size: 19px; line-height: 1.25; letter-spacing: -.3px; }
 .minimal-shell .location-link { margin-top: 5px; min-height: 28px; font-size: 12px; line-height: 1.4; gap: 5px; }
-.minimal-shell .dispatch-situation { margin-top: 9px; padding-top: 9px; gap: 9px; border-color: #ffffff1c; }
+.minimal-shell .dispatch-situation { margin-top: 9px; padding-top: 9px; gap: 9px; border-color: color-mix(in srgb, var(--theme-border-ink) 11.0%, transparent); }
 .minimal-shell .dispatch-deadline small { font-size: 10px; }
 .minimal-shell .dispatch-deadline b { font-size: 14px; gap: 4px; }
 .minimal-shell .dispatch-impact { margin: 9px 0 0; }
@@ -125,7 +125,7 @@
 .minimal-shell .call-mini { min-height: 36px; margin-top: 10px; padding: 7px 9px; gap: 8px; font-size: 12px; border-radius: 6px; box-shadow: none; }
 .minimal-shell .call-mini small { display: none; }
 .minimal-shell .call-mini > svg { width: 14px; height: 14px; filter: none; }
-.minimal-shell .tactical-drawer .requirements { padding: 11px 14px; background: #13171d; box-shadow: none; }
+.minimal-shell .tactical-drawer .requirements { padding: 11px 14px; background: var(--theme-inset); box-shadow: none; }
 .minimal-shell :is(.requirements h3, .units-heading h3, .assigned-units h3, .specialized-requirements h3) { font-size: 11px; letter-spacing: .25px; }
 .minimal-shell .tactical-drawer .requirements > div > span { padding: 5px 6px; gap: 5px; font-size: 10px; box-shadow: none; }
 .minimal-shell .requirements b { font-size: 12px; }
@@ -136,7 +136,7 @@
 .minimal-shell .route-estimate-action { min-height: 31px; margin: 0 14px 7px; padding: 6px 8px; font-size: 11px; }
 .minimal-shell .units-scroll { padding: 0 9px 10px; }
 .minimal-shell .tactical-drawer .unit-choice { padding: 8px; gap: 7px; margin-top: 4px; border-radius: 6px; box-shadow: none; }
-.minimal-shell .tactical-drawer .unit-choice.selected { box-shadow: inset 2px 0 #d1dceb; }
+.minimal-shell .tactical-drawer .unit-choice.selected { box-shadow: inset 2px 0 var(--theme-highlight); }
 .minimal-shell .unit-icon { width: 29px; height: 31px; border-radius: 5px; box-shadow: none; }
 .minimal-shell .unit-icon > svg { width: 16px; height: 16px; }
 .minimal-shell .tactical-drawer .unit-choice-text > strong { font-size: 12px; font-weight: 500; }
@@ -154,7 +154,7 @@
 .minimal-shell .arr-dispatch button strong { font-size: 12px; }
 .minimal-shell .mission-briefing > p { font-size: 12px; line-height: 1.6; }
 .minimal-shell .route-estimate-note { margin-top: 9px; font-size: 11px; }
-.minimal-shell .tactical-drawer .dispatch-bottom { padding: 10px 12px 12px; border-color: #7c8da052; background: #141920; box-shadow: none; }
+.minimal-shell .tactical-drawer .dispatch-bottom { padding: 10px 12px 12px; border-color: color-mix(in srgb, var(--theme-info) 32.2%, transparent); background: var(--theme-inset); box-shadow: none; }
 .minimal-shell .tactical-drawer .dispatch-bottom > div { margin-bottom: 7px; font-size: 11px; gap: 5px; }
 .minimal-shell .dispatch-bottom > div > .dispatch-selection-state { display: none; }
 .minimal-shell .tactical-drawer .dispatch-button { height: 36px !important; min-height: 36px; font-size: 12px !important; border-radius: 6px !important; }
@@ -189,13 +189,13 @@
 .minimal-shell .game-workspace {
   top: 66px; right: 16px; bottom: auto; left: auto; width: 760px; max-width: calc(100% - 32px);
   height: min(74dvh, 640px); max-height: calc(100dvh - 146px); border-radius: 9px;
-  border-color: var(--compact-line); box-shadow: 0 7px 26px #0005;
+  border-color: var(--compact-line); box-shadow: 0 7px 26px color-mix(in srgb, var(--theme-shadow) 33.3%, transparent);
 }
-.minimal-shell .workspace-bar { min-height: 40px; padding: 0 14px; background: #1d232c; box-shadow: none; }
+.minimal-shell .workspace-bar { min-height: 40px; padding: 0 14px; background: var(--theme-surface); box-shadow: none; }
 .minimal-shell .workspace-breadcrumb { font-size: 10px; letter-spacing: .2px; gap: 7px; }
 .minimal-shell .workspace-close { min-height: 32px; font-size: 11px; }
 .minimal-shell .workspace-close > svg { width: 15px; height: 15px; }
-.minimal-shell .game-workspace .management-page { padding: 18px 20px 24px; background: #171c24; }
+.minimal-shell .game-workspace .management-page { padding: 18px 20px 24px; background: var(--theme-surface); }
 .minimal-shell .game-workspace .page-heading { margin-bottom: 17px; gap: 12px; }
 .minimal-shell .game-workspace .page-heading h1 { font-size: 24px; letter-spacing: -.5px; }
 .minimal-shell .game-workspace .page-heading p { font-size: 12px; line-height: 1.5; margin-top: 6px; }
@@ -204,7 +204,7 @@
 .minimal-shell .game-workspace .section-line h2 { font-size: 15px; }
 .minimal-shell .game-workspace .section-line > span { font-size: 10px; letter-spacing: .2px; }
 .minimal-shell .game-workspace :is(.base-grid, .vehicle-grid, .facility-grid, .qualification-grid) { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; }
-.minimal-shell .game-workspace .base-illustration { height: 70px; background: linear-gradient(135deg, #242b36, #1c232e); }
+.minimal-shell .game-workspace .base-illustration { height: 70px; background: linear-gradient(135deg, var(--theme-surface), var(--theme-surface)); }
 .minimal-shell .game-workspace .base-illustration > svg { width: 42px; height: 42px; padding: 10px; box-shadow: none; }
 .minimal-shell .game-workspace :is(.base-info, .vehicle-card, .facility-card, .report-metric, .settings-section) { padding: 13px; }
 .minimal-shell .game-workspace :is(.base-info h3, .vehicle-card h3, .facility-card h3) { font-size: 16px; }
@@ -241,16 +241,16 @@
 .minimal-shell .game-workspace :is(.base-card, .vehicle-card, .facility-card, .report-metric, .career-rank, .settings-section),
 .minimal-shell .game-workspace :is(.expansion-strip, .specialist-strip), .minimal-shell .training-console, .minimal-shell .arr-builder,
 .minimal-shell :is(.training-list, .qualification-grid, .patrol-list, .arr-list) article, .minimal-shell .case-list article {
-  background: #202731; border-color: #8392a844; box-shadow: none; border-radius: 7px;
+  background: var(--theme-surface); border-color: color-mix(in srgb, var(--theme-info) 26.7%, transparent); box-shadow: none; border-radius: 7px;
 }
 .minimal-shell .game-workspace :is(.base-card, .vehicle-card):hover { box-shadow: none; }
 .minimal-shell :is(.progression-ribbon, .operations-summary, .fleet-table, .report-empty, .operations-empty, .full-logs) { box-shadow: none; }
 .minimal-shell :is(.primary-button, .outline-button, .danger-button) { min-height: 34px; font-size: 12px !important; }
-.minimal-shell .primary-button, .game-modal .primary-button, .minimal-shell .dispatch-button:not(:disabled) { background: linear-gradient(135deg, #d5dbe4, #bfc8d6) !important; border-color: #d1dbe9 !important; color: #141c28 !important; box-shadow: none; }
-.minimal-shell .primary-button:hover:not(:disabled), .game-modal .primary-button:hover:not(:disabled), .minimal-shell .dispatch-button:hover:not(:disabled) { background: #dce4f0 !important; box-shadow: none; }
-.minimal-shell .outline-button { background: #2b3544 !important; box-shadow: none; }
-.minimal-shell :is(.primary-button, .outline-button, .dispatch-button):disabled, .game-modal :is(.primary-button, .outline-button):disabled { background: #283242 !important; color: #b4c4dc !important; border-color: #596d89 !important; box-shadow: none; }
-.game-modal { width: min(430px, calc(100vw - 28px)) !important; max-width: calc(100vw - 28px) !important; max-height: min(72dvh, calc(100dvh - 96px)); padding: 18px !important; gap: 11px; background: linear-gradient(140deg, #222a36, #192230) !important; border-color: #9badc65e !important; box-shadow: 0 10px 35px #0006 !important; }
+.minimal-shell .primary-button, .game-modal .primary-button, .minimal-shell .dispatch-button:not(:disabled) { background: linear-gradient(135deg, var(--theme-accent), var(--theme-accent)) !important; border-color: var(--theme-border-strong) !important; color: var(--theme-on-accent) !important; box-shadow: none; }
+.minimal-shell .primary-button:hover:not(:disabled), .game-modal .primary-button:hover:not(:disabled), .minimal-shell .dispatch-button:hover:not(:disabled) { background: var(--theme-accent) !important; box-shadow: none; }
+.minimal-shell .outline-button { background: var(--theme-raised) !important; box-shadow: none; }
+.minimal-shell :is(.primary-button, .outline-button, .dispatch-button):disabled, .game-modal :is(.primary-button, .outline-button):disabled { background: var(--theme-raised) !important; color: var(--theme-info) !important; border-color: var(--theme-info) !important; box-shadow: none; }
+.game-modal { width: min(430px, calc(100vw - 28px)) !important; max-width: calc(100vw - 28px) !important; max-height: min(72dvh, calc(100dvh - 96px)); padding: 18px !important; gap: 11px; background: linear-gradient(140deg, var(--theme-surface), var(--theme-surface)) !important; border-color: color-mix(in srgb, var(--theme-info) 36.9%, transparent) !important; box-shadow: 0 10px 35px color-mix(in srgb, var(--theme-shadow) 40.0%, transparent) !important; }
 .game-modal h2 { font-size: 21px !important; line-height: 1.25; padding-right: 24px; }
 .game-modal [id$="description"] { font-size: 12px; line-height: 1.5; }
 .game-modal .modal-eyebrow { font-size: 10px; letter-spacing: .4px; }
@@ -260,7 +260,7 @@
 .game-modal .caller p { font-size: 14px; line-height: 1.5; }
 .game-modal .audio-wave { display: none; }
 .game-modal .call-choices { gap: 7px; margin-top: 4px; }
-.game-modal .call-choices > button { padding: 10px; min-height: 40px; font-size: 12px; line-height: 1.5; box-shadow: none; background: #28364a; }
+.game-modal .call-choices > button { padding: 10px; min-height: 40px; font-size: 12px; line-height: 1.5; box-shadow: none; background: var(--theme-raised); }
 .game-modal .call-choices > button > span { font-size: 11px; }
 .game-modal .call-result { margin-top: 8px; padding: 13px; }
 .game-modal .call-result p, .game-modal .help-steps p { font-size: 12px; line-height: 1.55; }
@@ -272,8 +272,8 @@
 .game-modal .help-steps small { font-size: 10px; }
 .game-modal .simulation-disclaimer { font-size: 11px; }
 .game-modal :is(.primary-button, .outline-button, .danger-button) { min-height: 36px; font-size: 12px !important; }
-.game-modal > button.absolute { top: 12px; right: 12px; width: 27px; height: 27px; background: #29374c; }
-[data-sonner-toast] { padding: 11px 13px !important; font-size: 12px !important; background: #202a39 !important; border-color: #788ea955 !important; box-shadow: 0 5px 18px #0004 !important; }
+.game-modal > button.absolute { top: 12px; right: 12px; width: 27px; height: 27px; background: var(--theme-raised); }
+[data-sonner-toast] { padding: 11px 13px !important; font-size: 12px !important; background: var(--theme-surface) !important; border-color: color-mix(in srgb, var(--theme-info) 33.3%, transparent) !important; box-shadow: 0 5px 18px color-mix(in srgb, var(--theme-shadow) 26.7%, transparent) !important; }
 
 @media (max-width: 800px) {
   .minimal-shell .operations-tabs { grid-template-columns: 1fr 1fr; }
@@ -339,7 +339,7 @@
   .minimal-shell .hud-options { max-height: calc(100dvh - 86px); overflow-y: auto; }
 }
 @media (prefers-reduced-transparency: reduce) {
-  .minimal-shell { --compact-surface: #171c24; }
+  .minimal-shell { --compact-surface: var(--distrito-glass); }
   .minimal-shell .minimal-brand, .minimal-shell .minimal-readout, .minimal-shell .hud-options, .minimal-shell .game-menu, .minimal-shell .layer-menu { backdrop-filter: none; }
-  .minimal-shell .tactical-drawer > :is(.incident-panel, .dispatch-panel) { background: #171c24; }
+  .minimal-shell .tactical-drawer > :is(.incident-panel, .dispatch-panel) { background: var(--theme-surface); }
 }

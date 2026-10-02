@@ -3,14 +3,14 @@
 @tailwind components;
 @tailwind utilities;
 @layer base {
- :root { color-scheme: dark; --background: 0 0% 4%; --foreground: 0 0% 94%; --card: 0 0% 7%; --card-foreground: 0 0% 94%; --popover: 0 0% 10%; --popover-foreground: 0 0% 94%; --primary: 0 0% 88%; --primary-foreground: 0 0% 8%; --secondary: 0 0% 16%; --secondary-foreground: 0 0% 94%; --muted: 0 0% 16%; --muted-foreground: 0 0% 58%; --accent: 0 0% 20%; --accent-foreground: 0 0% 94%; --destructive: 0 0% 30%; --destructive-foreground: 0 0% 100%; --border: 0 0% 18%; --input: 0 0% 28%; --ring: 0 0% 80%; --radius: .5rem; }
+ :root { color-scheme: var(--theme-color-scheme, dark); --background: 0 0% 4%; --foreground: 0 0% 94%; --card: 0 0% 7%; --card-foreground: 0 0% 94%; --popover: 0 0% 10%; --popover-foreground: 0 0% 94%; --primary: 0 0% 88%; --primary-foreground: 0 0% 8%; --secondary: 0 0% 16%; --secondary-foreground: 0 0% 94%; --muted: 0 0% 16%; --muted-foreground: 0 0% 58%; --accent: 0 0% 20%; --accent-foreground: 0 0% 94%; --destructive: 0 0% 30%; --destructive-foreground: 0 0% 100%; --border: 0 0% 18%; --input: 0 0% 28%; --ring: 0 0% 80%; --radius: .5rem; }
  * { @apply border-border; box-sizing: border-box; letter-spacing: 0; }
- body { margin: 0; background: #090909; color: #ededed; font-family: 'Barlow', sans-serif; font-size: 14px; -webkit-font-smoothing: antialiased; }
+ body { margin: 0; background: var(--theme-inset); color: var(--distrito-text); font-family: 'Barlow', sans-serif; font-size: 14px; -webkit-font-smoothing: antialiased; }
  button, input, select { font: inherit; }
  button, a { -webkit-tap-highlight-color: transparent; }
  button { cursor: pointer; } button:disabled { cursor: not-allowed; opacity: .4; }
- button, a, input, select { outline-offset: 3px; } :focus-visible { outline: 2px solid #dedede; }
- ::selection { background: #dedede; color: #151515; }
- ::-webkit-scrollbar { width: 4px; height: 4px; } ::-webkit-scrollbar-thumb { background: #484848; border-radius: 4px; } ::-webkit-scrollbar-thumb:hover { background: #777; } ::-webkit-scrollbar-track { background: transparent; }
+ button, a, input, select { outline-offset: 3px; } :focus-visible { outline: 2px solid var(--theme-border-strong); }
+ ::selection { background: var(--theme-accent); color: var(--theme-on-accent); }
+ ::-webkit-scrollbar { width: 4px; height: 4px; } ::-webkit-scrollbar-thumb { background: var(--theme-raised); border-radius: 4px; } ::-webkit-scrollbar-thumb:hover { background: var(--theme-accent); } ::-webkit-scrollbar-track { background: transparent; }
  [data-debug-wrapper="true"] { display: contents !important; }
 }

@@ -1,7 +1,7 @@
 /* Distrito 112 — daylight materials shared by the map, HUD and workspace. */
 
 html, body, #root {
-  background: var(--theme-page-bg, #05070a);
+  background: var(--theme-page-bg);
   color-scheme: var(--theme-color-scheme, dark);
 }
 
@@ -14,8 +14,6 @@ html, body, #root {
   --ui-secondary: var(--distrito-secondary);
   --ui-muted: var(--distrito-muted);
   --text: var(--distrito-text);
-  --muted: var(--distrito-muted);
-  --border: var(--distrito-edge);
   --compact-surface: var(--distrito-glass);
   --compact-line: var(--distrito-edge);
   --cinema-glass: var(--distrito-glass);
@@ -132,8 +130,6 @@ html, body, #root {
   --ui-secondary: var(--distrito-secondary);
   --ui-muted: var(--distrito-muted);
   --text: var(--distrito-text);
-  --muted: var(--distrito-muted);
-  --border: var(--distrito-edge);
   --compact-surface: var(--distrito-glass);
   --compact-line: var(--distrito-edge);
   --cinema-glass: var(--distrito-glass);
@@ -310,18 +306,13 @@ html, body, #root {
 /* Material hierarchy: quiet elevated glass, precise borders and one accent. */
 :root[data-time-theme-dark="false"] {
   --theme-color-scheme: light;
-  --status-success: #206642;
-  --status-warning: #875000;
-  --status-active: #205c9d;
-  --status-danger: #b12d35;
-  --status-cancelled: #596574;
 }
 :root[data-time-theme] {
   --distrito-radius: 14px;
   --distrito-card-radius: 10px;
   --distrito-control-radius: 8px;
-  --distrito-shadow: 0 18px 48px color-mix(in srgb, var(--theme-hud-color) 14%, transparent), 0 2px 8px #0000000a;
-  --distrito-card-shadow: 0 1px 3px #00000006;
+  --distrito-shadow: 0 18px 48px color-mix(in srgb, var(--theme-hud-color) 14%, transparent), 0 2px 8px color-mix(in srgb, var(--theme-shadow) 4%, transparent);
+  --distrito-card-shadow: 0 1px 3px color-mix(in srgb, var(--theme-shadow) 2.4%, transparent);
   --distrito-menu-blur: blur(24px) saturate(1.1);
 }
 .minimal-shell.distrito-interface :is(.minimal-brand, .minimal-readout, .minimal-readout > .icon-btn, .minimal-options-toggle, .menu-launcher > button, .map-zoom > .icon-btn, .central-management-rail > button, .central-quick-rail > button, .map-layer-button) {
@@ -330,7 +321,7 @@ html, body, #root {
 .minimal-shell.distrito-interface :is(.central-quick-rail > button, .map-layer-button) {
   background: var(--theme-quick-bg) !important;
   border: 1px solid var(--distrito-edge) !important;
-  box-shadow: 0 4px 16px #0000000c !important;
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--theme-shadow) 4.7%, transparent) !important;
   border-radius: 10px;
   text-shadow: none !important;
 }
@@ -362,7 +353,7 @@ html, body, #root {
   outline-offset: 3px;
 }
 .minimal-shell.distrito-interface :is(.geo-base, .geo-incident, .geo-vehicle-label) {
-  color: #f5f8fc;
+  color: var(--distrito-text);
 }
 .time-theme-buttons { gap: 6px; }
 .time-theme-buttons > button {
@@ -377,9 +368,9 @@ html, body, #root {
   color: var(--theme-accent);
   border-color: var(--theme-accent);
 }
-.time-theme-buttons > button[data-theme="morning"] > svg { color: #a77815; }
-.time-theme-buttons > button[data-theme="afternoon"] > svg { color: #c06320; }
-.time-theme-buttons > button[data-theme="night"] > svg { color: #6d8dcc; }
+.time-theme-buttons > button[data-theme="morning"] > svg { color: var(--theme-warning); }
+.time-theme-buttons > button[data-theme="afternoon"] > svg { color: var(--theme-danger); }
+.time-theme-buttons > button[data-theme="night"] > svg { color: var(--theme-violet); }
 .time-theme-heading { font-size: 11px; }
 .time-theme-detail { font-size: 10px; line-height: 1.6; }
 .minimal-shell.distrito-interface .hud-options-heading {
@@ -408,8 +399,8 @@ html, body, #root {
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  background: #101e36;
-  color: #fff;
+  background: var(--theme-inset);
+  color: var(--theme-on-image);
 }
 .time-theme-preview img {
   position: absolute;
@@ -425,10 +416,10 @@ html, body, #root {
   position: absolute;
   inset: 0;
   z-index: -1;
-  background: linear-gradient(180deg, transparent, #06162b99);
+  background: linear-gradient(180deg, transparent, var(--theme-image-scrim));
 }
-.time-theme-preview > span { font: 600 8px/1.6 var(--distrito-font); letter-spacing: 1.8px; color: #fff; }
-.time-theme-preview > strong { font: 600 22px/1.2 var(--distrito-font); color: #fff; }
+.time-theme-preview > span { font: 600 8px/1.6 var(--distrito-font); letter-spacing: 1.8px; color: var(--theme-on-image); }
+.time-theme-preview > strong { font: 600 22px/1.2 var(--distrito-font); color: var(--theme-on-image); }
 @media (prefers-reduced-motion: reduce) {
   .time-theme-preview img { transition: none; }
 }
@@ -457,7 +448,7 @@ html, body, #root {
   background: var(--theme-accent) !important;
   border-color: var(--theme-accent) !important;
   color: var(--theme-on-accent) !important;
-  box-shadow: 0 3px 10px #00000014;
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--theme-shadow) 7.8%, transparent);
 }
 .minimal-shell.distrito-interface .strategy-panel > .primary-button { margin: 14px 16px; }
 .minimal-shell.distrito-interface .training-console label { color: var(--distrito-secondary); }

@@ -2,9 +2,9 @@ import { Flame, HeartPulse, Shield } from 'lucide-react';
 import { ambientAudio } from './ambientAudio';
 import { portugalTime } from './engines/timeEngine';
 export const SERVICE = {
-  fire: { name: 'Bombeiros', short: 'BOMBEIROS', color: '#f58080', icon: Flame },
-  medical: { name: 'INEM', short: 'INEM', color: '#f0c75e', icon: HeartPulse },
-  police: { name: 'PSP', short: 'PSP', color: '#82adf4', icon: Shield },
+  fire: { ink: 'var(--service-fire)', name: 'Bombeiros', short: 'BOMBEIROS', color: '#f58080', icon: Flame },
+  medical: { ink: 'var(--service-medical)', name: 'INEM', short: 'INEM', color: '#f0c75e', icon: HeartPulse },
+  police: { ink: 'var(--service-police)', name: 'PSP', short: 'PSP', color: '#82adf4', icon: Shield },
 };
 export const money = n => new Intl.NumberFormat('pt-PT', { maximumFractionDigits: 0 }).format(n) + ' €';
 export const clock = value => portugalTime(value);

@@ -62,3 +62,23 @@ test('dawn and dusk preserve text contrast while surfaces change', () => {
     }
   }
 });
+
+test.each(['morning', 'afternoon', 'night'])('%s semantic chips and service ink meet text contrast', mode => {
+  const { cssVars } = getTimeThemeSnapshot(new Date(), {}, mode);
+  for (const role of ['success', 'warning', 'info', 'danger', 'neutral', 'violet']) {
+    for (const surface of ['--theme-surface', '--theme-inset', '--theme-raised']) {
+      expect(contrast(cssVars['--theme-' + role], cssVars[surface])).toBeGreaterThanOrEqual(4.5);
+    }
+  }
+  expect(cssVars['--service-fire']).toBe(cssVars['--theme-danger']);
+  expect(cssVars['--service-medical']).toBe(cssVars['--theme-warning']);
+  expect(cssVars['--service-police']).toBe(cssVars['--theme-info']);
+  expect(contrast(cssVars['--theme-on-accent'], cssVars['--theme-accent'])).toBeGreaterThanOrEqual(4.5);
+});
+
+test.each(['morning', 'afternoon', 'night'])('%s provides valid HSL tokens for portal components', mode => {
+  const { cssVars } = getTimeThemeSnapshot(new Date(), {}, mode);
+  for (const name of ['background', 'foreground', 'card', 'card-foreground', 'popover', 'popover-foreground', 'primary', 'primary-foreground', 'secondary', 'muted', 'muted-foreground', 'accent', 'destructive', 'destructive-foreground', 'input', 'border', 'ring']) {
+    expect(cssVars['--' + name]).toMatch(/^\d+(\.\d+)? \d+(\.\d+)?% \d+(\.\d+)?%$/);
+  }
+});

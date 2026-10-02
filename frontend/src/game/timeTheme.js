@@ -8,26 +8,29 @@ export const TIME_THEME_MODES = ['auto', 'morning', 'afternoon', 'night'];
 
 const PALETTES = {
   morning: {
+    success: '#176141', warning: '#794a00', info: '#175b98', danger: '#b22b35', neutral: '#526270', violet: '#68429e', shadow: '#173447', highlight: '#ffffff',
     page: '#edf3f5', shell: '#e5eef1', surface: '#ffffff', raised: '#f6fafb', inset: '#e8f0f3',
     text: '#172e3d', secondary: '#365363', muted: '#526c79', edge: '#224b6529', divider: '#224b651a',
     glassA: '#ffffffef', glassB: '#f0f7faf5', cardA: '#ffffffd9', cardB: '#f5fafbd9',
     headerA: '#e3f1f8cc', headerB: '#ffffff66', controlA: '#ffffffed', controlB: '#e9f2f7dd',
     hoverA: '#dceef8ee', hoverB: '#e8f3f9ee', selectedA: '#cde6f6ee', selectedB: '#e1f0faee',
     hud: '#173447', accent: '#176a9b', quickA: '#fffffff0', quickB: '#edf6faf0',
-    marker: '#172c3bf2', mapControl: '#f5fafaf2', overlayTop: '#ffffff00', overlayBottom: '#8ab1c008',
+    marker: '#f7fbfff5', mapControl: '#f5fafaf2', overlayTop: '#ffffff00', overlayBottom: '#8ab1c008',
     saturation: 1, brightness: 1, contrast: 1, sepia: 0, dark: false,
   },
   afternoon: {
+    success: '#24633f', warning: '#804400', info: '#275487', danger: '#9f2d25', neutral: '#6c5545', violet: '#75509b', shadow: '#502d17', highlight: '#fffbf3',
     page: '#f6e4ce', shell: '#efdabf', surface: '#fff5e8', raised: '#fff9f0', inset: '#efddc8',
     text: '#432a1e', secondary: '#694833', muted: '#7c573d', edge: '#92502030', divider: '#92502020',
     glassA: '#fff5e8ef', glassB: '#f9e4ccf5', cardA: '#fff9efd9', cardB: '#ffe9d1c9',
     headerA: '#f6c58c80', headerB: '#fff6e866', controlA: '#fff5e8ed', controlB: '#f8dfbfdd',
     hoverA: '#f5cda0ee', hoverB: '#ffe5c5ee', selectedA: '#f7c48eee', selectedB: '#ffdfb8ee',
     hud: '#4b2c1d', accent: '#a84a12', quickA: '#fff5e8f0', quickB: '#f8e0c4f0',
-    marker: '#392619f2', mapControl: '#fff0ddf2', overlayTop: '#627ab612', overlayBottom: '#ff882c22',
+    marker: '#fff4e4f5', mapControl: '#fff0ddf2', overlayTop: '#627ab612', overlayBottom: '#ff882c22',
     saturation: 1, brightness: 1, contrast: 1, sepia: 0, dark: false,
   },
   night: {
+    success: '#8ae2b5', warning: '#f8ca78', info: '#9cc5ff', danger: '#ffa19a', neutral: '#b0b7c2', violet: '#c4acff', shadow: '#020510', highlight: '#c5d8ff',
     page: '#040817', shell: '#070e20', surface: '#101c32', raised: '#1a2b45', inset: '#0a1327',
     text: '#f0f2f5', secondary: '#c2c8d0', muted: '#a1a9b4', edge: '#ffffff18', divider: '#ffffff10',
     glassA: '#101e36ed', glassB: '#080f24f2', cardA: '#ffffff09', cardB: '#ffffff04',
@@ -85,11 +88,20 @@ const luminance = color => {
 };
 const readableInk = background => luminance(background) > .179 ? '#000000' : '#ffffff';
 
+const toHsl = color => {
+  const values = color.startsWith('#') ? Object.values(parseHex(color)).slice(0, 3) : color.match(/[\d.]+/g).slice(0, 3).map(Number);
+  const [r, g, b] = values.map(v => v / 255), max = Math.max(r, g, b), min = Math.min(r, g, b);
+  const delta = max - min, light = (max + min) / 2;
+  const saturation = delta ? delta / (1 - Math.abs(2 * light - 1)) : 0;
+  const hue = !delta ? 0 : max === r ? ((g - b) / delta + 6) % 6 : max === g ? (b - r) / delta + 2 : (r - g) / delta + 4;
+  return `${(hue * 60).toFixed(1)} ${(saturation * 100).toFixed(1)}% ${(light * 100).toFixed(1)}%`;
+};
+
 const mixPalette = (fromName, toName, amount) => {
   const from = PALETTES[fromName], to = PALETTES[toName], t = clamp(amount);
   const transitioning = from.dark !== to.dark && t > 0 && t < 1;
   const surface = mixColor(from.surface, to.surface, t);
-  const color = key => transitioning && ['text', 'secondary', 'muted', 'accent'].includes(key)
+  const color = key => transitioning && ['text', 'secondary', 'muted', 'accent', 'success', 'warning', 'info', 'danger', 'neutral', 'violet'].includes(key)
     ? readableInk(surface)
     : transitioning && key === 'hud'
       ? readableInk(mixColor(MAP_PALETTES[fromName].background, MAP_PALETTES[toName].background, t))
@@ -97,6 +109,18 @@ const mixPalette = (fromName, toName, amount) => {
   const number = key => lerp(from[key], to[key], t);
   return {
     '--theme-page-bg': color('page'),
+    ...Object.fromEntries(['success', 'warning', 'info', 'danger', 'neutral', 'violet', 'shadow', 'highlight'].map(key => ['--theme-' + key, color(key)])),
+    '--service-fire': color('danger'), '--service-medical': color('warning'), '--service-police': color('info'),
+    ...Object.fromEntries(Object.entries({
+      background: 'page', foreground: 'text', card: 'surface', 'card-foreground': 'text',
+      popover: 'surface', 'popover-foreground': 'text', primary: 'accent', secondary: 'raised',
+      'secondary-foreground': 'text', muted: 'inset', 'muted-foreground': 'muted',
+      accent: 'raised', 'accent-foreground': 'text', destructive: 'danger',
+      border: 'neutral', input: 'neutral', ring: 'accent',
+      'chart-1': 'info', 'chart-2': 'success', 'chart-3': 'warning', 'chart-4': 'violet', 'chart-5': 'danger',
+    }).map(([key, source]) => ['--' + key, toHsl(color(source))])),
+    '--primary-foreground': toHsl(readableInk(color('accent'))),
+    '--destructive-foreground': toHsl(readableInk(color('danger'))),
     '--theme-shell-bg': color('shell'),
     '--theme-surface': color('surface'),
     '--theme-raised': color('raised'),
@@ -190,11 +214,14 @@ export function useTimeTheme(location) {
 
   useEffect(() => {
     const root = document.documentElement;
+    const previousDarkClass = root.classList.contains('dark');
+    root.classList.toggle('dark', theme.dark);
     root.dataset.timeTheme = theme.phase;
     root.dataset.timeThemeMode = themeMode;
     root.dataset.timeThemeDark = theme.dark ? 'true' : 'false';
     Object.entries(theme.cssVars).forEach(([key, value]) => root.style.setProperty(key, value));
     return () => {
+      root.classList.toggle('dark', previousDarkClass);
       delete root.dataset.timeTheme;
       delete root.dataset.timeThemeMode;
       delete root.dataset.timeThemeDark;
