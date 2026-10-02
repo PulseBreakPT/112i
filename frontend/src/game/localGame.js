@@ -337,7 +337,7 @@ export function tickGame(input,seconds){
     else{u.status='onscene';log(g,`${u.name} no local da ocorrência.`);}
   });
   g.trainings.forEach(training=>{if(training.status==='active'&&g.elapsed>=training.completes_at){training.status='completed';g.operations_metrics.trained+=training.count;const base=g.bases.find(b=>b.id===training.base_id);(training.personnel_ids||[]).forEach(id=>{const person=g.personnel.find(item=>item.id===id);if(person){person.status='available';person.experience=(person.experience||0)+25;if(!(person.qualifications||[]).includes(training.course))person.qualifications=[...(person.qualifications||[]),training.course];}});if(base){base.qualifications=base.qualifications||{};base.qualifications[training.course]=g.personnel.filter(person=>person.base_id===base.id&&(person.qualifications||[]).includes(training.course)).length;}const course=TRAINING_CATALOG.find(item=>item.id===training.course);log(g,`Formação concluída: ${course?.name||training.course} · ${training.count} elemento(s).`,'success');}});
-  g.patients.forEach(patient=>{if(patient.status==='admitted'&&g.elapsed>=patient.discharge_at){patient.status='discharged';patient.closed_at=g.elapsed;const baseReward=patient.specialty_matched?450:250,reward=Math.round(baseReward*(patient.source_player_planned?.25:1));g.money+=reward;g.earned+=reward;if(patient.specialty_matched)g.trust=Math.min(100,g.trust+1);}});
+  g.patients.forEach(patient=>{if(patient.status==='admitted'&&g.elapsed>=patient.discharge_at){patient.status='discharged';patient.closed_at=g.elapsed;const baseReward=patient.specialty_matched?450:250,reward=Math.round(baseReward*(patient.source_player_planned ? .25 : 1));g.money+=reward;g.earned+=reward;if(patient.specialty_matched)g.trust=Math.min(100,g.trust+1);}});
   g.prisoners.forEach(prisoner=>{if(prisoner.status==='detained'&&g.elapsed>=prisoner.release_at){prisoner.status='released';prisoner.closed_at=g.elapsed;}});
   g.patients=g.patients.filter(patient=>!patient.closed_at||g.elapsed-patient.closed_at<600);
   g.prisoners=g.prisoners.filter(prisoner=>!prisoner.closed_at||g.elapsed-prisoner.closed_at<600);
@@ -520,7 +520,15 @@ export function applyAction(input,kind,data={}){
     const price=g.command_centers.length?7500:0;requireValue(g.money>=price,'Orçamento insuficiente.');g.money-=price;g.expenses+=price;const center=makeCommandCenter(name,site,radius);g.command_centers.push(center);g.active_command_center_id=center.id;g.city=center.city;log(g,`${center.name} criado com raio operacional de ${radius} km.`,'success');
   }
   else if(kind==='update_command_center'){
-    const center=commandCenterFor(g,data.command_center_id);requireValue(center,'Centro de Comando inválido.');if(data.name!==undefined){const name=String(data.name).trim().slice(0,48);requireValue(name,'O nome não pode ficar vazio.');center.name=name;}if(data.radius_km!==undefined)center.radius_km=Math.max(5,Math.min(120,Number(data.radius_km)||35));if(data.active!==undefined)center.active=!!data.active;log(g,`${center.name} atualizado.`,'success');
+    const center=commandCenterFor(g,data.command_center_id)||g.command_centers.find(item=>item.id===data.command_center_id);requireValue(center,'Centro de Comando inválido.');
+    if(data.name!==undefined){const name=String(data.name).trim().slice(0,48);requireValue(name,'O nome não pode ficar vazio.');center.name=name;}
+    if(data.radius_km!==undefined)center.radius_km=Math.max(5,Math.min(120,Number(data.radius_km)||35));
+    if(data.active!==undefined){
+      const nextActive=!!data.active;
+      if(!nextActive&&center.active!==false){requireValue(!g.incidents.some(item=>item.command_center_id===center.id),'Resolve primeiro as ocorrências desta área.');requireValue(!(g.planned_missions||[]).some(item=>item.command_center_id===center.id&&['scheduled','active'].includes(item.status)),'Cancela ou conclui primeiro as operações planeadas desta área.');const other=g.command_centers.find(item=>item.id!==center.id&&item.active!==false);requireValue(other,'Tem de existir pelo menos outro Centro de Comando ativo.');center.active=false;if(g.active_command_center_id===center.id){g.active_command_center_id=other.id;g.city=other.city;}}
+      else if(nextActive)center.active=true;
+    }
+    log(g,`${center.name} atualizado.`,'success');
   }
   else if(kind==='assign_base_command'){
     const base=g.bases.find(item=>item.id===data.base_id),center=commandCenterFor(g,data.command_center_id);requireValue(base&&center,'Base ou Centro de Comando inválido.');requireValue(withinCommandArea(center,base),'A base fica fora da área operacional deste comando.');base.command_center_id=center.id;log(g,`${base.name} atribuída a ${center.name}.`,'success');
