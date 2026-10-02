@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { HashRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { Radio, LoaderCircle, X, Menu, PanelsTopLeft, Info, BarChart3, Building2, CarFront, Users } from 'lucide-react';
-import { Toaster, toast } from './components/ui/sonner';
 import { useGame } from './game/useGame';
 import { Sidebar, Footer } from './game/Shell';
 import { GameHUD } from './game/GameHUD';
@@ -91,7 +90,7 @@ function GameApp() {
     return () => window.removeEventListener('keydown', closeOnEscape);
   }, [isCentral, navigate]);
 
-  const save = async () => { if (await act('save')) toast.success('Progresso guardado neste navegador.'); };
+  const save = async () => { await act('save'); };
   const selectIncident = id => { setSelected(id); setPanel('dispatch'); if (!isCentral) navigate('/'); beep(sound, 490); };
   const call = id => { setCallId(id); setSelected(id); beep(sound, 800); };
   const closeCall = () => { setCallId(null); setPanel('dispatch'); };
@@ -190,7 +189,6 @@ function GameApp() {
     <CallModal incident={game.incidents.find(i => i.id === callId)} open={!!callId} onClose={closeCall} act={act} busy={busy} />
     <HelpModal open={help} onClose={() => setHelp(false)} />
     <EventEffects event={feedback} onDone={clearFeedback} />
-    <Toaster theme="dark" position="top-right" visibleToasts={3} />
   </div>;
 }
 export default function App() { return <HashRouter><GameApp /></HashRouter>; }
