@@ -83,12 +83,26 @@ export async function fetchRoadRoute(points,originId,destinationId,conditions=nu
     const controller=new AbortController();
     const timeout=setTimeout(()=>controller.abort(),12000);
     try{
-      const coordinates=`${a.lng},${a.lat};${b.lng},${b.lat}`;
-      const response=await fetch(`https://router.project-osrm.org/route/v1/driving/${coordinates}?overview=full&geometries=geojson&steps=false`,{headers:{Accept:'application/json'},signal:controller.signal});
-      if(!response.ok)throw new Error(`Serviço rodoviário indisponível (${response.status}).`);
-      const payload=await response.json(),route=payload?.routes?.[0];
-      if(payload?.code!=='Ok'||!route?.geometry?.coordinates?.length)throw new Error('Não existe um percurso rodoviário entre estes locais.');
-      road={coordinates:route.geometry.coordinates,distance:Math.round(route.distance),duration:Math.max(1,Math.round(route.duration))};
+      const backend=(process.env.REACT_APP_BACKEND_URL||'').replace(/\/$/,'');
+      let payload=null;
+      if(backend){
+        try{
+          const land=a.land||b.land||'mainland';
+          const response=await fetch(`${backend}/api/road-routes/coordinates`,{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify({origin:{lng:a.lng,lat:a.lat,land},destination:{lng:b.lng,lat:b.lat,land:b.land||land}}),signal:controller.signal});
+          if(response.ok)payload=await response.json();
+          else if(response.status===422){const detail=await response.json().catch(()=>({}));throw new Error(detail?.detail||'Sem percurso rodoviário disponível.');}
+        }catch(error){if(error?.name==='AbortError')throw error;if(error?.message?.includes('Sem percurso'))throw error;}
+      }
+      if(payload?.coordinates?.length){
+        road={coordinates:payload.coordinates,distance:Math.round(payload.distance),duration:Math.max(1,Math.round(payload.duration))};
+      }else{
+        const coordinates=`${a.lng},${a.lat};${b.lng},${b.lat}`;
+        const response=await fetch(`https://router.project-osrm.org/route/v1/driving/${coordinates}?overview=full&geometries=geojson&steps=false`,{headers:{Accept:'application/json'},signal:controller.signal});
+        if(!response.ok)throw new Error(`Serviço rodoviário indisponível (${response.status}).`);
+        const direct=await response.json(),route=direct?.routes?.[0];
+        if(direct?.code!=='Ok'||!route?.geometry?.coordinates?.length)throw new Error('Não existe um percurso rodoviário entre estes locais.');
+        road={coordinates:route.geometry.coordinates,distance:Math.round(route.distance),duration:Math.max(1,Math.round(route.duration))};
+      }
       roadRouteCache.set(key,road);
       if(roadRouteCache.size>500)roadRouteCache.delete(roadRouteCache.keys().next().value);
     }catch(error){
