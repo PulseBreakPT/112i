@@ -104,6 +104,7 @@ export function buildingCounts(game, commandCenterId = null) {
 
 export function missionCap(game, commandCenterId = null) {
   const areaBases = basesForCommand(game, commandCenterId);
+  if (commandCenterId && !areaBases.length) return 0;
   const coveredCities = new Set(areaBases.map(base => base.city)).size;
   const levelPressure = Math.floor(Math.max(0, (game.level || 1) - 1) / 3);
   const territoryPressure = Math.floor(Math.max(0, coveredCities - 1) / 2);
