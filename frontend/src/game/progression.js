@@ -1,4 +1,5 @@
 import { NEW_VEHICLES, NEW_MISSION_DEFINITIONS } from './expansionContent';
+import { applyVehicleSpec } from './vehicleSystems';
 
 export const EXTENSIONS = {
   fire: [
@@ -38,7 +39,7 @@ export const SPECIALIZATIONS = {
   ],
 };
 
-export const VEHICLE_CATALOG = {
+const RAW_VEHICLE_CATALOG = {
   fire: [
     { id: 'fire-engine', name: 'VFCI', level: 1, price: 5000, crew: 5 },
     { id: 'ladder', name: 'Auto-Escada', level: 2, price: 8500, crew: 3, extension: 'aerial' },
@@ -59,6 +60,10 @@ export const VEHICLE_CATALOG = {
     ...NEW_VEHICLES.police,
   ],
 };
+
+export const VEHICLE_CATALOG = Object.fromEntries(
+  Object.entries(RAW_VEHICLE_CATALOG).map(([service,vehicles]) => [service, vehicles.map(vehicle => applyVehicleSpec(vehicle, service))])
+);
 
 export const POIS = [
   { id: 'poi-industrial-porto', type: 'industrial', name: 'Zona Industrial de Campanhã', node: 'porto-campanha', city: 'Porto' },
