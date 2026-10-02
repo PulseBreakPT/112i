@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import * as maplibregl from 'maplibre-gl';
-import { Plus, Minus, LocateFixed, Layers3, ArrowUpRight, Flame, TreePine, CarFront, HeartPulse, Lungs, Handcuffs, Search, ShieldAlert, Waves, FlaskConical, Bomb, CloudLightning, Building2, Baby, Brain, HardHat, BusFront, Bike, TrainFront, Plane, Users, CircleAlert } from 'lucide-react';
+import { Plus, Minus, LocateFixed, Layers3, ArrowUpRight, Flame, TreePine, CarFront, HeartPulse, Lungs, Handcuffs, Search, ShieldAlert, Waves, FlaskConical, Bomb, CloudLightning, Baby, Brain, HardHat, BusFront, Bike, TrainFront, Plane, Users, CircleAlert } from 'lucide-react';
 import { getMapThemePalette } from './timeTheme';
 import { SERVICE } from './common';
 import { vehicleImage } from './vehicleMedia';
@@ -309,11 +309,35 @@ export const PortugalMap = ({ world, game, selected, onSelect, focusKey, theme, 
   useEffect(() => {
     const map = mapRef.current;
     if (!loaded || !map) return;
+    const visibleIncidents = game.incidents.filter(isIncidentVisibleOnMap);
     const entries = [
       ...game.bases.map(item => ({ kind: 'base', item })),
-      ...game.incidents.filter(isIncidentVisibleOnMap).map(item => ({ kind: 'incident', item })),
+      ...visibleIncidents.map(item => ({ kind: 'incident', item })),
       ...(unitsVisible ? game.units.filter(u => u.status !== 'available').map(item => ({ kind: 'vehicle', item })) : []),
     ];
+
+    // When several unresolved incidents share the same operational point,
+    // fan them out in a small deterministic ring so none is hidden underneath another.
+    const incidentOffsets = new Map();
+    const incidentGroups = new Map();
+    visibleIncidents.forEach(item => {
+      const key = `${Number(item.lng).toFixed(5)}:${Number(item.lat).toFixed(5)}`;
+      if (!incidentGroups.has(key)) incidentGroups.set(key, []);
+      incidentGroups.get(key).push(item);
+    });
+    incidentGroups.forEach(group => {
+      const ordered = [...group].sort((a,b) => (a.priority || 3) - (b.priority || 3) || String(a.id).localeCompare(String(b.id)));
+      if (ordered.length === 1) {
+        incidentOffsets.set(ordered[0].id, [0,0]);
+        return;
+      }
+      const radius = Math.min(23, 15 + ordered.length * 1.5);
+      ordered.forEach((item,index) => {
+        const angle = -Math.PI / 2 + index * (Math.PI * 2 / ordered.length);
+        incidentOffsets.set(item.id, [Math.cos(angle) * radius, Math.sin(angle) * radius]);
+      });
+    });
+
     const keep = new Set();
     for (const { kind, item } of entries) {
       const id = `${kind}-${item.id}`;
@@ -326,6 +350,7 @@ export const PortugalMap = ({ world, game, selected, onSelect, focusKey, theme, 
         markers.current.set(id, marker);
       }
       marker.setLngLat([item.lng, item.lat]);
+      if (kind === 'incident') marker.setOffset(incidentOffsets.get(item.id) || [0,0]);
       const element = marker.getElement();
       element.classList.toggle('is-selected', kind === 'incident' && item.id === selected);
       element.dataset.lng = item.lng; element.dataset.lat = item.lat;
