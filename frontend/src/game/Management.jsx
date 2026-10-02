@@ -6,6 +6,8 @@ import { toast } from 'sonner';
 import { SERVICE, ServiceIcon, money, STATUS, duration } from './common';
 import { vehicleImage, VehicleThumbnail } from './vehicleMedia';
 import { fetchRoadRoute } from './localGame';
+import FleetAdvancedControls from './FleetAdvancedControls';
+import OperationalComplexes from './OperationalComplexes';
 const VehicleArt = ({ service, vehicleType, name }) => {
   const [failed, setFailed] = useState(false);
   const label = name || (service === 'fire' ? 'Viatura dos bombeiros' : service === 'medical' ? 'Viatura médica' : 'Viatura da polícia');
@@ -141,7 +143,7 @@ export default function Management({ game, world, act, busy, mode }) {
             <div className="base-actions">
               <button data-testid={`base-buy-vehicle-${index}`} disabled={base.operational_at > game.elapsed || count >= capacity(base)} onClick={() => openPurchase(base.service, world.vehicle_catalog[base.service][0])}>Adquirir viatura <ArrowUpRight size={15} /></button>
               <button disabled={busy || base.operational_at > game.elapsed || (base.level || 1) >= 10} onClick={() => run('upgrade_base', { base_id: base.id }, `${base.name} melhorada.`)}><Wrench size={14} /> Melhorar · {money(upgradeCost(base))}</button>
-              <button disabled={busy || (base.personnel || 0) + 2 > (base.staff_capacity || 14)} onClick={() => run('queue_recruitment', { base_id: base.id, amount: 2 }, 'Recrutamento de dois elementos iniciado.')}><Users size={14} /> Recrutar 2 · {money(450)}</button>
+              
               <button className={base.mission_generation_enabled!==false?'active':''} onClick={()=>run('toggle_building_generation',{building_id:base.id,enabled:base.mission_generation_enabled===false},base.mission_generation_enabled===false?'Base reativada.':'Geração de ocorrências suspensa.')}><Power size={12}/>{base.mission_generation_enabled===false?'Reativar base':'Suspender geração'}</button>
             </div>
             <div className="base-development">
@@ -159,6 +161,7 @@ export default function Management({ game, world, act, busy, mode }) {
         </article>;
       })}</div>
       <div className="expansion-strip"><Building2 size={28} /><div><h3>A rede determina as ocorrências.</h3><p>A expansão melhora cobertura e desbloqueia capacidade especializada. A pressão de ocorrências cresce sobretudo com território e progressão, não com o número bruto de bases.</p></div><Button className="outline-button" data-testid="expand-network-button" onClick={() => setBuildOpen(true)}>Expandir rede <Plus size={16} /></Button></div>
+      <OperationalComplexes game={game} act={act} busy={busy}/>
     </> : <>
       <div className="section-line"><h2>As tuas viaturas <span>{game.units.length}</span></h2><select aria-label="Filtrar frota" data-testid="fleet-filter" value={filter} onChange={event => setFilter(event.target.value)}><option value="all">Todos os serviços</option>{Object.entries(SERVICE).map(([key, info]) => <option key={key} value={key}>{info.name}</option>)}</select></div>
       <div className="fleet-grid">{game.units.filter(unit => filter === 'all' || filter === unit.service).map(unit => {
@@ -170,6 +173,7 @@ export default function Management({ game, world, act, busy, mode }) {
           <div className="fleet-card-details"><span className={`fleet-status ${unit.status}`}><i />{STATUS[unit.status] || (unit.status === 'uncrewed' ? 'Sem equipa' : unit.status)}</span><span><small>CONDIÇÃO</small><b>{Math.round(unit.condition || 100)}%</b></span><span><small>EQUIPA</small><b>{unit.crew_assigned || 0}/{unit.crew_required || 0}</b></span><span><small>{unit.status === 'base_transfer' ? 'CHEGADA' : 'FADIGA'}</small><b>{unit.status === 'base_transfer' ? duration(Math.max(0, (unit.travel_total || 0) - (unit.travel || 0))) : `${Math.round(unit.fatigue || 0)}%`}</b></span></div>
         </article>;
       })}</div>
+      <FleetAdvancedControls game={game} act={act} busy={busy}/>
       <div className="section-line"><h2>Catálogo de viaturas</h2><span>EXPANDIR A FROTA</span></div>
       <div className="vehicle-grid expanded-catalog">{Object.entries(world.vehicle_catalog).flatMap(([serviceId, vehicles]) => vehicles.map((vehicle, vehicleIndex) => {
         const extensionName = vehicle.extension && (world.extensions[serviceId] || []).find(extension => extension.id === vehicle.extension)?.name;
