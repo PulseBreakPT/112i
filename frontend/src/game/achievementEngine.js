@@ -119,6 +119,7 @@ export const ACHIEVEMENT_CATALOG = FAMILIES.flatMap(family =>
 );
 
 export const ACHIEVEMENT_TOTAL = ACHIEVEMENT_CATALOG.length;
+const ACHIEVEMENT_IDS = new Set(ACHIEVEMENT_CATALOG.map(item=>item.id));
 
 const emptyMetrics = () => ({
   service_completed:{fire:0,medical:0,police:0},
@@ -188,7 +189,7 @@ export function recordAchievementTransport(game,kind,count=1){
 }
 
 export function achievementMetricSnapshot(game){
-  const m=ensureAchievementMetrics(game);
+  const m=game.achievement_metrics?.version===1?game.achievement_metrics:emptyMetrics();
   const category=id=>m.category_completed?.[id]||0;
   const service=id=>m.service_completed?.[id]||0;
   return {
@@ -285,7 +286,7 @@ export function syncAchievements(game){
 
 export function achievementSummary(game){
   const unlocked=game.achievement_state?.unlocked||{};
-  const count=Object.keys(unlocked).filter(id=>ACHIEVEMENT_CATALOG.some(item=>item.id===id)).length;
+  const count=Object.keys(unlocked).filter(id=>ACHIEVEMENT_IDS.has(id)).length;
   return {
     total:ACHIEVEMENT_TOTAL,
     unlocked:count,
