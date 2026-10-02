@@ -1,3 +1,5 @@
+import { crewFatigue, vehicleAccessPenalty } from '../vehicleSystems';
+
 export const operationalUnit = (unit, allowReturning = false) =>
   unit.enabled!==false && (['available','patrol','staged'].includes(unit.status) || (allowReturning && unit.status==='returning'));
 
@@ -24,9 +26,10 @@ const dispatchable = (g, unit, incident, distanceMeters) =>
   operationalUnit(unit, g.dispatch_policy?.allow_returning_redirect===true) &&
   g.bases.find(base=>base.id===unit.base_id)?.enabled!==false &&
   unit.exclude_from_arr!==true &&
+  unit.auto_dispatch!==false &&
   unit.land===incident.land &&
   (unit.condition||100)>20 &&
-  (unit.fatigue||0)<90 &&
+  crewFatigue(g,unit)<90 &&
   hasOperationalResources(unit) &&
   withinResponseRange(g, unit, incident, distanceMeters);
 
@@ -62,19 +65,30 @@ export function selectRecommendedUnitIds(g,incidentId,mode='safe',{requireValue,
   const preferFastest=g.dispatch_policy?.prefer_fastest!==false;
   const score=unit=>{
     const definition=vehicleDefinition(unit.service,unit.vehicle_type);
-    const specialist=(inc.required_vehicle_types||[]).includes(unit.vehicle_type);
+    const aliases={urban:'urban-fire',industrial:'hazmat',criminal:'investigation',wildfire:'wildfire'};
+    const capability=aliases[inc.specialization]||inc.specialization;
+    const specialist=(inc.required_vehicle_types||[]).includes(unit.vehicle_type)||(capability&&unit.capabilities?.includes(capability));
     const trained=(unit.personnel_ids||[]).some(id=>{
       const person=(g.personnel||[]).find(item=>item.id===id);
       return (inc.required_trainings||[]).some(training=>(person?.qualifications||[]).includes(training));
     });
     const distancePenalty=responseDistanceKm(unit,inc,distanceMeters)*1000*(preferFastest?1:.28);
     const preparationPenalty=(Number(unit.response_delay)||0)*(preferFastest?15:5);
-    return distancePenalty+preparationPenalty+
+    const fatigue=crewFatigue(g,unit);
+    const recommended=Math.max(1,Number(unit.recommended_response_km)||Number(unit.max_response_km)||80);
+    const distanceKm=responseDistanceKm(unit,inc,distanceMeters);
+    const beyondRecommended=Math.max(0,distanceKm-recommended)*120;
+    const reservePenalty=unit.operational_reserve===true?6500:0;
+    const maintenancePenalty=unit.maintenance_due===true?2200:0;
+    const priorityBonus=(Math.max(0,Math.min(100,Number(unit.dispatch_priority)||50))-50)*35;
+    const accessPenalty=vehicleAccessPenalty(unit,inc,g.conditions);
+    return distancePenalty+preparationPenalty+beyondRecommended+reservePenalty+maintenancePenalty+accessPenalty-priorityBonus+
       (unit.status==='staged'?-2500:0)+(unit.status==='patrol'?-1200:0)+(unit.status==='returning'?600:0)+
       (specialist?-3200:0)+(trained?-1400:0)+(definition?.training?-400:0)+
-      (unit.fatigue||0)*90+(100-(unit.condition||100))*60;
+      fatigue*90+(100-(unit.condition||100))*60+(unit.wear||0)*28;
   };
   const reserveOk=unit=>{
+    if(unit.operational_reserve===true&&available.some(candidate=>candidate.service===unit.service&&!chosen.includes(candidate)&&candidate.operational_reserve!==true))return false;
     const reserve=g.dispatch_policy?.reserve_by_service?.[unit.service]||0;
     return available.filter(candidate=>candidate.service===unit.service&&!chosen.includes(candidate)).length>reserve*reserveWeight;
   };
