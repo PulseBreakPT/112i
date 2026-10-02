@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Radio, Pause, Play, Volume2, VolumeX, Save, Crosshair, SlidersHorizontal, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { IconButton } from './Shell';
-import { clock, money } from './common';
+import { money } from './common';
 import { APP_NAME, BRAND_WORD, BRAND_NUMBER } from './branding';
 
 export function GameHUD({ game, act, sound, setSound, onSave, error }) {
@@ -19,10 +19,9 @@ export function GameHUD({ game, act, sound, setSound, onSave, error }) {
     <Link to="/" className="minimal-brand" data-testid="brand-home" aria-label={`${APP_NAME} — voltar ao mapa`}><Radio size={18} /><span className="brand-wordmark" data-testid="game-brand">{BRAND_WORD}{' '}<span>{BRAND_NUMBER}</span></span></Link>
     <div className="minimal-readout">
       <div className="hud-stat hud-budget"><small>Orçamento</small><span className="minimal-budget" data-testid="user-budget-display" title={money(game.money)}>{money(game.money)}</span></div>
-      <div className="hud-stat hud-time" data-paused={!game.speed}><small>{game.speed ? 'Turno' : 'Em pausa'}</small><b data-testid="game-clock">{clock(game.elapsed).slice(0, 5)}</b></div>
       <IconButton icon={game.speed ? Pause : Play} label={game.speed ? 'Pausar simulação' : 'Retomar simulação'} testId="game-speed-pause" active={!game.speed} onClick={() => act('speed', { speed: game.speed ? 0 : 1 })} />
       <div className="hud-options-wrap" ref={options}>
-        <button className={`minimal-options-toggle ${optionsOpen ? 'active' : ''}`} aria-label="Controlos e informação do turno" aria-expanded={optionsOpen} aria-controls="hud-options" data-testid="hud-options-toggle" onClick={() => setOptionsOpen(!optionsOpen)}><SlidersHorizontal size={17} /><span>{game.speed ? `${game.speed}×` : 'Ⅱ'}</span></button>
+        <button className={`minimal-options-toggle ${optionsOpen ? 'active' : ''}`} aria-label="Controlos e informação do turno" aria-expanded={optionsOpen} aria-controls="hud-options" data-testid="hud-options-toggle" onClick={() => setOptionsOpen(!optionsOpen)}><SlidersHorizontal size={17} /></button>
         {optionsOpen && <div className="hud-options" id="hud-options" data-testid="hud-options" onKeyDown={event => { if (event.key === 'Escape') { event.stopPropagation(); setOptionsOpen(false); options.current?.querySelector('button')?.focus(); } }}>
           <div className="hud-options-heading">CONTROLOS DO TURNO</div>
           <div className="option-line"><span>Velocidade</span><div className="speed-group">{[1, 2, 5].map(n => <button key={n} aria-label={`Velocidade ${n} vezes`} aria-pressed={game.speed === n} data-testid={`game-speed-${n}x`} className={game.speed === n ? 'chosen' : ''} onClick={() => act('speed', { speed: n })}>{n}×</button>)}</div></div>
