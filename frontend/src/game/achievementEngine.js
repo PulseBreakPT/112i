@@ -102,6 +102,7 @@ export const ACHIEVEMENT_CATALOG = FAMILIES.flatMap(family =>
       title:`${family.title} ${ROMAN[index]}`,
       description:`Atinge ${target.toLocaleString('pt-PT')}${family.unit?' '+family.unit:''} em ${family.description}.`,
       metric:family.metric,
+      unit:family.unit||null,
       target,
       step:index+1,
       rarity,
