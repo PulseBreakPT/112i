@@ -280,7 +280,7 @@ export function syncAchievements(game){
     recent:newlyUnlocked.slice(-8).map(item=>item.id),
     last_unlock_at:newlyUnlocked.length?(game.elapsed||0):(previous.last_unlock_at||0),
   };
-  if(xpAwarded)game.level=1+Math.floor((game.xp||0)/200);
+  if(xpAwarded)game.level=Math.max(game.level||1,1+Math.floor((game.xp||0)/200));
   return newlyUnlocked;
 }
 
