@@ -1,65 +1,226 @@
-/* Distrito 112 — permanent dark operations mode.
-   Dark gray/navy surfaces preserve depth without using pure black.
-   The interface keeps semantic colours for meaning and reserves brightness
-   for content, focus and critical operational state. */
+/* Distrito 112 — permanent graphite dark mode.
+   Neutral charcoal surfaces, grayscale cartography and semantic colour only
+   where colour communicates state or action. */
 
 :root,
 html,
 body,
 #root {
   color-scheme: dark;
-  background: var(--theme-page-bg, #070b12);
+  background: var(--theme-page-bg, #050506);
 }
 
 body {
   accent-color: var(--theme-accent);
+  background: #050506;
 }
 
-/* There is no theme transition anymore, so surface changes should feel stable. */
+/* One stable visual environment: no day/night surface transitions. */
 .minimal-shell.distrito-interface {
-  transition: none;
+  transition: none !important;
+  background: var(--theme-shell-bg) !important;
 }
 
-/* Native controls must belong to the same dark environment as custom UI. */
+/* Native controls belong to the same charcoal environment. */
 .minimal-shell.distrito-interface :is(input, select, textarea),
 .game-modal :is(input, select, textarea) {
   color-scheme: dark;
   caret-color: var(--theme-accent);
 }
 
-/* Quiet surfaces create hierarchy. Large saturated fills are deliberately avoided. */
+/* Persistent HUD stays unboxed. Only opened menus/panels get surfaces. */
+.minimal-shell.distrito-interface :is(
+  .minimal-brand,
+  .minimal-readout,
+  .minimal-readout > .icon-btn,
+  .hud-options-wrap > .minimal-options-toggle,
+  .menu-launcher > button,
+  .map-layer-button,
+  .map-zoom,
+  .map-zoom > .icon-btn,
+  .central-management-rail > button,
+  .central-quick-rail > button,
+  .central-incidents-launcher,
+  .incoming-call,
+  .incoming-icon,
+  .paused-label
+) {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+.minimal-shell.distrito-interface :is(
+  .central-management-rail > button,
+  .central-quick-rail > button,
+  .map-layer-button,
+  .map-zoom > .icon-btn,
+  .menu-launcher > button,
+  .minimal-options-toggle
+):is(:hover, :focus-visible, .active, [aria-expanded="true"]) {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Opened surfaces use graphite, not navy. */
 .minimal-shell.distrito-interface :is(
   .game-menu,
   .hud-options,
+  .layer-menu,
   .game-workspace,
+  .central-widget,
   .tactical-drawer > .incident-panel,
-  .tactical-drawer > .dispatch-panel
+  .tactical-drawer > .dispatch-panel,
+  .geo-map-loading,
+  .geo-map-error,
+  .connection-notice
 ),
 .game-modal {
-  border-color: var(--distrito-edge);
+  background: linear-gradient(135deg, #151618f2, #0e0f11f6) !important;
+  border-color: #ffffff16 !important;
+  box-shadow:
+    0 18px 52px rgba(0, 0, 0, .48),
+    0 3px 12px rgba(0, 0, 0, .30) !important;
 }
 
-/* Focus must not rely on colour alone and must remain obvious on every surface. */
+/* Cards and raised content stay neutral. Semantic colours are accents, never base fills. */
+.minimal-shell.distrito-interface .game-workspace :is(
+  .base-card,
+  .vehicle-card,
+  .fleet-card,
+  .facility-card,
+  .report-metric,
+  .career-rank,
+  .settings-section,
+  .expansion-strip,
+  .specialist-strip,
+  .command-card,
+  .command-overview,
+  .strategy-hero,
+  .strategy-panel,
+  .training-console,
+  .arr-builder,
+  .training-list article,
+  .qualification-grid article,
+  .patrol-list article,
+  .arr-list article,
+  .case-list article,
+  .personnel-grid article,
+  .poi-board article,
+  .unit-control-grid article,
+  .cooperation-card,
+  .task-list article,
+  .complex-grid article
+) {
+  background: linear-gradient(145deg, rgba(255,255,255,.035), rgba(255,255,255,.015)) !important;
+  border-color: #ffffff14 !important;
+  box-shadow: none !important;
+}
+
+.minimal-shell.distrito-interface :is(
+  .workspace-bar,
+  .tactical-drawer .panel-heading,
+  .command-card > header,
+  .strategy-panel > header
+) {
+  background: rgba(255,255,255,.025) !important;
+  border-color: #ffffff0f !important;
+}
+
+/* Inset content uses luminance, not hue, to communicate depth. */
+.minimal-shell.distrito-interface :is(
+  .personnel-toolbar,
+  .employee-location,
+  .employee-key-stats > div,
+  .employee-assignment,
+  .strategy-list article,
+  .recruitment-grid article,
+  .policy-grid label,
+  .hospital-specialties,
+  .arr-vehicle-builder,
+  .fleet-card-base,
+  .requirements,
+  .dispatch-bottom,
+  .shift-overview,
+  .coverage-band
+) {
+  background: #0f1012 !important;
+  border-color: #ffffff0d !important;
+}
+
+/* Segmented and selected neutral UI stays graphite. */
+.minimal-shell.distrito-interface :is(
+  .operations-tabs,
+  .tactical-drawer .incident-tabs,
+  .hud-options .speed-group,
+  .geo-style-control > div
+) {
+  background: #0f1012 !important;
+  border-color: #ffffff12 !important;
+}
+
+.minimal-shell.distrito-interface :is(
+  .operations-tabs button.active,
+  .tactical-drawer .incident-tabs > button.selected,
+  .geo-style-control button.active,
+  .hud-options .speed-group > button.chosen
+) {
+  background: #202124 !important;
+  border-color: #ffffff24 !important;
+  color: #f1f1f2 !important;
+  box-shadow: inset 0 1px rgba(255,255,255,.05) !important;
+}
+
+/* Inputs and menus must never flash a blue surface. */
+.minimal-shell.distrito-interface :is(
+  .game-workspace,
+  .hud-options
+) :is(input:not([type="checkbox"]):not([type="range"]), select, textarea),
+.game-modal :is(input:not([type="checkbox"]):not([type="range"]), select, textarea) {
+  background: #0f1012 !important;
+  border-color: #ffffff16 !important;
+  color: #f1f1f2 !important;
+}
+
+.minimal-shell.distrito-interface select option,
+.game-modal select option {
+  background: #141416 !important;
+  color: #f1f1f2 !important;
+}
+
+/* Cartographic chrome mirrors the reference: quiet gray, no blue material. */
+.minimal-shell.distrito-interface .portugal-map :is(
+  .maplibregl-ctrl-attrib,
+  .maplibregl-ctrl-scale
+) {
+  background: rgba(10,10,11,.72) !important;
+  color: #a7a9ae !important;
+  border-color: #ffffff14 !important;
+  text-shadow: 0 1px 2px #000 !important;
+}
+
+/* Focus remains visible without reintroducing a blue brand accent. */
 .minimal-shell.distrito-interface :is(button, a, input, select, textarea):focus-visible,
 .game-modal :is(button, a, input, select, textarea):focus-visible {
-  outline: 2px solid var(--theme-accent) !important;
+  outline: 2px solid #d6d8dc !important;
   outline-offset: 3px;
 }
 
-/* Selection stays readable without producing a bright full-screen flash. */
 ::selection {
-  background: color-mix(in srgb, var(--theme-accent) 48%, var(--theme-surface));
-  color: var(--distrito-text);
+  background: #d6d8dc;
+  color: #08090a;
 }
 
-/* Users asking the OS for more contrast still get one dark mode, just with
-   stronger separators and secondary ink. */
+/* Higher contrast stays inside the same dark neutral family. */
 @media (prefers-contrast: more) {
   :root {
-    --distrito-secondary: #d4dae2 !important;
-    --distrito-muted: #bcc5d0 !important;
-    --distrito-edge: #ffffff45 !important;
-    --distrito-divider: #ffffff2d !important;
+    --distrito-secondary: #dedfe2 !important;
+    --distrito-muted: #c1c3c8 !important;
+    --distrito-edge: #ffffff42 !important;
+    --distrito-divider: #ffffff2a !important;
   }
 
   .minimal-shell.distrito-interface :is(button, a, input, select, textarea):focus-visible,
@@ -68,7 +229,6 @@ body {
   }
 }
 
-/* Let Windows/OS high-contrast mode take control instead of fighting it. */
 @media (forced-colors: active) {
   :root,
   html,
