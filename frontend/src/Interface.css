@@ -1125,3 +1125,143 @@
     padding: 10px 12px;
   }
 }
+
+
+/* Centered-modal interaction model.
+   The map is softened when a modal is open, while HUD/UI controls remain visible. */
+.minimal-shell.distrito-interface .geographic-canvas {
+  transition: filter .18s ease, transform .18s ease;
+  transform-origin: center;
+}
+.minimal-shell.distrito-interface:is(.menu-open, .panel-open, .workspace-open) .geographic-canvas {
+  filter: blur(7px) brightness(.62) saturate(.72) !important;
+  transform: scale(1.012);
+}
+
+/* HUD and persistent UI never disappear when another modal opens. */
+.minimal-shell.distrito-interface.menu-open :is(
+  .central-management-rail,
+  .central-incidents-launcher,
+  .map-layer-wrap,
+  .map-zoom
+),
+.minimal-shell.distrito-interface.panel-incidents :is(
+  .central-management-rail,
+  .central-incidents-launcher,
+  .map-layer-wrap,
+  .map-zoom
+),
+.minimal-shell.distrito-interface.panel-dispatch :is(
+  .central-management-rail,
+  .central-incidents-launcher,
+  .map-layer-wrap,
+  .map-zoom
+),
+.minimal-shell.distrito-interface.workspace-open :is(
+  .central-management-rail,
+  .central-incidents-launcher,
+  .map-layer-wrap,
+  .map-zoom
+) {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Main navigation itself is a centered modal. */
+.minimal-shell.distrito-interface .game-menu {
+  top: 50% !important;
+  left: 50% !important;
+  right: auto !important;
+  bottom: auto !important;
+  width: min(330px, calc(100vw - 36px)) !important;
+  max-height: min(80dvh, 720px) !important;
+  transform: translate(-50%, -50%) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 24px 80px #000b !important;
+  animation: distrito-centered-modal .16s ease-out !important;
+}
+
+/* Resource/management pages use one centered workspace modal. */
+.minimal-shell.distrito-interface .game-workspace {
+  top: 50% !important;
+  left: 50% !important;
+  right: auto !important;
+  bottom: auto !important;
+  width: min(1060px, calc(100vw - 120px)) !important;
+  height: min(80dvh, 760px) !important;
+  max-width: none !important;
+  max-height: calc(100dvh - 80px) !important;
+  transform: translate(-50%, -50%) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 28px 90px #000b !important;
+  animation: distrito-centered-modal .18s ease-out !important;
+  z-index: 20;
+}
+
+/* Occurrence and mobilisation flows are centered modals too. */
+.minimal-shell.distrito-interface .tactical-drawer,
+.minimal-shell.distrito-interface .dispatch-drawer,
+.minimal-shell.distrito-interface .incidents-drawer {
+  top: 50% !important;
+  left: 50% !important;
+  right: auto !important;
+  bottom: auto !important;
+  width: min(410px, calc(100vw - 80px)) !important;
+  height: min(78dvh, 690px) !important;
+  max-width: none !important;
+  max-height: calc(100dvh - 80px) !important;
+  transform: translate(-50%, -50%) !important;
+  animation: distrito-centered-modal .16s ease-out !important;
+}
+.minimal-shell.distrito-interface .tactical-drawer > :is(.incident-panel, .dispatch-panel) {
+  border-radius: 12px !important;
+  box-shadow: 0 24px 80px #000b !important;
+}
+
+/* Click-outside surfaces stay invisible; blur belongs to the map, not the HUD. */
+.minimal-shell.distrito-interface :is(.workspace-shade, .panel-shade, .menu-dismiss) {
+  position: absolute;
+  inset: 0;
+  background: transparent !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+.minimal-shell.distrito-interface .panel-shade { z-index: 15; }
+.minimal-shell.distrito-interface .workspace-shade { z-index: 15; }
+
+/* Persistent controls stay above centered workspaces. */
+.minimal-shell.distrito-interface :is(.minimal-hud, .central-management-rail, .central-incidents-launcher, .menu-launcher) {
+  visibility: visible !important;
+}
+.minimal-shell.distrito-interface .central-management-rail { z-index: 24 !important; }
+.minimal-shell.distrito-interface .central-incidents-launcher { z-index: 27 !important; }
+.minimal-shell.distrito-interface .minimal-hud { z-index: 26 !important; }
+.minimal-shell.distrito-interface .menu-launcher { z-index: 35 !important; }
+
+@keyframes distrito-centered-modal {
+  from { opacity: 0; transform: translate(-50%, -47%) scale(.985); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+@media (max-width: 700px) {
+  .minimal-shell.distrito-interface .game-menu {
+    width: min(320px, calc(100vw - 44px)) !important;
+    max-height: min(78dvh, calc(100dvh - 104px)) !important;
+  }
+  .minimal-shell.distrito-interface .game-workspace {
+    width: calc(100vw - 72px) !important;
+    height: min(78dvh, calc(100dvh - 116px)) !important;
+    max-height: calc(100dvh - 116px) !important;
+  }
+  .minimal-shell.distrito-interface .tactical-drawer,
+  .minimal-shell.distrito-interface .dispatch-drawer,
+  .minimal-shell.distrito-interface .incidents-drawer {
+    width: calc(100vw - 72px) !important;
+    height: min(72dvh, calc(100dvh - 130px)) !important;
+    max-height: calc(100dvh - 130px) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .minimal-shell.distrito-interface .geographic-canvas { transition: none; }
+}
