@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { HashRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
-import { Radio, LoaderCircle, X, Menu, PanelsTopLeft } from 'lucide-react';
+import { Radio, LoaderCircle, X, Menu, PanelsTopLeft, Info, BarChart3, FileText, Bell, Building2, CarFront, Users } from 'lucide-react';
 import { Toaster, toast } from './components/ui/sonner';
 import { useGame } from './game/useGame';
 import { Sidebar, Footer } from './game/Shell';
@@ -47,6 +47,7 @@ function GameApp() {
   const [focusKey, setFocusKey] = useState(0);
   const [panel, setPanel] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [centralWidget, setCentralWidget] = useState(null);
   const [sound, setSoundState] = useState(() => localStorage.getItem(SOUND_PREFERENCE_KEY) !== 'false');
   const sequence = useRef(null);
   const audioActive = !!game && !!game.speed && isCentral;
@@ -70,7 +71,7 @@ function GameApp() {
     beep(sound, feedback.tone === 'positive' ? 1040 : feedback.tone === 'warning' ? 620 : 210);
   }, [feedback, sound]);
 
-  useEffect(() => { if (!isCentral) setPanel(null); setMenuOpen(false); }, [isCentral, location.pathname]);
+  useEffect(() => { if (!isCentral) { setPanel(null); setCentralWidget(null); } setMenuOpen(false); }, [isCentral, location.pathname]);
   useEffect(() => {
     const closeOnEscape = event => {
       if (event.key !== 'Escape' || event.defaultPrevented || document.querySelector('[role="dialog"][data-state="open"]')) return;
@@ -87,7 +88,8 @@ function GameApp() {
   const call = id => { setCallId(id); setSelected(id); beep(sound, 800); };
   const closeCall = () => { setCallId(null); setPanel('dispatch'); };
   const focusIncident = () => { setPanel(null); setFocusKey(k => k + 1); };
-  const openPanel = value => { setMenuOpen(false); setPanel(value); if (!isCentral) navigate('/'); };
+  const openPanel = value => { setMenuOpen(false); setCentralWidget(null); setPanel(value); if (!isCentral) navigate('/'); };
+  const toggleCentralWidget = value => { setMenuOpen(false); setPanel(null); setCentralWidget(current => current === value ? null : value); };
 
   if (!game || !world) return <div className="loading-screen" data-testid="loading-screen"><Radio size={40} /><h1 className="brand-wordmark" aria-label={APP_NAME}>{BRAND_WORD}{' '}<span>{BRAND_NUMBER}</span></h1>{error ? <><p data-testid="loading-error">{error}</p><button data-testid="retry-connection" className="primary-button" onClick={retry}>Voltar a ligar</button></> : <><LoaderCircle className="spinner" size={20} /><p>A estabelecer ligação à central…</p></>}</div>;
   const incident = game.incidents.find(i => i.id === selected);
@@ -102,9 +104,36 @@ function GameApp() {
     </main>
     <GameHUD game={game} act={act} sound={sound} setSound={setSound} onSave={save} error={error} />
     <div className="menu-launcher">
-      <button className={menuOpen ? 'active' : ''} data-testid="game-menu-toggle" aria-label={menuOpen ? 'Fechar menu do jogo' : 'Abrir menu do jogo'} aria-expanded={menuOpen} aria-controls="game-menu" onClick={() => { setMenuOpen(value => !value); setPanel(null); }}>{menuOpen ? <X size={17} /> : <Menu size={17} />}<span>Menu</span></button>
-      {isCentral && <button className="quick-incidents" data-tone={queueTone} data-testid="quick-incidents" aria-label={`${game.incidents.length} ocorrências, ${waitingIncidents.length} a aguardar mobilização — abrir fila`} aria-expanded={panel === 'incidents'} aria-controls="incident-drawer" onClick={() => openPanel(panel === 'incidents' ? null : 'incidents')}><Radio size={17} /><span className="quick-incidents-label">Ocorrências</span><b className="queue-count">{game.incidents.length}</b></button>}
+      <button className={menuOpen ? 'active' : ''} data-testid="game-menu-toggle" aria-label={menuOpen ? 'Fechar menu do jogo' : 'Abrir menu do jogo'} aria-expanded={menuOpen} aria-controls="game-menu" onClick={() => { setMenuOpen(value => !value); setPanel(null); setCentralWidget(null); }}>{menuOpen ? <X size={17} /> : <Menu size={17} />}<span>Menu</span></button>
     </div>
+    {isCentral && <>
+      <nav className="central-quick-rail central-info-rail" aria-label="Informação e controlo">
+        <button className={centralWidget === 'info' ? 'active' : ''} title="Informação da central" aria-label="Informação da central" aria-expanded={centralWidget === 'info'} onClick={() => toggleCentralWidget('info')}><Info size={17}/><span>Informação</span></button>
+        <button className={centralWidget === 'stats' ? 'active' : ''} title="Estatísticas da central" aria-label="Estatísticas da central" aria-expanded={centralWidget === 'stats'} onClick={() => toggleCentralWidget('stats')}><BarChart3 size={17}/><span>Estatísticas</span></button>
+        <button title="Relatórios" aria-label="Abrir relatórios" onClick={() => navigate('/relatorios')}><FileText size={17}/><span>Relatórios</span></button>
+        <button className={panel === 'incidents' ? 'active' : ''} data-tone={queueTone} title="Alertas e ocorrências" aria-label={`${game.incidents.length} ocorrências, ${waitingIncidents.length} a aguardar mobilização`} aria-expanded={panel === 'incidents'} onClick={() => openPanel(panel === 'incidents' ? null : 'incidents')}><Bell size={17}/><span>Alertas</span><b>{game.incidents.length}</b></button>
+      </nav>
+      <nav className="central-quick-rail central-management-rail" aria-label="Gestão rápida">
+        <button title="Gestão" aria-label="Abrir gestão" onClick={() => navigate('/gestao')}><PanelsTopLeft size={17}/><span>Gestão</span></button>
+        <button title="Bases" aria-label="Abrir bases" onClick={() => navigate('/bases')}><Building2 size={17}/><span>Bases</span></button>
+        <button title="Frota" aria-label="Abrir frota" onClick={() => navigate('/frota')}><CarFront size={17}/><span>Frota</span></button>
+        <button title="Funcionários" aria-label="Abrir funcionários" onClick={() => navigate('/funcionarios')}><Users size={17}/><span>Funcionários</span></button>
+      </nav>
+      {centralWidget && <aside className="central-glance-panel" aria-label={centralWidget === 'info' ? 'Informação da central' : 'Estatísticas da central'}>
+        <header><span>{centralWidget === 'info' ? 'INFORMAÇÃO DA CENTRAL' : 'ESTATÍSTICAS RÁPIDAS'}</span><button aria-label="Fechar painel" onClick={() => setCentralWidget(null)}><X size={15}/></button></header>
+        {centralWidget === 'info' ? <div className="central-glance-grid">
+          <div><small>CONDIÇÕES</small><strong>{game.conditions?.weather_label || 'Céu limpo'}</strong><span>{game.conditions?.traffic_label || 'Trânsito fluido'}{game.conditions?.night ? ' · Noite' : ''}</span></div>
+          <div><small>OPERADOR</small><strong>Nível {game.level}</strong><span>{game.xp % 200}/200 XP</span></div>
+          <div><small>ORÇAMENTO</small><strong>{money(game.money)}</strong><span>Disponível</span></div>
+          <div><small>COMANDO ATIVO</small><strong>{game.command_centers?.find(center => center.id === game.active_command_center_id)?.name || game.command_centers?.[0]?.name || 'Sem comando'}</strong><span>{game.city}</span></div>
+        </div> : <div className="central-glance-grid">
+          <div><small>OCORRÊNCIAS</small><strong>{game.incidents.length}</strong><span>{waitingIncidents.length} a aguardar</span></div>
+          <div><small>VIATURAS</small><strong>{game.units.filter(unit => unit.status === 'available').length}/{game.units.length}</strong><span>Disponíveis</span></div>
+          <div><small>EFETIVO</small><strong>{(game.personnel || []).filter(person => !person.unit_id && person.status === 'available').length}</strong><span>Elementos livres</span></div>
+          <div><small>CONFIANÇA</small><strong>{game.trust}%</strong><span>{game.bases.length} bases · {(game.facilities || []).length} instalações</span></div>
+        </div>}
+      </aside>}
+    </>}
     {menuOpen && <>
       <div className="menu-dismiss" data-testid="menu-dismiss" onClick={() => setMenuOpen(false)} />
       <div className="game-menu" id="game-menu" data-testid="game-menu">
