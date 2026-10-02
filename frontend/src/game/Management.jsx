@@ -63,7 +63,7 @@ export default function Management({ game, world, act, busy, mode }) {
       <div className="progression-ribbon">
         <div><Target size={18} /><span>Limite operacional</span><strong>{game.progression?.mission_cap || 3} ocorrências</strong></div>
         <div><ShieldCheck size={18} /><span>Modelos desbloqueados</span><strong>{game.progression?.unlocked_missions?.length || 0} de {world.mission_definitions.length}</strong></div>
-        <div><Users size={18} /><span>Pessoal na rede</span><strong>{game.bases.reduce((sum, base) => sum + (base.personnel || 0), 0)} elementos</strong></div>
+        <div><Users size={18} /><span>Pessoal na rede</span><strong>{game.bases.reduce((sum, base) => sum + (base.personnel || 0), 0)} elementos</strong></div><div><ShieldCheck size={18} /><span>Financiamento público</span><strong>{money(game.public_funding||0)}</strong></div>
       </div>
       <div className="section-line"><h2>Infraestrutura ativa</h2><span>DESENVOLVIMENTO DA REDE</span></div>
       <div className="base-grid">{game.bases.map((base, index) => {
