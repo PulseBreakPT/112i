@@ -11,12 +11,22 @@ const withinResponseRange = (g, unit, incident, distanceMeters) => {
   return responseDistanceKm(unit, incident, distanceMeters) <= Math.min(policyMax, unitMax);
 };
 
+export const hasOperationalResources = unit => {
+  const resources=unit.resources||{};
+  if((resources.fuel??100)<=5)return false;
+  if(unit.service==='fire')return (resources.water??3000)>=150;
+  if(unit.service==='medical')return (resources.oxygen??100)>=8&&(resources.medical??100)>=8;
+  if(unit.service==='police')return (resources.equipment??100)>=8;
+  return true;
+};
+
 const dispatchable = (g, unit, incident, distanceMeters) =>
   operationalUnit(unit, g.dispatch_policy?.allow_returning_redirect===true) &&
   unit.exclude_from_arr!==true &&
   unit.land===incident.land &&
   (unit.condition||100)>20 &&
   (unit.fatigue||0)<90 &&
+  hasOperationalResources(unit) &&
   withinResponseRange(g, unit, incident, distanceMeters);
 
 export function selectArrUnitIds(g,incidentId,arrId,{requireValue,distanceMeters}){
