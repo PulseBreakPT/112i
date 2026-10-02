@@ -31,12 +31,15 @@ export default function Operations({ game, world, act, busy }) {
   const trainings = game.trainings || [];
   const hospitals = facilities.filter(facility => facility.type === 'hospital' && (!facility.operational_at || facility.operational_at <= game.elapsed));
   const prisons = facilities.filter(facility => facility.type === 'prison' && (!facility.operational_at || facility.operational_at <= game.elapsed));
-  const academy = facilities.some(facility => facility.type === 'academy' && facility.enabled!==false && (!facility.operational_at || facility.operational_at <= game.elapsed)) || (game.cooperation?.support?.academy||0)>0;
   const definition = world.facility_catalog[facilityType];
   const buildPrice = Math.round(definition.cost * (1 + facilities.length * .06));
   const selectedCourse = world.training_catalog.find(item => item.id === course);
-  const trainingPrice = Math.round((selectedCourse?.cost||0) * trainingCount * .75);
   const compatibleBases = useMemo(() => game.bases.filter(base => base.service === selectedCourse?.service), [game.bases, selectedCourse]);
+  const selectedTrainingBase = game.bases.find(base => base.id === trainingBase);
+  const localAcademy = !!selectedTrainingBase && facilities.some(facility => facility.type === 'academy' && facility.command_center_id===selectedTrainingBase.command_center_id && facility.enabled!==false && (!facility.operational_at || facility.operational_at <= game.elapsed));
+  const sharedAcademy = (game.cooperation?.support?.academy||0)>0;
+  const academy = localAcademy || sharedAcademy;
+  const trainingPrice = Math.round((selectedCourse?.cost||0) * trainingCount * (sharedAcademy&&!localAcademy ? .65 : .75));
 
   const run = async (kind, data, success) => {
     const next = await act(kind, data);
@@ -84,7 +87,7 @@ export default function Operations({ game, world, act, busy }) {
           <div className="facility-card-top"><span><Icon size={16} />{FACILITY_LABELS[facility.type].eyebrow}</span><b>{facility.operational_at > game.elapsed ? `OBRAS · ${Math.ceil((facility.operational_at-game.elapsed)/60)} MIN` : `NÍVEL ${facility.level}`}</b></div>
           <h3>{facility.name}</h3><p>{facility.city} · {info.name}</p>
           <div className="facility-meter"><span>{facility.type === 'hospital' ? 'Camas ocupadas' : facility.type === 'prison' ? 'Celas ocupadas' : 'Lugares em uso'}</span><strong>{occupancy(facility)}/{facility.capacity}</strong><i><b style={{ width:`${Math.min(100, occupancy(facility) / facility.capacity * 100)}%` }} /></i></div>
-          {facility.type==='hospital'&&<div className="hospital-specialties"><div>{(facility.specialties||['urgency']).map(id=><span key={id}>{world.hospital_specialties.find(item=>item.id===id)?.name||id}</span>)}</div>{world.hospital_specialties.some(item=>!(facility.specialties||[]).includes(item.id))&&<label>Nova especialidade<select value={specialtyChoices[facility.id]||world.hospital_specialties.find(item=>!(facility.specialties||[]).includes(item.id))?.id} onChange={event=>setSpecialtyChoices(current=>({...current,[facility.id]:event.target.value}))}>{world.hospital_specialties.filter(item=>!(facility.specialties||[]).includes(item.id)).map(item=><option value={item.id} key={item.id}>{item.name} · {money(item.cost)}</option>)}</select><button onClick={()=>run('add_hospital_specialty',{facility_id:facility.id,specialty_id:specialtyChoices[facility.id]||world.hospital_specialties.find(item=>!(facility.specialties||[]).includes(item.id))?.id},'Especialidade hospitalar disponível.')}><Plus size={13}/> Instalar</button></label>}</div>}
+          {facility.type==='hospital'&&<div className="hospital-specialties"><div>{(facility.specialties||['urgency']).map(id=><span key={id}>{world.hospital_specialties.find(item=>item.id===id)?.name||id}</span>)}</div>{world.hospital_specialties.some(item=>!(facility.specialties||[]).includes(item.id))&&<label>Nova especialidade<select value={specialtyChoices[facility.id]||world.hospital_specialties.find(item=>!(facility.specialties||[]).includes(item.id))?.id} onChange={event=>setSpecialtyChoices(current=>({...current,[facility.id]:event.target.value}))}>{world.hospital_specialties.filter(item=>!(facility.specialties||[]).includes(item.id)).map(item=><option value={item.id} key={item.id}>{item.name} · {money(Math.round(item.cost*.75))}</option>)}</select><button onClick={()=>run('add_hospital_specialty',{facility_id:facility.id,specialty_id:specialtyChoices[facility.id]||world.hospital_specialties.find(item=>!(facility.specialties||[]).includes(item.id))?.id},'Especialidade hospitalar disponível.')}><Plus size={13}/> Instalar</button></label>}</div>}
           <button disabled={busy || facility.operational_at > game.elapsed} onClick={() => run('upgrade_facility', { facility_id:facility.id }, 'Instalação ampliada.')}><ArrowUpRight size={14} /> Ampliar · {money(2200 * facility.level)}</button>
           <button className={facility.enabled!==false?'active':''} onClick={()=>run('toggle_building_generation',{building_id:facility.id,enabled:facility.enabled===false},facility.enabled===false?'Instalação reativada.':'Instalação suspensa.')}>{facility.enabled===false?'Reativar instalação':'Suspender instalação'}</button>
         </article>;
