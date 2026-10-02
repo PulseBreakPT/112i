@@ -1,4 +1,4 @@
-import { Radio, Clock3, ChevronRight, SlidersHorizontal, Plus, CheckCheck, X, MapPin, HeartPulse, Shield, GraduationCap } from 'lucide-react';
+import { Radio, Clock3, SlidersHorizontal, Plus, CheckCheck, X, MapPin, HeartPulse, Shield, GraduationCap, Coins, Star } from 'lucide-react';
 import { useState } from 'react';
 import { SERVICE, ServiceIcon, STATUS, duration, money } from './common';
 import { useVirtualList } from './engines/virtualList';
@@ -31,6 +31,7 @@ export const IncidentPanel = ({ game, selected, onSelect, act, busy, onClose }) 
         const activeDeadline = inc.response_arrived_at ? (inc.resolution_deadline || inc.deadline) : (inc.response_deadline || inc.deadline);
         const remaining = activeDeadline - game.elapsed;
         return <button className={`incident-card ${selected === inc.id ? 'selected' : ''}`} key={inc.id} data-priority={inc.priority} data-testid={`incident-${inc.number}`} onClick={() => onSelect(inc.id)} style={{ '--service-color': SERVICE[inc.service].color }}>
+          <div className="incident-reward-primary" data-testid={`incident-reward-${inc.number}`}><span><Coins size={14} />{money(inc.reward)}</span><span><Star size={13} />{inc.xp} XP</span></div>
           <div className="incident-top">
             <span className={`priority p${inc.priority}`} data-testid={`priority-${inc.number}`}>P{inc.priority} · {inc.priority === 1 ? 'CRÍTICA' : inc.priority === 2 ? 'URGENTE' : 'MODERADA'}</span>
             <span className={`incident-timer ${remaining <= 60 ? 'critical' : remaining <= 120 ? 'warning' : ''}`} data-testid={`incident-timer-${inc.number}`} aria-label={`Tempo restante: ${duration(remaining)}`}><Clock3 size={13} />{duration(remaining)}</span>
@@ -41,7 +42,7 @@ export const IncidentPanel = ({ game, selected, onSelect, act, busy, onClose }) 
           <div className="incident-bottom">
             <div className="required-mini" aria-label="Meios necessários">{Object.entries(inc.needs).map(([service, count]) => <span key={service} title={`${count} ${SERVICE[service].name}`} style={{ '--chip-color': SERVICE[service].color }}><ServiceIcon service={service} size={13} /><b>{count}</b><span>{service === 'fire' ? 'BOMB.' : SERVICE[service].short}</span></span>)}{!!inc.required_vehicle_types?.length && <span className="special-requirement" title="Requer veículo especializado">ESP</span>}{!!inc.required_trainings?.length && <span className="special-requirement" title="Requer formação especializada"><GraduationCap size={11} /> FOR</span>}{inc.escalated && <span className="special-requirement" title="Ocorrência agravada">AGR</span>}</div>
           </div>
-          <div className="incident-secondary"><div className="incident-impact"><span>{inc.difficulty || 'Média'}</span>{inc.operational_phases?.[inc.active_phase] && <span>{inc.operational_phases[inc.active_phase]}</span>}{inc.casualties > 0 && <span data-tone="warning"><HeartPulse size={12} />{inc.casualties} ferido{inc.casualties !== 1 ? 's' : ''}</span>}{inc.detainees > 0 && <span data-tone="active"><Shield size={12} />{inc.detainees} detido{inc.detainees !== 1 ? 's' : ''}</span>}</div><span className="incident-reward">{money(inc.reward)}<ChevronRight size={14} /></span></div>
+          <div className="incident-secondary"><div className="incident-impact"><span>{inc.difficulty || 'Média'}</span>{inc.operational_phases?.[inc.active_phase] && <span>{inc.operational_phases[inc.active_phase]}</span>}{inc.casualties > 0 && <span data-tone="warning"><HeartPulse size={12} />{inc.casualties} ferido{inc.casualties !== 1 ? 's' : ''}</span>}{inc.detainees > 0 && <span data-tone="active"><Shield size={12} />{inc.detainees} detido{inc.detainees !== 1 ? 's' : ''}</span>}</div></div>
         </button>;
       })}
       {!!virtual.paddingBottom && <div style={{ height: virtual.paddingBottom, flex: '0 0 auto' }} />}

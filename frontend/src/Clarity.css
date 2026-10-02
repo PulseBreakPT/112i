@@ -161,6 +161,9 @@
 .minimal-shell .incident-impact { margin: 0; gap: 5px; }
 .minimal-shell .incident-impact > span { padding: 0; border: 0; text-transform: none; font: 11px/1.5 'Barlow', sans-serif; color: #b1bbc9; }
 .incident-reward { display: inline-flex; align-items: center; gap: 4px; color: #b8c1ce; font: 10px var(--mono); white-space: nowrap; }
+.incident-reward-primary { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: -2px 0 12px; padding: 9px 10px; border: 1px solid #d9b9694a; border-radius: 7px; background: linear-gradient(120deg, #d9b96916, #9cc5ff0b); color: #f2d994; font: 700 12px/1 var(--mono); }
+.incident-reward-primary > span { display: inline-flex; align-items: center; gap: 5px; }
+.incident-reward-primary > span:last-child { color: #bad7ff; }
 .minimal-shell .incident-impact > span[data-tone="warning"], .minimal-shell .mission-facts > span[data-tone="warning"] { color: var(--status-warning); }
 .minimal-shell .incident-impact > span[data-tone="active"], .minimal-shell .mission-facts > span[data-tone="active"] { color: var(--status-active); }
 .minimal-shell .tactical-drawer .new-incident { min-height: 42px; margin: 10px 14px 14px; font-size: 13px; color: #d2dae6; background: #202630; border: 1px solid #505d6f; border-radius: 8px; }
@@ -201,6 +204,14 @@
 .minimal-shell .units-heading > span { font: 11px var(--mono); color: var(--status-success); background: #8ae2b50c; border-color: #8ae2b53d; padding: 3px 6px; }
 .minimal-shell .route-estimate-action { min-height: 38px; margin: 0 20px 9px; padding: 8px 10px; font-size: 12px; border-color: #455367; color: #c9ddfa; border-radius: 6px; background: #9cc5ff07; }
 .minimal-shell .route-estimate-action:hover:not(:disabled) { border-color: #8bacdb; background: #9cc5ff12; }
+.minimal-shell .dispatch-automation { min-height: 46px; margin-top: 12px; justify-content: space-between; font-weight: 700; color: #edf5ff !important; background: linear-gradient(120deg, #365174, #263b55) !important; border-color: #7ba4d8 !important; }
+.minimal-shell .dispatch-automation:hover:not(:disabled) { background: linear-gradient(120deg, #42648e, #304b6b) !important; }
+.minimal-shell .share-alliance-action { margin: 14px 0 0; width: 100%; }
+.dispatch-reward-primary { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 15px; }
+.dispatch-reward-primary > span { min-width: 0; padding: 10px 11px; border: 1px solid #ffffff1d; border-radius: 8px; background: #ffffff08; }
+.dispatch-reward-primary small { display: block; margin-bottom: 6px; color: #9ca9ba; font: 700 7px/1 var(--mono); letter-spacing: 1px; }
+.dispatch-reward-primary b { display: flex; align-items: center; gap: 6px; color: #f4d98e; font: 700 15px/1.2 var(--mono); white-space: nowrap; }
+.dispatch-reward-primary > span:last-child b { color: #bdd9ff; }
 .minimal-shell .route-estimate-action:disabled { color: #aab6c6; border-color: #3a4453; background: #1b2028; }
 .minimal-shell .units-scroll { padding: 0 13px 16px; }
 .minimal-shell .tactical-drawer .unit-choice { gap: 10px; padding: 12px 9px; margin-top: 5px; border: 1px solid #343e4c; border-radius: 8px; background: #1b212a; }
@@ -631,6 +642,16 @@
   .minimal-shell .operations-tabs { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 600px) {
+  .minimal-shell .dispatch-content { overflow-x: hidden; }
+  .minimal-shell .dispatch-reward-primary { position: sticky; top: 0; z-index: 2; margin: -2px -2px 13px; padding: 5px; border-radius: 9px; background: #171d26f2; backdrop-filter: blur(12px); }
+  .minimal-shell .dispatch-reward-primary > span { padding: 9px; }
+  .minimal-shell .dispatch-reward-primary b { font-size: 13px; }
+  .minimal-shell .dispatch-automation { min-height: 48px; margin: 11px 14px 12px; width: calc(100% - 28px); font-size: 11px; }
+  .minimal-shell .units-heading { padding-top: 11px; }
+  .minimal-shell .unit-choice { min-height: 58px; align-items: center; }
+  .minimal-shell .unit-choice-right { max-width: 82px; }
+  .minimal-shell .unit-ready { white-space: normal; text-align: right; line-height: 1.25; }
+  .minimal-shell .incident-reward-primary { margin-bottom: 10px; padding: 8px 9px; font-size: 11px; }
   .minimal-shell .minimal-hud { top: max(12px, env(safe-area-inset-top)); left: 12px; right: 12px; height: 54px; gap: 7px; }
   .minimal-shell .minimal-brand { padding: 0 10px; gap: 6px; border-radius: 10px; }
   .minimal-shell .minimal-brand > svg { width: 16px; height: 16px; }

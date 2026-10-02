@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { fetchRoadRoute } from './localGame';
-import { ArrowUpRight, Check, MapPin, Radio, Send, PhoneIncoming, Crosshair, X, ClipboardList, HeartPulse, Shield, Gauge, Clock3, ChevronDown, CarFront, GraduationCap } from 'lucide-react';
+import { ArrowUpRight, Check, MapPin, Radio, Send, PhoneIncoming, Crosshair, X, ClipboardList, HeartPulse, Shield, Gauge, Clock3, ChevronDown, CarFront, GraduationCap, Coins, Star } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { SERVICE, ServiceIcon, STATUS, money, duration } from './common';
 import { operationalText } from './operationalLanguage';
@@ -15,7 +15,20 @@ export const DispatchPanel = ({ game, world, incident, act, busy, onCall, onFocu
   const assigned = game.units.filter(u => u.incident_id === incident?.id);
   const needed = s => Math.max(0, (incident?.needs[s] || 0) - assigned.filter(u => u.service === s).length);
   const trainingName = id => world.training_catalog?.find(item => item.id === id)?.name || id;
-  const send = async () => { const routes=Object.fromEntries(picked.filter(id=>estimates[id]).map(id=>[id,estimates[id]]));const result = await act('dispatch', { incident_id: incident.id, unit_ids: picked, routes }); if (result) setPicked([]); };
+  const send = async () => {
+    setEstimating(true);
+    const routes={...estimates};
+    try {
+      const missing=available.filter(unit=>picked.includes(unit.id)&&!routes[unit.id]);
+      const prepared=await Promise.all(missing.map(async unit=>[unit.id,await fetchRoadRoute({lng:unit.lng,lat:unit.lat},incident.node,game.conditions)]));
+      prepared.forEach(([id,route])=>{routes[id]=route;});
+      setEstimates(routes);
+      const result=await act('dispatch',{incident_id:incident.id,unit_ids:picked,routes:Object.fromEntries(picked.map(id=>[id,routes[id]]))});
+      if(result)setPicked([]);
+    } catch(error) {
+      setEstimates(current=>({...current,_error:{error:operationalText(error?.message||'Não foi possível preparar os percursos.')}}));
+    } finally { setEstimating(false); }
+  };
   const estimateRoutes = async (autoSelect=false) => {
     const request = ++estimateRequest.current;
     setEstimating(true);
@@ -44,6 +57,7 @@ export const DispatchPanel = ({ game, world, incident, act, busy, onCall, onFocu
     {!incident ? <div className="empty-state" data-testid="dispatch-empty"><Radio size={35} /><strong>Central em escuta</strong><p>Nenhuma ocorrência selecionada.</p></div> : <>
       <div className="dispatch-content">
         <div className="dispatch-detail">
+          <div className="dispatch-reward-primary" data-testid="selected-incident-reward"><span><small>RECOMPENSA</small><b><Coins size={16} />{money(incident.reward)}</b></span><span><small>EXPERIÊNCIA</small><b><Star size={15} />{incident.xp} XP</b></span></div>
           <div className="detail-eyebrow"><span className={`priority p${incident.priority}`}>P{incident.priority} · {incident.priority === 1 ? 'CRÍTICA' : incident.priority === 2 ? 'URGENTE' : 'MODERADA'}</span><span className="service-tag" style={{ '--chip-color': SERVICE[incident.service].color }}><ServiceIcon service={incident.service} size={13} />{SERVICE[incident.service].short}</span></div>
           <h2 data-testid="selected-incident-title">{incident.title}</h2>
           <button className="location-link" data-testid="focus-incident" onClick={onFocus}><MapPin size={14} /><span>{incident.address || incident.district}</span><ArrowUpRight size={14} /></button>
@@ -56,13 +70,8 @@ export const DispatchPanel = ({ game, world, incident, act, busy, onCall, onFocu
       {!!incident.required_trainings?.length && <div className="specialized-requirements"><h3>FORMAÇÃO OBRIGATÓRIA</h3><div>{incident.required_trainings.map(training => {const present=assigned.some(unit=>(unit.personnel_ids||[]).some(id=>(game.personnel||[]).find(person=>person.id===id)?.qualifications?.includes(training)));return <span className={present ? 'ready' : ''} key={training}><GraduationCap size={12} />{trainingName(training)}{present && <Check size={11} />}</span>;})}</div></div>}
       {assigned.length > 0 && <div className="assigned-units"><h3>MEIOS MOBILIZADOS</h3>{assigned.map(u => <div key={u.id} data-testid={`assigned-${u.name}`}><VehicleThumbnail unit={u} className="assigned-vehicle-thumbnail" /><b>{u.callsign||u.name}</b><span className="route-distance">{(u.route_distance / 1000).toFixed(1)} km</span><span className={`state-label ${u.status}`}>{['enroute', 'returning'].includes(u.status) ? `${duration(u.travel_total - u.travel)} · ${STATUS[u.status]}` : STATUS[u.status] || 'Estado indisponível'}</span>{u.status==='enroute'&&<button className="unit-recall" onClick={()=>act('recall_unit',{unit_id:u.id})}>Recolher</button>}</div>)}{incident.status === 'onscene' && <div className="resolution-progress" data-testid="resolution-progress"><i style={{ width: `${incident.progress}%` }} /></div>}</div>}
       <div className="units-heading"><h3>Seleciona os meios</h3><span data-testid="available-unit-count">{available.length} disponíveis</span></div>
-      {!incident.shared_with_alliance && <button className="route-estimate-action" data-testid="share-alliance-button" disabled={busy} onClick={() => act('share_incident_to_alliance', { incident_id: incident.id })}><Radio size={14} />Partilhar com a rede cooperativa<ArrowUpRight size={14} /></button>}
       {incident.shared_with_alliance && <p className="route-estimate-note" data-testid="shared-alliance-note">Ocorrência partilhada com a rede cooperativa. O prazo operacional recebeu margem adicional.</p>}
-      <button className="route-estimate-action" data-testid="estimate-routes-button" disabled={estimating || !available.some(u => needed(u.service) && u.land === incident.land)} onClick={()=>estimateRoutes(false)}><MapPin size={14} />{estimating ? 'A calcular percursos…' : 'Estimar tempos de chegada'}<ArrowUpRight size={14} /></button>
-      <button className="route-estimate-action smart-dispatch" data-testid="smart-dispatch-button" disabled={busy || estimating || !available.some(u => u.land === incident.land)} onClick={()=>act('dispatch_recommended',{incident_id:incident.id,mode:'safe'})}><Gauge size={14} />Despacho seguro<ArrowUpRight size={14} /></button>
-      <button className="route-estimate-action" data-testid="minimum-dispatch-button" disabled={busy || estimating || !available.some(u => u.land === incident.land)} onClick={()=>act('dispatch_recommended',{incident_id:incident.id,mode:'minimum'})}><Gauge size={14} />Despacho mínimo<ArrowUpRight size={14} /></button>
-      <button className="route-estimate-action" data-testid="full-dispatch-button" disabled={busy || estimating || !available.some(u => u.land === incident.land)} onClick={()=>act('dispatch_recommended',{incident_id:incident.id,mode:'full'})}><Gauge size={14} />Despacho total<ArrowUpRight size={14} /></button>
-      <button className="route-estimate-action" data-testid="smart-select-button" disabled={estimating || !available.some(u => needed(u.service) && u.land === incident.land)} onClick={()=>estimateRoutes(true)}><Gauge size={14} />Pré-selecionar meios rápidos<ArrowUpRight size={14} /></button>
+      <button className="route-estimate-action smart-dispatch dispatch-automation" data-testid="smart-select-button" disabled={busy || estimating || !available.some(u => needed(u.service) && u.land === incident.land)} onClick={()=>estimateRoutes(true)}><Gauge size={16} />{estimating ? 'A analisar meios e percursos…' : 'Selecionar viaturas automaticamente'}<ArrowUpRight size={15} /></button>
       {Object.values(estimates).some(route => route.error) && <p className="route-estimate-note route-estimate-error" role="alert">{Object.values(estimates).find(route => route.error).error}</p>}
       <div className="units-scroll">{available.map(u => {
         const selected = picked.includes(u.id);
@@ -81,10 +90,10 @@ export const DispatchPanel = ({ game, world, incident, act, busy, onCall, onFocu
       <details className="dispatch-foldout mission-briefing" key={`briefing-${incident.id}`}><summary><Radio size={15} />Detalhes da ocorrência<ChevronDown size={15} /></summary>
         <p data-testid="selected-incident-description">{incident.description}</p>
         <div className="mission-facts"><span><Gauge size={13} />{incident.difficulty || 'Média'}</span>{incident.operational_phases?.[incident.active_phase] && <span>{incident.operational_phases[incident.active_phase]}</span>}<span><CarFront size={13} />{incident.required_vehicle_types?.length || 0} viaturas esp.</span><span><GraduationCap size={13} />{incident.required_trainings?.length || 0} formações</span><span data-tone={incident.casualties > 0 ? 'warning' : undefined}><HeartPulse size={13} />{incident.casualties || 0} feridos</span><span data-tone={incident.detainees > 0 ? 'active' : undefined}><Shield size={13} />{incident.detainees || 0} detidos</span></div>
-        <div className="dispatch-reward"><span>Receita prevista</span><b data-testid="selected-incident-reward">{money(incident.reward)} <small>+{incident.xp} XP</small></b></div>
+        {!incident.shared_with_alliance && <button className="route-estimate-action share-alliance-action" data-testid="share-alliance-button" disabled={busy} onClick={() => act('share_incident_to_alliance', { incident_id: incident.id })}><Radio size={14} />Partilhar com a rede cooperativa<ArrowUpRight size={14} /></button>}
         <p className="route-estimate-note">Percursos reais · OSRM / OpenStreetMap. Tempos estimados, sem trânsito em direto. A velocidade do jogo acelera o relógio, não a viatura.</p>
       </details>
-      </div><div className="dispatch-bottom"><div><span data-testid="selected-unit-count">{picked.length} meio{picked.length !== 1 ? 's' : ''} selecionado{picked.length !== 1 ? 's' : ''}</span><span className="dispatch-selection-state" data-ready={picked.length > 0}>{picked.length ? 'Mobilização pronta' : 'Seleciona os meios'}</span></div><Button className="dispatch-button" data-testid="dispatch-action-button" disabled={!picked.length || busy} onClick={send}><Send size={17} /> {busy ? 'A preparar percursos…' : 'Mobilizar meios'} <ArrowUpRight size={17} /></Button></div>
+      </div><div className="dispatch-bottom"><div><span data-testid="selected-unit-count">{picked.length} meio{picked.length !== 1 ? 's' : ''} selecionado{picked.length !== 1 ? 's' : ''}</span><span className="dispatch-selection-state" data-ready={picked.length > 0}>{picked.length ? 'Mobilização pronta' : 'Seleciona os meios'}</span></div><Button className="dispatch-button" data-testid="dispatch-action-button" disabled={!picked.length || busy || estimating} onClick={send}><Send size={17} /> {estimating ? 'A preparar percursos…' : busy ? 'A mobilizar…' : 'Mobilizar meios'} <ArrowUpRight size={17} /></Button></div>
     </>}
   </aside>;
 };
