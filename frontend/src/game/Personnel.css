@@ -91,7 +91,7 @@
 .personnel-sheet-sections p b{color:var(--distrito-text);font:700 9px var(--mono)}
 .personnel-sheet-training{grid-column:1/-1}
 .personnel-sheet-training>div{display:flex;flex-wrap:wrap;gap:5px}
-.personnel-sheet-training span{padding:5px 7px;color:var(--distrito-secondary);border:1px solid var(--distrito-edge);border-radius:5px;background:var(--distrito-control);font-size:8px;color:var(--distrito-secondary);border-color:var(--distrito-edge);background:var(--distrito-control)}
+.personnel-sheet-training span{padding:5px 7px;color:var(--distrito-secondary);border:1px solid var(--distrito-edge);border-radius:5px;background:var(--distrito-control);font-size:8px}
 .personnel-sheet-training small{color:var(--distrito-muted);font-size:8px}
 
 @media(max-width:1050px){
