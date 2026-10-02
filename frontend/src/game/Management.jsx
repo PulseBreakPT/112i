@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { SERVICE, ServiceIcon, money, STATUS, duration } from './common';
 import { vehicleImage, VehicleThumbnail } from './vehicleMedia';
 import { fetchRoadRoute } from './localGame';
-import { vehicleRatings, maintenanceQuote, resaleValue, crewFatigue } from './vehicleSystems';
+import { vehicleRatings, maintenanceQuote, resaleValue, crewFatigue, adjustedRoutePlan, fuelPercentForDistance } from './vehicleSystems';
 import FleetAdvancedControls from './FleetAdvancedControls';
 import OperationalComplexes from './OperationalComplexes';
 const VehicleArt = ({ service, vehicleType, name }) => {
@@ -52,6 +52,7 @@ export default function Management({ game, world, act, busy, mode }) {
   const selectedRatings = selectedUnit ? vehicleRatings(selectedUnit, selectedDefinition || selectedUnit) : null;
   const selectedMaintenance = selectedUnit ? maintenanceQuote(selectedUnit, selectedDefinition || selectedUnit) : null;
   const selectedResale = selectedUnit ? resaleValue(selectedUnit, selectedDefinition || selectedUnit, game.elapsed) : 0;
+  const transferVehiclePlan = selectedUnit && transferEstimate?.route ? adjustedRoutePlan(selectedUnit, transferEstimate.route, 'base_transfer') : null;
   const requiredTrainingName = requiredTraining ? world.training_catalog?.find(course => course.id === requiredTraining)?.name || requiredTraining : null;
   const selectedCrew = selectedUnit ? (selectedUnit.personnel_ids || []).map(id => (game.personnel || []).find(person => person.id === id)).filter(Boolean) : [];
   const freeBaseCrew = selectedUnit && selectedBase ? (game.personnel || []).filter(person => person.base_id === selectedBase.id && person.service === selectedUnit.service && !person.unit_id && person.status === 'available') : [];
@@ -226,7 +227,7 @@ export default function Management({ game, world, act, busy, mode }) {
               {!unitAtBase && <p className="vehicle-command-warning">A viatura tem de estar disponível e fisicamente na base antes de poder ser transferida.</p>}
               {transferBusy && <div className="transfer-estimate loading"><Clock3 size={15} /> A calcular percurso rodoviário...</div>}
               {transferEstimate?.error && <div className="transfer-estimate error">{transferEstimate.error}</div>}
-              {transferEstimate?.route && transferEstimate.base_id === targetBaseId && <div className="transfer-estimate"><div><Navigation size={15} /><span><small>DISTÂNCIA</small><strong>{(transferEstimate.route.distance / 1000).toFixed(1)} km</strong></span></div><div><Clock3 size={15} /><span><small>TEMPO</small><strong>{duration(transferEstimate.route.duration)}</strong></span></div><div><span><small>COMBUSTÍVEL EST.</small><strong>{Math.max(.2, transferEstimate.route.distance / 1000 * .42).toFixed(1)}</strong></span></div></div>}
+              {transferEstimate?.route && transferEstimate.base_id === targetBaseId && <div className="transfer-estimate"><div><Navigation size={15} /><span><small>DISTÂNCIA</small><strong>{(transferEstimate.route.distance / 1000).toFixed(1)} km</strong></span></div><div><Clock3 size={15} /><span><small>TEMPO</small><strong>{duration(transferVehiclePlan?.duration || transferEstimate.route.duration)}</strong></span></div><div><span><small>COMBUSTÍVEL EST.</small><strong>{fuelPercentForDistance(selectedUnit, transferEstimate.route.distance, 2).toFixed(1)}%</strong></span></div></div>}
               <label className="vehicle-fixed-crew"><input type="checkbox" checked={selectedUnit.fixed_crew === true} disabled={busy} onChange={event => run('update_advanced_unit', { unit_id: selectedUnit.id, fixed_crew: event.target.checked }, event.target.checked ? 'A tripulação acompanhará futuras transferências.' : 'A tripulação será substituída na base de destino.')} /><span><b>Levar a tripulação atual</b><small>Se desligado, a equipa atual fica na origem e a base de destino atribui uma nova equipa disponível.</small></span></label>
               <Button className="primary-button transfer-start-button" disabled={busy || transferBusy || !unitAtBase || !transferTarget || transferTargetCount >= (transferTarget?.capacity || 2) || !transferEstimate?.route || transferEstimate.base_id !== targetBaseId} onClick={startTransfer}><Navigation size={15} /> Iniciar transferência</Button>
             </>}
