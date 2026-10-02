@@ -1580,6 +1580,6 @@ export const normalizePersonnelProfile = (person,index=0) => {
     profile_index:profileIndex,
     experience,
     level:personnelLevel(experience),
-    rank:person?.rank||personnelRank(experience),
+    rank:personnelRank(experience),
   };
 };
