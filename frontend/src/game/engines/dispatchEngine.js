@@ -34,7 +34,8 @@ export function selectArrUnitIds(g,incidentId,arrId,{requireValue,distanceMeters
   const inc=g.incidents.find(i=>i.id===incidentId),arr=g.arrs.find(item=>item.id===arrId);
   requireValue(inc&&arr,'Ocorrência ou regulamento inválido.');
   const pool=g.units.filter(unit=>dispatchable(g,unit,inc,distanceMeters)),chosen=[];
-  const byDistance = items => [...items].sort((a,b)=>responseDistanceKm(a,inc,distanceMeters)-responseDistanceKm(b,inc,distanceMeters));
+  const arrivalCost = unit => responseDistanceKm(unit,inc,distanceMeters)*1000+(Number(unit.response_delay)||0)*15;
+  const byDistance = items => [...items].sort((a,b)=>arrivalCost(a)-arrivalCost(b));
   for(const [type,count] of Object.entries(arr.vehicles||{}))
     byDistance(pool.filter(unit=>unit.vehicle_type===type&&!chosen.includes(unit))).slice(0,count).forEach(unit=>chosen.push(unit));
   for(const [service,need] of Object.entries(inc.needs)){
@@ -67,7 +68,8 @@ export function selectRecommendedUnitIds(g,incidentId,mode='safe',{requireValue,
       return (inc.required_trainings||[]).some(training=>(person?.qualifications||[]).includes(training));
     });
     const distancePenalty=responseDistanceKm(unit,inc,distanceMeters)*1000*(preferFastest?1:.28);
-    return distancePenalty+
+    const preparationPenalty=(Number(unit.response_delay)||0)*(preferFastest?15:5);
+    return distancePenalty+preparationPenalty+
       (unit.status==='staged'?-2500:0)+(unit.status==='patrol'?-1200:0)+(unit.status==='returning'?600:0)+
       (specialist?-3200:0)+(trained?-1400:0)+(definition?.training?-400:0)+
       (unit.fatigue||0)*90+(100-(unit.condition||100))*60;
