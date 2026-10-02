@@ -1502,3 +1502,84 @@ export const PERSONNEL_PROFILES = [
     "name": "Zulmira Melgaço"
   }
 ];
+
+
+export const PERSONNEL_TRAITS = ['Calmo','Resiliente','Metódico','Comunicador','Líder nato','Prudente','Ágil','Observador'];
+
+export const PERSONNEL_SPECIALIZATIONS = {
+  fire:['Combate urbano','Salvamento','Incêndio rural','Matérias perigosas','Comando de equipa'],
+  medical:['Emergência pré-hospitalar','Trauma','Triagem','Suporte avançado','Condução urgente'],
+  police:['Patrulhamento','Trânsito','Investigação','Ordem pública','Custódia'],
+};
+
+const clamp = value => Math.max(0,Math.min(100,Math.round(value)));
+const profileStat = (index,salt,min=45,spread=41) => min+((Math.max(0,index)+1)*37+salt*23)%spread;
+
+export const personnelLevel = experience => Math.max(1,Math.min(10,1+Math.floor(Math.max(0,Number(experience)||0)/100)));
+export const personnelRank = experience => (Number(experience)||0)>=500?'Chefe':(Number(experience)||0)>=200?'Graduado':'Operacional';
+
+export const personnelDefaults = (profileIndex=0,service='fire') => {
+  const index=Math.max(0,Number(profileIndex)||0),trait=PERSONNEL_TRAITS[index%PERSONNEL_TRAITS.length];
+  const age=22+((index*7+11)%37),serviceYears=Math.min(age-19,(index*5+3)%21);
+  const traitBonus=(key,value)=>{
+    const bonuses={
+      'Calmo':{decision_making:7,stress:-4},
+      'Resiliente':{endurance:8,health:4},
+      'Metódico':{discipline:8,skill:5},
+      'Comunicador':{communication:9,teamwork:6},
+      'Líder nato':{leadership:10,teamwork:4},
+      'Prudente':{decision_making:5,discipline:6},
+      'Ágil':{response_speed:9,emergency_driving:5},
+      'Observador':{decision_making:7,skill:4},
+    };
+    return value+(bonuses[trait]?.[key]||0);
+  };
+  const firstAid=profileStat(index,6,42,42)+(service==='medical'?12:service==='fire'?4:0);
+  const specializations=PERSONNEL_SPECIALIZATIONS[service]||['Operações gerais'];
+  const skill=clamp(traitBonus('skill',profileStat(index,1,50,36)));
+  return {
+    age,
+    service_years:serviceYears,
+    level:1,
+    morale:clamp(profileStat(index,2,78,18)),
+    health:clamp(traitBonus('health',profileStat(index,3,90,11))),
+    stress:clamp(traitBonus('stress',profileStat(index,4,6,16))),
+    skill,
+    response_speed:clamp(traitBonus('response_speed',profileStat(index,5,50,41))),
+    decision_making:clamp(traitBonus('decision_making',profileStat(index,7,48,41))),
+    teamwork:clamp(traitBonus('teamwork',profileStat(index,8,54,37))),
+    discipline:clamp(traitBonus('discipline',profileStat(index,9,52,41))),
+    endurance:clamp(traitBonus('endurance',profileStat(index,10,50,41))),
+    first_aid:clamp(firstAid),
+    emergency_driving:clamp(traitBonus('emergency_driving',profileStat(index,11,45,43))),
+    leadership:clamp(traitBonus('leadership',profileStat(index,12,40,43))),
+    communication:clamp(traitBonus('communication',profileStat(index,13,50,41))),
+    team_affinity:clamp(profileStat(index,14,55,36)),
+    specialization:specializations[index%specializations.length],
+    trait,
+    salary:Math.round(1080+serviceYears*24+skill*3.2),
+    missions_completed:0,
+    successes:0,
+    failures:0,
+    injuries:0,
+    commendations:0,
+  };
+};
+
+export const normalizePersonnelProfile = (person,index=0) => {
+  const profileIndex=Number.isInteger(person?.profile_index)?person.profile_index:index%PERSONNEL_PROFILES.length;
+  const defaults=personnelDefaults(profileIndex,person?.service||'fire');
+  const experience=Math.max(0,Number(person?.experience)||0);
+  return {
+    ...defaults,
+    unit_id:null,
+    status:'available',
+    qualifications:[],
+    fatigue:0,
+    ...person,
+    profile_index:profileIndex,
+    experience,
+    level:personnelLevel(experience),
+    rank:person?.rank||personnelRank(experience),
+  };
+};
