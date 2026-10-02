@@ -219,6 +219,50 @@ test('vehicle transfers reserve capacity and take time', () => {
   expect(game.units.find(item=>item.id===unit.id).base_id).toBe(target.id);
 });
 
+test('routed vehicle transfers move along the prepared road route and finish at the target base', () => {
+  let game=newGame();game.money=100000;
+  const center=game.command_centers[0];
+  game=applyAction(game,'build_base',{service:'fire',site_id:'porto-campanha',command_center_id:center.id});
+  game=tickGame(game,181);
+  const target=game.bases.find(base=>base.service==='fire'&&base.node==='porto-campanha');
+  const unit=game.units.find(item=>item.service==='fire');
+  const origin=game.bases.find(base=>base.id===unit.base_id);
+  const route={coordinates:[[origin.lng,origin.lat],[(origin.lng+target.lng)/2,(origin.lat+target.lat)/2],[target.lng,target.lat]],times:[0,60,120],duration:120,distance:2400};
+  game=applyAction(game,'transfer_unit',{unit_id:unit.id,base_id:target.id,route});
+  let moving=game.units.find(item=>item.id===unit.id);
+  expect(moving.status).toBe('base_transfer');
+  expect(moving.route).toHaveLength(3);
+  expect(moving.travel_total).toBe(120);
+  game=tickGame(game,61);
+  moving=game.units.find(item=>item.id===unit.id);
+  expect(moving.base_id).toBe(origin.id);
+  expect(moving.travel).toBeGreaterThan(0);
+  expect(moving.lng).not.toBe(origin.lng);
+  game=tickGame(game,60);
+  const arrived=game.units.find(item=>item.id===unit.id);
+  expect(arrived.base_id).toBe(target.id);
+  expect(arrived.status).toMatch(/available|uncrewed/);
+  expect(arrived.route).toHaveLength(0);
+});
+
+test('vehicle crew can be removed and assigned individually while the unit is at its base', () => {
+  let game=newGame();
+  const unit=game.units.find(item=>item.service==='fire');
+  const originalPersonId=unit.personnel_ids[0];
+  game=applyAction(game,'remove_unit_personnel',{unit_id:unit.id,person_id:originalPersonId});
+  let changed=game.units.find(item=>item.id===unit.id);
+  let person=game.personnel.find(item=>item.id===originalPersonId);
+  expect(changed.personnel_ids).not.toContain(originalPersonId);
+  expect(person.unit_id).toBeNull();
+  expect(person.status).toBe('available');
+  game=applyAction(game,'assign_unit_personnel',{unit_id:unit.id,person_id:originalPersonId});
+  changed=game.units.find(item=>item.id===unit.id);
+  person=game.personnel.find(item=>item.id===originalPersonId);
+  expect(changed.personnel_ids).toContain(originalPersonId);
+  expect(person.unit_id).toBe(unit.id);
+  expect(person.status).toBe('assigned');
+});
+
 test('protected reserve funding is not counted as operational earnings', () => {
   let game=newGame();
   game.money=0;game.next_upkeep=999999;
