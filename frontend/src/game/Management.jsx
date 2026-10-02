@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { SERVICE, ServiceIcon, money, STATUS, duration } from './common';
 import { vehicleImage, VehicleThumbnail } from './vehicleMedia';
 import { fetchRoadRoute } from './localGame';
+import { vehicleRatings, maintenanceQuote, resaleValue, crewFatigue } from './vehicleSystems';
 import FleetAdvancedControls from './FleetAdvancedControls';
 import OperationalComplexes from './OperationalComplexes';
 const VehicleArt = ({ service, vehicleType, name }) => {
@@ -48,6 +49,9 @@ export default function Management({ game, world, act, busy, mode }) {
   const selectedTransferBase = selectedUnit?.transfer_target_base_id ? game.bases.find(base => base.id === selectedUnit.transfer_target_base_id) : null;
   const selectedDefinition = selectedUnit ? world.vehicle_catalog[selectedUnit.service]?.find(vehicle => vehicle.id === selectedUnit.vehicle_type) : null;
   const requiredTraining = selectedDefinition?.training || selectedUnit?.training || null;
+  const selectedRatings = selectedUnit ? vehicleRatings(selectedUnit, selectedDefinition || selectedUnit) : null;
+  const selectedMaintenance = selectedUnit ? maintenanceQuote(selectedUnit, selectedDefinition || selectedUnit) : null;
+  const selectedResale = selectedUnit ? resaleValue(selectedUnit, selectedDefinition || selectedUnit, game.elapsed) : 0;
   const requiredTrainingName = requiredTraining ? world.training_catalog?.find(course => course.id === requiredTraining)?.name || requiredTraining : null;
   const selectedCrew = selectedUnit ? (selectedUnit.personnel_ids || []).map(id => (game.personnel || []).find(person => person.id === id)).filter(Boolean) : [];
   const freeBaseCrew = selectedUnit && selectedBase ? (game.personnel || []).filter(person => person.base_id === selectedBase.id && person.service === selectedUnit.service && !person.unit_id && person.status === 'available') : [];
@@ -104,6 +108,7 @@ export default function Management({ game, world, act, busy, mode }) {
   };
   const assignPerson = personId => selectedUnit && run('assign_unit_personnel', { unit_id: selectedUnit.id, person_id: personId }, 'Elemento atribuído à viatura.');
   const removePerson = personId => selectedUnit && run('remove_unit_personnel', { unit_id: selectedUnit.id, person_id: personId }, 'Elemento removido da viatura.');
+  const sellSelectedUnit = async () => { if (!selectedUnit) return; if (!window.confirm(`Vender ${selectedUnit.callsign || selectedUnit.name} por ${money(selectedResale)}?`)) return; if (await run('sell_vehicle', { unit_id: selectedUnit.id }, `Viatura vendida por ${money(selectedResale)}.`)) setUnitOpenId(null); };
   const openPurchase = (serviceId, vehicle) => {
     setPurchase({ service: serviceId, vehicle_type: vehicle.id });
     setBaseId(game.bases.find(base => base.service === serviceId)?.id || '');
@@ -181,7 +186,7 @@ export default function Management({ game, world, act, busy, mode }) {
         return <article key={vehicle.id} className="vehicle-card" data-testid={vehicleIndex === 0 ? `vehicle-shop-${serviceId}` : `vehicle-shop-${vehicle.id}`} style={{ '--service-color': SERVICE[serviceId].ink }}>
           <div className="vehicle-category"><ServiceIcon service={serviceId} size={17} />{SERVICE[serviceId].short}<span>{vehicle.level > 1 ? 'ESPECIALIZADA' : 'CONVENCIONAL'}</span></div>
           <VehicleArt service={serviceId} vehicleType={vehicle.id} name={vehicle.name} /><h3>{vehicle.name}</h3>
-          <p>{vehicle.crew} elementos · Base nível {vehicle.level}{extensionName ? ` · ${extensionName}` : ''}{vehicle.training ? ' · Formação obrigatória' : ''}</p>
+          <p>{vehicle.crew} elementos · {vehicle.vehicle_class} · resposta ×{Number(vehicle.speed_multiplier || 1).toFixed(2)} · {vehicle.patient_capacity || 0} vítima(s) · {vehicle.detainee_capacity || 0} detido(s) · Base nível {vehicle.level}{extensionName ? ` · ${extensionName}` : ''}{vehicle.training ? ' · Formação obrigatória' : ''}</p>
           <div className="vehicle-price"><strong>{money(vehicle.price)}</strong><Button className="outline-button" data-testid={vehicleIndex === 0 ? `buy-vehicle-${serviceId}` : `buy-special-${serviceId}-${vehicle.id}`} onClick={() => openPurchase(serviceId, vehicle)} disabled={!eligible}><Plus size={15} /> {eligible ? 'Adquirir' : 'Bloqueado'}</Button></div>
         </article>;
       }))}</div>
@@ -196,7 +201,7 @@ export default function Management({ game, world, act, busy, mode }) {
           <DialogDescription>{SERVICE[selectedUnit.service].name} · {selectedDefinition?.name || selectedUnit.vehicle_type} · ID {selectedUnit.name}</DialogDescription>
           <div className="vehicle-command-hero" style={{ '--service-color': SERVICE[selectedUnit.service].ink }}>
             <VehicleThumbnail unit={selectedUnit} className="vehicle-command-thumbnail" />
-            <div><span className={`fleet-status ${selectedUnit.status}`}><i />{STATUS[selectedUnit.status] || selectedUnit.status}</span><strong>{selectedBase?.name || 'Base por definir'}</strong><small>{Math.round(selectedUnit.condition || 100)}% condição · {Math.round(selectedUnit.fatigue || 0)}% fadiga · {selectedUnit.crew_assigned || 0}/{selectedUnit.crew_required || 0} elementos</small></div>
+            <div><span className={`fleet-status ${selectedUnit.status}`}><i />{STATUS[selectedUnit.status] || selectedUnit.status}</span><strong>{selectedBase?.name || 'Base por definir'}</strong><small>{Math.round(selectedUnit.condition || 100)}% condição · {Math.round(selectedUnit.wear || 0)}% desgaste · {Math.round(crewFatigue(game,selectedUnit))}% fadiga da equipa · {selectedUnit.crew_assigned || 0}/{selectedUnit.crew_required || 0} elementos</small></div>
           </div>
 
           <section className="vehicle-command-section">
@@ -225,6 +230,41 @@ export default function Management({ game, world, act, busy, mode }) {
               <label className="vehicle-fixed-crew"><input type="checkbox" checked={selectedUnit.fixed_crew === true} disabled={busy} onChange={event => run('update_advanced_unit', { unit_id: selectedUnit.id, fixed_crew: event.target.checked }, event.target.checked ? 'A tripulação acompanhará futuras transferências.' : 'A tripulação será substituída na base de destino.')} /><span><b>Levar a tripulação atual</b><small>Se desligado, a equipa atual fica na origem e a base de destino atribui uma nova equipa disponível.</small></span></label>
               <Button className="primary-button transfer-start-button" disabled={busy || transferBusy || !unitAtBase || !transferTarget || transferTargetCount >= (transferTarget?.capacity || 2) || !transferEstimate?.route || transferEstimate.base_id !== targetBaseId} onClick={startTransfer}><Navigation size={15} /> Iniciar transferência</Button>
             </>}
+          </section>
+
+
+          <section className="vehicle-command-section vehicle-technical-section">
+            <header><Wrench size={15} /><div><h3>Ficha técnica e ciclo de vida</h3><p>Os valores abaixo entram realmente no despacho, deslocação, consumo, desgaste, avarias e manutenção.</p></div></header>
+            <div className="vehicle-rating-grid">
+              {Object.entries(selectedRatings || {}).map(([key,value]) => <div key={key}><small>{{response:'RESPOSTA',robustness:'ROBUSTEZ',capacity:'CAPACIDADE',specialization:'ESPECIALIZAÇÃO',efficiency:'EFICIÊNCIA',reliability:'FIABILIDADE'}[key] || key.toUpperCase()}</small><strong>{value}</strong><div className="vehicle-rating-track"><i style={{width:`${value}%`}} /></div></div>)}
+            </div>
+            <div className="vehicle-spec-grid">
+              <span><small>CLASSE</small><b>{selectedUnit.vehicle_class || '—'} · {selectedUnit.size_class || '—'}</b></span>
+              <span><small>VELOCIDADE OPERACIONAL</small><b>×{Number(selectedUnit.speed_multiplier || 1).toFixed(2)}</b></span>
+              <span><small>PREPARAÇÃO</small><b>{Math.round(selectedUnit.preparation_time || 0)} s</b></span>
+              <span><small>MANOBRABILIDADE</small><b>{Math.round(selectedUnit.maneuverability || 0)}/100</b></span>
+              <span><small>TODO-O-TERRENO</small><b>{Math.round(selectedUnit.offroad || 0)}/100</b></span>
+              <span><small>MAU TEMPO</small><b>{Math.round(selectedUnit.weather_resistance || 0)}/100</b></span>
+              <span><small>COMBUSTÍVEL</small><b>{Math.round(selectedUnit.resources?.fuel ?? 0)}% · {Math.round(selectedUnit.fuel_capacity_l || 0)} L</b></span>
+              <span><small>CONSUMO</small><b>{Number(selectedUnit.fuel_consumption_l_100km || 0).toFixed(1)} L/100 km</b></span>
+              <span><small>QUILOMETRAGEM</small><b>{Math.round(selectedUnit.mileage_km || 0).toLocaleString('pt-PT')} km</b></span>
+              <span><small>HORAS OPERACIONAIS</small><b>{Number(selectedUnit.operating_hours || 0).toFixed(1)} h</b></span>
+              <span><small>PRÓXIMA REVISÃO</small><b>{Math.round(selectedUnit.next_maintenance_km || 5000).toLocaleString('pt-PT')} km{selectedUnit.maintenance_due ? ' · ATRASADA' : ''}</b></span>
+              <span><small>TRANSPORTE</small><b>{selectedUnit.patient_capacity || 0} vítima(s) · {selectedUnit.detainee_capacity || 0} detido(s)</b></span>
+              <span><small>CARGA</small><b>{Math.round(selectedUnit.cargo_capacity || 0)} kg · {selectedUnit.equipment_slots || 0} slots</b></span>
+              <span><small>RAIO RECOMENDADO</small><b>{selectedUnit.recommended_response_km || 0} km · máx. {selectedUnit.max_response_km || 0} km</b></span>
+              <span><small>MISSÕES</small><b>{selectedUnit.missions_success || 0}/{selectedUnit.missions_total || 0} sucesso · {selectedUnit.critical_incidents || 0} críticas</b></span>
+              <span><small>AVARIAS</small><b>{selectedUnit.breakdowns || 0}</b></span>
+            </div>
+            <div className="vehicle-tags"><strong>Capacidades</strong>{(selectedUnit.capabilities || []).map(item => <span key={item}>{item}</span>)}</div>
+            <div className="vehicle-tags"><strong>Equipamento</strong>{(selectedUnit.equipment_installed || []).map(item => <span key={item}>{item}</span>)}</div>
+            <div className="vehicle-resource-grid">{Object.entries(selectedUnit.resources || {}).map(([key,value]) => <span key={key}><small>{key.toUpperCase()}</small><b>{Math.round(value)} / {Math.round(selectedUnit.resource_capacity?.[key] ?? 100)}</b></span>)}</div>
+            <div className="vehicle-lifecycle-actions">
+              <div><small>MANUTENÇÃO ESTIMADA</small><strong>{money(selectedMaintenance?.cost || 0)} · {duration(selectedMaintenance?.duration || 0)}</strong></div>
+              <div><small>VALOR DE REVENDA</small><strong>{money(selectedResale)}</strong></div>
+              <Button className="outline-button" disabled={busy || !['available','uncrewed','offshift'].includes(selectedUnit.status) || selectedUnit.node !== selectedBase?.node} onClick={() => run('repair_unit',{unit_id:selectedUnit.id},'Manutenção iniciada.')}>Manutenção</Button>
+              <Button className="outline-button" disabled={busy || !['available','uncrewed','offshift'].includes(selectedUnit.status) || selectedUnit.node !== selectedBase?.node} onClick={sellSelectedUnit}>Vender viatura</Button>
+            </div>
           </section>
 
           <section className="vehicle-command-section">
