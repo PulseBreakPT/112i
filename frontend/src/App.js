@@ -25,7 +25,7 @@ import { ambientAudio } from './game/ambientAudio';
 import { useAmbientAudio } from './game/useAmbientAudio';
 import EventEffects from './game/EventEffects';
 import { APP_NAME, BRAND_WORD, BRAND_NUMBER } from './game/branding';
-import { SOUND_PREFERENCE_KEY } from './game/storageCompatibility';
+import { SOUND_PREFERENCE_KEY } from './game/storageCompatibility';\nimport { useTimeTheme } from './game/timeTheme';
 import './Silver.css';
 import './game/semantics.css';
 import './Immersive.css';
@@ -34,7 +34,7 @@ import './Polish.css';
 import './Clarity.css';
 import './Compact.css';
 import './VehicleMedia.css';
-import './Interface.css';
+import './Interface.css';\nimport './TimeTheme.css';
 
 function GameApp() {
   const { game, world, error, busy, act, retry, feedback, clearFeedback } = useGame();
@@ -103,7 +103,7 @@ function GameApp() {
     <main className="world-stage" aria-label="Mapa operacional" inert={!isCentral || menuOpen}>
       <CityMap world={world} game={game} selected={selected} onSelect={selectIncident} focusKey={focusKey} active={isCentral && !menuOpen} />
     </main>
-    <GameHUD game={game} act={act} sound={sound} setSound={setSound} onSave={save} error={error} />
+    <GameHUD game={game} act={act} sound={sound} setSound={setSound} onSave={save} error={error} themeMode={themeMode} setThemeMode={setThemeMode} theme={theme} />
     <div className="menu-launcher">
       <button className={menuOpen ? 'active' : ''} data-testid="game-menu-toggle" aria-label={menuOpen ? 'Fechar menu do jogo' : 'Abrir menu do jogo'} aria-expanded={menuOpen} aria-controls="game-menu" onClick={() => { setMenuOpen(value => !value); setPanel(null); setCentralWidget(null); }}>{menuOpen ? <X size={17} /> : <Menu size={17} />}<span>Menu</span></button>
     </div>
