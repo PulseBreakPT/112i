@@ -213,3 +213,31 @@ html[data-time-theme-dark="true"] { color-scheme: dark; }
     transition: none !important;
   }
 }
+
+
+/* Dialogs can be rendered outside .app-shell, so they inherit the active
+   root palette explicitly instead of falling back to the legacy dark skin. */
+.game-modal {
+  --ui-surface: var(--theme-surface);
+  --ui-raised: var(--theme-raised);
+  --ui-inset: var(--theme-inset);
+  --ui-line: var(--distrito-edge);
+  --ui-text: var(--distrito-text);
+  --ui-secondary: var(--distrito-secondary);
+  --ui-muted: var(--distrito-muted);
+  --text: var(--distrito-text);
+  --muted: var(--distrito-muted);
+  --border: var(--distrito-edge);
+  --compact-surface: var(--distrito-glass);
+  --compact-line: var(--distrito-edge);
+  --cinema-glass: var(--distrito-glass);
+  background: var(--distrito-glass) !important;
+  border-color: var(--distrito-edge) !important;
+  color: var(--distrito-text) !important;
+  color-scheme: inherit;
+}
+.game-modal :is(button, input, select, textarea) { color: var(--distrito-text); }
+.game-modal :is(input, select, textarea) {
+  background: var(--distrito-control);
+  border-color: var(--distrito-edge);
+}
