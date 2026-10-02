@@ -29,12 +29,16 @@ test('mission unlocks are isolated between command centers', () => {
 test('planned missions start at their scheduled time', () => {
   let game = newGame();
   const center = game.command_centers[0];
-  game = applyAction(game,'create_planned_mission',{title:'Jogo de teste',scenario:5,delay:60,site_id:'porto-aliados',command_center_id:center.id});
+  const beforeMoney=game.money;
+  game = applyAction(game,'create_planned_mission',{title:'Jogo de teste',scenario:5,delay:300,site_id:'porto-aliados',command_center_id:center.id});
+  expect(game.money).toBe(beforeMoney-250);
   const planned = game.planned_missions[0];
   expect(planned.status).toBe('scheduled');
-  game = tickGame(game,61);
+  game = tickGame(game,301);
   expect(game.planned_missions[0].status).toBe('active');
-  expect(game.incidents.some(incident => incident.planned_mission_id === planned.id)).toBe(true);
+  const incident=game.incidents.find(incident => incident.planned_mission_id === planned.id);
+  expect(incident).toBeTruthy();
+  expect(incident.player_planned).toBe(true);
 });
 
 test('units can deploy to a staging area and become staged', () => {
@@ -121,9 +125,13 @@ test('mission-specific ranges are stored by command center', () => {
   expect(game.command_centers[0].mission_ranges.fire).toBe(18);
 });
 
-test('custom coordinate POIs are accepted and preserved', () => {
-  let game=newGame();const center=game.command_centers[0];
-  game=applyAction(game,'create_player_poi',{name:'PDI Faro',type:'stadium',custom:true,lng:-7.93,lat:37.02,city:'Faro',command_center_id:center.id});
+test('custom coordinate POIs must belong to their command area', () => {
+  let game=newGame();game.money=100000;
+  const porto=game.command_centers[0];
+  expect(()=>applyAction(game,'create_player_poi',{name:'PDI Faro',type:'stadium',custom:true,lng:-7.93,lat:37.02,city:'Faro',command_center_id:porto.id})).toThrow(/área|região/i);
+  game=applyAction(game,'create_command_center',{name:'Comando do Algarve',site_id:'faro',radius_km:45});
+  const faro=game.command_centers.find(center=>center.city==='Faro');
+  game=applyAction(game,'create_player_poi',{name:'PDI Faro',type:'stadium',custom:true,lng:-7.93,lat:37.02,city:'Faro',command_center_id:faro.id});
   expect(game.player_pois[0]).toMatchObject({name:'PDI Faro',lng:-7.93,lat:37.02,city:'Faro'});
 });
 
@@ -170,4 +178,60 @@ test('seeded simulation state advances deterministically', () => {
   const ta=tickGame(a,220),tb=tickGame(b,220);
   expect(ta.rng_state).toBe(tb.rng_state);
   expect(ta.incidents.map(item=>[item.scenario,item.node,item.false_alarm])).toEqual(tb.incidents.map(item=>[item.scenario,item.node,item.false_alarm]));
+});
+
+
+test('weekly trust objective requires continuous time and cannot be claimed immediately', () => {
+  let game=newGame();
+  game.incidents=[];game.next_spawn=999999;game.next_crisis_wave=999999;
+  const task=game.rotating_tasks.weekly.find(item=>item.metric==='trust_hold');
+  expect(task).toBeTruthy();
+  expect(()=>applyAction(game,'claim_rotating_task',{task_id:task.id})).toThrow(/ainda não concluído/i);
+  game=tickGame(game,3599);
+  expect(game.rotating_tasks.weekly.find(item=>item.id===task.id).progress_value).toBeLessThan(3600);
+  game=tickGame(game,2);
+  const before=game.money;
+  game=applyAction(game,'claim_rotating_task',{task_id:task.id});
+  expect(game.money).toBe(before+task.reward);
+});
+
+test('suspended bases no longer provide dispatch capacity', () => {
+  let game=newGame();
+  const fireBase=game.bases.find(base=>base.service==='fire');
+  game=applyAction(game,'toggle_building_generation',{building_id:fireBase.id,enabled:false});
+  const incident=game.incidents.find(item=>item.needs.fire);
+  expect(()=>selectRecommendedUnitIds(game,incident.id,'minimum')).toThrow(/disponíveis|compatíveis|raio/i);
+});
+
+test('vehicle transfers reserve capacity and take time', () => {
+  let game=newGame();game.money=100000;
+  const center=game.command_centers[0];
+  game=applyAction(game,'build_base',{service:'fire',site_id:'porto-campanha',command_center_id:center.id});
+  game=tickGame(game,181);
+  const target=game.bases.find(base=>base.service==='fire'&&base.node==='porto-campanha'),unit=game.units.find(item=>item.service==='fire');
+  const originId=unit.base_id;
+  game=applyAction(game,'transfer_unit',{unit_id:unit.id,base_id:target.id});
+  expect(game.units.find(item=>item.id===unit.id).status).toBe('base_transfer');
+  expect(game.units.find(item=>item.id===unit.id).base_id).toBe(originId);
+  game=tickGame(game,1801);
+  expect(game.units.find(item=>item.id===unit.id).base_id).toBe(target.id);
+});
+
+test('continuity aid is not counted as operational earnings', () => {
+  let game=newGame();
+  game.money=0;game.next_upkeep=999999;
+  game.units.forEach(unit=>{unit.status='resting';unit.rest_until=99999;});
+  const earned=game.earned;
+  game=tickGame(game,1);
+  expect(game.emergency_aid).toBe(1500);
+  expect(game.earned).toBe(earned);
+});
+
+test('cooperative academy capacity can support training', () => {
+  let game=newGame();
+  game.money=100000;game.cooperation.funds=10000;
+  game=applyAction(game,'build_alliance_facility',{type:'academy',name:'Academia de rede'});
+  const base=game.bases.find(item=>item.service==='medical');
+  game=applyAction(game,'start_training',{base_id:base.id,course:'advanced-care',count:1});
+  expect(game.trainings.some(item=>item.base_id===base.id&&item.status==='active')).toBe(true);
 });
