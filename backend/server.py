@@ -73,6 +73,17 @@ class TickRequest(BaseModel):
     seconds: float = Field(default=2, gt=0, le=3)
 
 
+class RoutePoint(BaseModel):
+    lng: float = Field(ge=-180, le=180)
+    lat: float = Field(ge=-90, le=90)
+    land: str = Field(default='mainland', min_length=1, max_length=32)
+
+
+class CoordinateRouteRequest(BaseModel):
+    origin: RoutePoint
+    destination: RoutePoint
+
+
 class PlayerCreate(BaseModel):
     callsign: str | None = None
 
@@ -190,6 +201,13 @@ async def road_route(origin_id: str, destination_id: str):
     if origin_id not in POINTS or destination_id not in POINTS:
         raise HTTPException(422, 'Localização desconhecida.')
     return await road_router.get(POINTS[origin_id], POINTS[destination_id])
+
+
+@api.post('/road-routes/coordinates')
+async def coordinate_road_route(req: CoordinateRouteRequest):
+    origin=req.origin.model_dump()
+    destination=req.destination.model_dump()
+    return await road_router.get(origin,destination)
 
 
 @api.get('/world')
