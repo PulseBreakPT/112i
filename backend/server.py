@@ -1,14 +1,19 @@
 import asyncio
+import hashlib
 import os
+import re
+import secrets
 from pathlib import Path
-from uuid import UUID
+from uuid import UUID, uuid4
 from datetime import datetime, timezone
 from typing import Any
+
 from dotenv import load_dotenv
-from fastapi import FastAPI, APIRouter, HTTPException
+from fastapi import FastAPI, APIRouter, HTTPException, Header, Query
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, Field
 from starlette.middleware.cors import CORSMiddleware
+
 from engine import new_game, tick, action
 from world import world_data, SERVICES, SITES
 from geo_world import POINTS, MODE, world_data as geo_world_data
@@ -22,6 +27,14 @@ road_router = RoadRouter(db)
 app = FastAPI(title='Distrito 112 · Central de Operações')
 api = APIRouter(prefix='/api')
 locks = {}
+room_locks = {}
+
+CALLSIGNS = [
+    'Alpha', 'Bravo', 'Charlie', 'Delta', 'Echo', 'Foxtrot', 'Golf', 'Hotel',
+    'India', 'Juliett', 'Kilo', 'Lima', 'Mike', 'November', 'Oscar', 'Papa',
+    'Quebec', 'Romeo', 'Sierra', 'Tango', 'Uniform', 'Victor', 'Whiskey', 'Zulu',
+]
+
 
 class GameResponse(BaseModel):
     id: str
@@ -45,12 +58,79 @@ class GameResponse(BaseModel):
     history: list[dict[str, Any]]
     saved_at: str
 
+
 class ActionRequest(BaseModel):
     type: str
     data: dict[str, Any] = Field(default_factory=dict)
 
+
 class TickRequest(BaseModel):
     seconds: float = Field(default=2, gt=0, le=3)
+
+
+class PlayerCreate(BaseModel):
+    callsign: str | None = None
+
+
+class RoomCreate(BaseModel):
+    name: str | None = None
+
+
+class OnlineActionRequest(BaseModel):
+    type: str
+    data: dict[str, Any] = Field(default_factory=dict)
+    expected_revision: int = Field(ge=0)
+
+
+def utcnow():
+    return datetime.now(timezone.utc)
+
+
+def token_hash(token: str) -> str:
+    return hashlib.sha256(token.encode('utf-8')).hexdigest()
+
+
+def safe_room_name(value: str | None) -> str:
+    text = re.sub(r'[^A-Za-zÀ-ÿ0-9 ._-]+', '', str(value or '')).strip()[:32]
+    return text or 'Sala operacional'
+
+
+def public_room(room: dict[str, Any]) -> dict[str, Any]:
+    return {
+        'id': room['id'],
+        'name': room['name'],
+        'status': room['status'],
+        'host_id': room['host_id'],
+        'members': room.get('members', []),
+        'revision': room.get('revision', 0),
+        'game': room['game'],
+        'created_at': room['created_at'],
+        'updated_at': room['updated_at'],
+    }
+
+
+async def authenticated_player(authorization: str | None) -> dict[str, Any]:
+    if not authorization or not authorization.startswith('Bearer '):
+        raise HTTPException(401, 'Sessão online necessária.')
+    token = authorization[7:].strip()
+    if len(token) < 20:
+        raise HTTPException(401, 'Sessão online inválida.')
+    player = await db.online_players.find_one({'token_hash': token_hash(token)}, {'_id': 0, 'token_hash': 0})
+    if not player:
+        raise HTTPException(401, 'Sessão online inválida ou expirada.')
+    return player
+
+
+def server_score(game: dict[str, Any]) -> int:
+    completed = int(game.get('completed', 0))
+    failed = int(game.get('failed', 0))
+    earned = int(game.get('earned', 0))
+    trust = int(game.get('trust', 0))
+    elapsed = max(1.0, float(game.get('elapsed', 0)))
+    # Server-only score: rewards effective response, not raw client-submitted XP.
+    value = completed * 1000 + earned / 10 + trust * 20 - failed * 750 - elapsed / 5
+    return max(0, int(round(value)))
+
 
 async def read_game(game_id):
     game = await db.games.find_one({'id': str(game_id)}, {'_id': 0})
@@ -58,14 +138,29 @@ async def read_game(game_id):
         raise HTTPException(404, 'Turno não encontrado.')
     return game
 
+
 async def save_game(game):
-    game['saved_at'] = datetime.now(timezone.utc).isoformat()
+    game['saved_at'] = utcnow().isoformat()
     await db.games.replace_one({'id': game['id']}, dict(game), upsert=True)
     return GameResponse(**game)
+
+
+async def read_room(room_id: str) -> dict[str, Any]:
+    room = await db.online_rooms.find_one({'id': room_id}, {'_id': 0})
+    if not room:
+        raise HTTPException(404, 'Sala não encontrada.')
+    return room
+
+
+def ensure_member(room: dict[str, Any], player_id: str):
+    if not any(member.get('player_id') == player_id for member in room.get('members', [])):
+        raise HTTPException(403, 'Não pertences a esta sala.')
+
 
 @api.get('/')
 async def health():
     return {'status': 'operational', 'name': 'Distrito 112'}
+
 
 @api.get('/road-routes/{origin_id}/{destination_id}')
 async def road_route(origin_id: str, destination_id: str):
@@ -88,9 +183,11 @@ async def legacy_world():
 async def create():
     return await save_game(geo_engine.new_game())
 
+
 @api.get('/games/{game_id}', response_model=GameResponse)
 async def get_game(game_id: UUID):
     return GameResponse(**await read_game(game_id))
+
 
 @api.post('/games/{game_id}/tick', response_model=GameResponse)
 async def advance(game_id: UUID, req: TickRequest):
@@ -101,6 +198,7 @@ async def advance(game_id: UUID, req: TickRequest):
         else:
             tick(game, req.seconds)
         return await save_game(game)
+
 
 @api.post('/games/{game_id}/action', response_model=GameResponse)
 async def perform(game_id: UUID, req: ActionRequest):
@@ -115,16 +213,186 @@ async def perform(game_id: UUID, req: ActionRequest):
             action(game, req.type, req.data)
         return await save_game(game)
 
+
+@api.post('/online/players')
+async def create_online_player(req: PlayerCreate):
+    requested = (req.callsign or '').strip().title()
+    callsign = requested if requested in CALLSIGNS else secrets.choice(CALLSIGNS)
+    suffix = secrets.randbelow(9000) + 1000
+    display_name = f'{callsign}-{suffix}'
+    token = secrets.token_urlsafe(32)
+    player = {
+        'id': str(uuid4()),
+        'callsign': display_name,
+        'token_hash': token_hash(token),
+        'created_at': utcnow(),
+        'last_seen_at': utcnow(),
+    }
+    await db.online_players.insert_one(player)
+    return {'player_id': player['id'], 'callsign': display_name, 'token': token}
+
+
+@api.post('/online/rooms')
+async def create_online_room(req: RoomCreate, authorization: str | None = Header(default=None)):
+    player = await authenticated_player(authorization)
+    now = utcnow()
+    game = geo_engine.new_game()
+    game['speed'] = 1
+    room = {
+        'id': str(uuid4()),
+        'name': safe_room_name(req.name),
+        'status': 'active',
+        'host_id': player['id'],
+        'members': [{'player_id': player['id'], 'callsign': player['callsign'], 'joined_at': now}],
+        'revision': 0,
+        'game': game,
+        'created_at': now,
+        'updated_at': now,
+    }
+    await db.online_rooms.insert_one(room)
+    return public_room(room)
+
+
+@api.post('/online/rooms/{room_id}/join')
+async def join_online_room(room_id: str, authorization: str | None = Header(default=None)):
+    player = await authenticated_player(authorization)
+    async with room_locks.setdefault(room_id, asyncio.Lock()):
+        room = await read_room(room_id)
+        if room['status'] != 'active':
+            raise HTTPException(409, 'A sala já não está ativa.')
+        if not any(member.get('player_id') == player['id'] for member in room.get('members', [])):
+            if len(room.get('members', [])) >= 8:
+                raise HTTPException(409, 'A sala atingiu o limite de 8 jogadores.')
+            room['members'].append({'player_id': player['id'], 'callsign': player['callsign'], 'joined_at': utcnow()})
+            room['revision'] += 1
+            room['updated_at'] = utcnow()
+            await db.online_rooms.replace_one({'id': room_id}, room)
+        return public_room(room)
+
+
+@api.get('/online/rooms/{room_id}')
+async def get_online_room(room_id: str, authorization: str | None = Header(default=None)):
+    player = await authenticated_player(authorization)
+    room = await read_room(room_id)
+    ensure_member(room, player['id'])
+    return public_room(room)
+
+
+@api.post('/online/rooms/{room_id}/action')
+async def online_room_action(room_id: str, req: OnlineActionRequest, authorization: str | None = Header(default=None)):
+    player = await authenticated_player(authorization)
+    async with room_locks.setdefault(room_id, asyncio.Lock()):
+        room = await read_room(room_id)
+        ensure_member(room, player['id'])
+        if room['status'] != 'active':
+            raise HTTPException(409, 'A partida já terminou.')
+        if room.get('revision', 0) != req.expected_revision:
+            raise HTTPException(409, detail={'message': 'Estado desatualizado.', 'revision': room.get('revision', 0)})
+        if req.type in {'speed', 'reset', 'new_incident'}:
+            raise HTTPException(403, 'Esta ação não está disponível no modo online.')
+        game = room['game']
+        await geo_engine.action(game, req.type, req.data, road_router)
+        room['revision'] += 1
+        room['updated_at'] = utcnow()
+        result = await db.online_rooms.replace_one(
+            {'id': room_id, 'revision': req.expected_revision},
+            room,
+        )
+        if result.matched_count != 1:
+            raise HTTPException(409, 'A sala foi atualizada por outro jogador. Sincroniza e tenta novamente.')
+        return public_room(room)
+
+
+@api.post('/online/rooms/{room_id}/finish')
+async def finish_online_room(room_id: str, authorization: str | None = Header(default=None)):
+    player = await authenticated_player(authorization)
+    async with room_locks.setdefault(room_id, asyncio.Lock()):
+        room = await read_room(room_id)
+        ensure_member(room, player['id'])
+        if room['host_id'] != player['id']:
+            raise HTTPException(403, 'Só o anfitrião pode terminar a partida.')
+        if room['status'] == 'finished':
+            return {'room_id': room_id, 'score': server_score(room['game'])}
+        room['status'] = 'finished'
+        room['revision'] += 1
+        room['updated_at'] = utcnow()
+        score = server_score(room['game'])
+        entry = {
+            'room_id': room_id,
+            'score': score,
+            'completed': int(room['game'].get('completed', 0)),
+            'failed': int(room['game'].get('failed', 0)),
+            'trust': int(room['game'].get('trust', 0)),
+            'elapsed': float(room['game'].get('elapsed', 0)),
+            'players': [member['callsign'] for member in room.get('members', [])],
+            'player_count': len(room.get('members', [])),
+            'created_at': utcnow(),
+        }
+        await db.online_rooms.replace_one({'id': room_id}, room)
+        await db.leaderboard.update_one({'room_id': room_id}, {'$set': entry}, upsert=True)
+        return {'room_id': room_id, **entry}
+
+
+@api.get('/leaderboard')
+async def leaderboard(limit: int = Query(default=25, ge=1, le=100), player_count: int | None = Query(default=None, ge=1, le=8)):
+    query: dict[str, Any] = {}
+    if player_count is not None:
+        query['player_count'] = player_count
+    cursor = db.leaderboard.find(query, {'_id': 0}).sort([('score', -1), ('elapsed', 1)]).limit(limit)
+    return {'entries': [entry async for entry in cursor]}
+
+
+async def online_tick_loop():
+    while True:
+        try:
+            rooms = db.online_rooms.find({'status': 'active'}, {'_id': 0})
+            async for room in rooms:
+                room_id = room['id']
+                lock = room_locks.setdefault(room_id, asyncio.Lock())
+                if lock.locked():
+                    continue
+                async with lock:
+                    latest = await db.online_rooms.find_one({'id': room_id, 'status': 'active'}, {'_id': 0})
+                    if not latest:
+                        continue
+                    game = latest['game']
+                    geo_engine.tick(game, 2)
+                    expected = latest.get('revision', 0)
+                    latest['revision'] = expected + 1
+                    latest['updated_at'] = utcnow()
+                    await db.online_rooms.replace_one({'id': room_id, 'revision': expected}, latest)
+        except Exception:
+            # One bad room or transient database error must not stop the simulation loop.
+            pass
+        await asyncio.sleep(2)
+
+
 app.include_router(api)
-app.add_middleware(CORSMiddleware, allow_origins=os.environ['CORS_ORIGINS'].split(','), allow_credentials=False, allow_methods=['GET', 'POST'], allow_headers=['Content-Type'])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=os.environ['CORS_ORIGINS'].split(','),
+    allow_credentials=False,
+    allow_methods=['GET', 'POST'],
+    allow_headers=['Content-Type', 'Authorization'],
+)
+
 
 @app.on_event('startup')
 async def startup():
     await db.games.create_index('id', unique=True)
     await db.road_routes.create_index('key', unique=True)
     await db.road_routes.create_index('expires_at', expireAfterSeconds=0)
+    await db.online_players.create_index('id', unique=True)
+    await db.online_players.create_index('token_hash', unique=True)
+    await db.online_rooms.create_index('id', unique=True)
+    await db.leaderboard.create_index([('score', -1), ('elapsed', 1)])
+    app.state.online_tick_task = asyncio.create_task(online_tick_loop())
+
 
 @app.on_event('shutdown')
 async def shutdown():
+    task = getattr(app.state, 'online_tick_task', None)
+    if task:
+        task.cancel()
     await road_router.close()
     client.close()
