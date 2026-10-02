@@ -158,7 +158,7 @@ test('dispatch policy stores reserve and maximum response distance', () => {
 });
 
 test('vehicle shifts and consumables are simulated', () => {
-  let game=newGame();const unit=game.units[0];
+  let game=newGame();game.clock_start_hour=2;game.clock_start_day=0;const unit=game.units[0];
   expect(unit.resources.water).toBe(unit.resource_capacity.water);
   expect(unit.resource_capacity.water).toBeGreaterThan(3000);
   game=applyAction(game,'update_advanced_unit',{unit_id:unit.id,shift:{start:0,end:1},max_response_km:25,fixed_crew:true});
@@ -175,6 +175,25 @@ test('mission-specific ranges are stored by command center', () => {
   expect(game.command_centers[0].mission_ranges.fire).toBe(18);
 });
 
+test('changing the general command radius also updates the default generation radius', () => {
+  let game=newGame();const center=game.command_centers[0];
+  game=applyAction(game,'update_command_center',{command_center_id:center.id,radius_km:60});
+  expect(game.command_centers[0].radius_km).toBe(60);
+  expect(game.command_centers[0].mission_ranges.default).toBe(60);
+});
+
+test('spawn zones can be created and removed', () => {
+  let game=newGame();const center=game.command_centers[0];
+  game=applyAction(game,'add_spawn_zone',{command_center_id:center.id,name:'Teste',mission_key:'fire',points:[
+    {lng:center.lng-.01,lat:center.lat-.01},{lng:center.lng+.01,lat:center.lat-.01},
+    {lng:center.lng+.01,lat:center.lat+.01},{lng:center.lng-.01,lat:center.lat+.01},
+  ]});
+  expect(game.command_centers[0].spawn_zones).toHaveLength(1);
+  const zoneId=game.command_centers[0].spawn_zones[0].id;
+  game=applyAction(game,'delete_spawn_zone',{command_center_id:center.id,zone_id:zoneId});
+  expect(game.command_centers[0].spawn_zones).toHaveLength(0);
+});
+
 test('custom coordinate POIs must belong to their command area', () => {
   let game=newGame();game.money=100000;
   const porto=game.command_centers[0];
@@ -186,13 +205,16 @@ test('custom coordinate POIs must belong to their command area', () => {
 });
 
 
-test('triage and alliance sharing do not extend the response deadline', () => {
+test('triage keeps the deadline while alliance sharing adds a bounded response margin', () => {
   let game=newGame();
   const incident=game.incidents[0],deadline=incident.response_deadline;
-  game=applyAction(game,'answer',{incident_id:incident.id,choice:game.incidents[0].scenario===0?0:0});
+  game=applyAction(game,'answer',{incident_id:incident.id,choice:0});
   expect(game.incidents.find(item=>item.id===incident.id).response_deadline).toBe(deadline);
   game=applyAction(game,'share_incident_to_alliance',{incident_id:incident.id});
-  expect(game.incidents.find(item=>item.id===incident.id).response_deadline).toBe(deadline);
+  const shared=game.incidents.find(item=>item.id===incident.id);
+  expect(shared.response_deadline).toBeGreaterThan(deadline);
+  expect(shared.response_deadline-deadline).toBeGreaterThanOrEqual(60);
+  expect(shared.response_deadline-deadline).toBeLessThanOrEqual(180);
 });
 
 test('recommended dispatch respects the configured maximum response distance', () => {
