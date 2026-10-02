@@ -7,6 +7,7 @@ import { operationalPhasesFor, generatedEvolution, vehicleTraining as vehicleTra
 import { operationalUnit, hasOperationalResources, selectArrUnitIds as selectArrUnitIdsEngine, selectRecommendedUnitIds as selectRecommendedUnitIdsEngine } from './engines/dispatchEngine';
 import { locate, returnToBase, startRoute } from './engines/unitEngine';
 import { ECONOMY, ensureReserve, payCost, applyPeriodicFunding, missionPayout, reserveFloor } from './engines/economyEngine';
+import { isPortugalNight, legacyRealTime } from './engines/timeEngine';
 
 import { GAME_SAVE_KEY as SAVE_KEY } from './storageCompatibility';
 
@@ -121,7 +122,7 @@ const randomSeed=()=>{if(globalThis.crypto?.getRandomValues){const value=new Uin
 const gameRandom=g=>{let x=(Number(g.rng_state??g.rng_seed)||1)>>>0;x^=x<<13;x^=x>>>17;x^=x<<5;g.rng_state=(x>>>0)||1;g.rng_counter=(g.rng_counter||0)+1;return g.rng_state/4294967296;};
 const clone = value => globalThis.structuredClone ? globalThis.structuredClone(value) : JSON.parse(JSON.stringify(value));
 const requireValue = (condition, message) => { if (!condition) throw new Error(message); };
-const log = (g,text,kind='info') => { g.logs.unshift({id:uid(),text,kind,time:g.elapsed}); g.logs=g.logs.slice(0,50); };
+const log = (g,text,kind='info') => { g.logs.unshift({id:uid(),text,kind,time:g.elapsed,real_time:new Date().toISOString()}); g.logs=g.logs.slice(0,50); };
 export const fetchRoadRoute = (originId,destinationId,conditions=null) => fetchRoadRouteEngine(POINTS,originId,destinationId,conditions);
 export const gamePoint = id => POINTS[id]||null;
 const makeBase=(service,point)=>({...point,id:uid(),service,node:point.id,name:`${SERVICES[service].name} · ${point.name}`,level:1,capacity:2,staff_capacity:14,personnel:service==='fire'?10:6,extensions:[],specialization:'general'});
@@ -258,7 +259,7 @@ const resolveIncident=(g,incident,success)=>{
   const seasonal=(g.seasonal_events||[]).filter(event=>event.status==='active').reduce((factor,event)=>factor*(event.reward_multiplier||1),1);
   const rawPayout=incident.false_alarm?Math.round(incident.reward*.25):Math.round(incident.reward*trustFactor*seasonal);const payout=success?missionPayout(g,incident,rawPayout):0;
   log(g,`${incident.title} — ${success?(incident.false_alarm?'falso alarme confirmado.':'resolvida.'):'prazo de resposta excedido.'}`,success?'success':'alert');
-  g.history.unshift({id:incident.id,title:incident.title,service:incident.service,success,reward:payout,time:g.elapsed});g.history=g.history.slice(0,100);
+  g.history.unshift({id:incident.id,title:incident.title,service:incident.service,success,reward:payout,time:g.elapsed,real_time:new Date().toISOString()});g.history=g.history.slice(0,100);
   g.units.filter(u=>u.incident_id===incident.id).forEach(u=>{u.fatigue=Math.min(100,(u.fatigue||0)+24);u.condition=Math.max(10,(u.condition||100)-6);(u.personnel_ids||[]).forEach(personId=>{const person=g.personnel.find(item=>item.id===personId);if(person){person.experience=(person.experience||0)+(success?12:4);person.rank=person.experience>=500?'Chefe':person.experience>=200?'Graduado':'Operacional';person.fatigue=Math.min(100,(person.fatigue||0)+18);}});if(u.resources){const use=u.service==='fire'?{water:650,foam:35}:u.service==='medical'?{oxygen:14,medical:18}:{equipment:9};Object.entries(use).forEach(([key,value])=>{u.resources[key]=Math.max(0,(u.resources[key]||0)-value);});}returnToBase(g,u);});
   if(success){const debtPayment=Math.min(g.operating_debt||0,Math.round(payout*.15));g.operating_debt=Math.max(0,(g.operating_debt||0)-debtPayment);g.money+=payout-debtPayment;g.earned+=payout;g.xp+=incident.false_alarm?20:incident.xp;g.completed++;g.trust=Math.min(100,g.trust+(incident.false_alarm?0:1));createAftercare(g,incident,careQuality);if(!incident.false_alarm&&incident.service==='police'&&(incident.detainees>0||/assalto|roubo|sequestro|tráfico|desaparecid/i.test(incident.title))&&gameRandom(g)<.45){const next=spawn(g,9,incident.node,incident.command_center_id);if(next){next.title='Investigação complementar';next.definition=next.title;next.parent_incident_id=incident.id;next.needs={police:Math.max(1,next.needs.police||1)};mergeIncidentRequirements(g,next,{trainings:['investigation']},true);log(g,`Ocorrência subsequente criada: ${next.title}.`,'alert');}}if(!incident.false_alarm&&incident.service==='fire'&&incident.priority===1&&gameRandom(g)<.35){const next=spawn(g,4,incident.node,incident.command_center_id);if(next){next.title='Vistoria e rescaldo preventivo';next.definition=next.title;next.parent_incident_id=incident.id;next.needs={fire:1,police:incident.district==='Porto'?1:0};next.reward=Math.round(next.reward*.75);log(g,`Ocorrência subsequente criada: ${next.title}.`,'alert');}}if(incident.evolution?.type==='subsequent'&&!incident.evolution_spawned){const next=spawn(g,incident.evolution.scenario,incident.node,incident.command_center_id);if(next){next.title=incident.evolution.title;next.definition=incident.evolution.title;next.parent_incident_id=incident.id;log(g,`Ocorrência subsequente criada: ${next.title}.`,'alert');}}}
   else{const penalty=Math.min(250,Math.round(incident.reward*.03));payCost(g,penalty,{label:'penalização por ocorrência falhada',protectReserve:true});g.failed++;g.trust=Math.max(0,g.trust-4);}
@@ -281,7 +282,7 @@ export function selectRecommendedUnitIds(g,incidentId,mode='safe'){
   return selectRecommendedUnitIdsEngine(g,incidentId,mode,{requireValue,distanceMeters,vehicleDefinition});
 }
 export function tickGame(input,seconds){
-  const g=initializeAdvancedState(clone(input)), dt=seconds*g.speed;if(!dt)return g;g.elapsed+=dt;
+  const g=initializeAdvancedState(clone(input)), dt=seconds*g.speed;if(!dt){if(g.conditions)g.conditions.night=isPortugalNight(new Date());return g;}g.elapsed+=dt;if(g.conditions)g.conditions.night=isPortugalNight(new Date());
   if(g.elapsed>=(g.conditions?.next_change_at||((g.conditions?.updated_at||0)+1800))){g.conditions=freshConditions(g.elapsed,g.conditions,()=>gameRandom(g));log(g,`Condições atualizadas: ${g.conditions.weather_label.toLowerCase()}, ${g.conditions.traffic_label.toLowerCase()}${g.conditions.roadworks?' e obras na rede viária':''}.`);}
   g.bases.forEach(base=>{if(base.operational_at&&g.elapsed>=base.operational_at){delete base.operational_at;log(g,`${base.name} entrou ao serviço.`,'success');}});
   g.facilities.forEach(facility=>{if(facility.operational_at&&g.elapsed>=facility.operational_at){delete facility.operational_at;log(g,`${facility.name} entrou ao serviço.`,'success');}});
@@ -618,6 +619,7 @@ export function loadLocalGame(){
     const saved=JSON.parse(localStorage.getItem(SAVE_KEY));
     if(saved?.mode?.startsWith('portugal-offline')){
       const fresh=newGame();
+      const stampRecord=item=>item&&({...item,real_time:item.real_time||legacyRealTime(saved.saved_at||new Date().toISOString(),saved.elapsed||0,item.time??saved.elapsed??0)});
       const migratedCenters=saved.command_centers?.length?saved.command_centers:[makeCommandCenter(`Comando Operacional de ${saved.city||'Porto'}`,POINTS['porto-aliados'],35)];
       const previousDebt=Math.max(0,saved.operating_debt||0);const merged={...fresh,...saved,mode:'portugal-offline-v5',rng_seed:saved.rng_seed||fresh.rng_seed,rng_state:saved.rng_state||saved.rng_seed||fresh.rng_state,rng_counter:saved.rng_counter||0,expenses:saved.expenses||0,public_funding:saved.public_funding||0,task_rewards:saved.task_rewards||0,emergency_aid:saved.emergency_aid||0,debt_relief:(saved.debt_relief||0)+previousDebt,operating_debt:0,next_public_funding:saved.next_public_funding||((saved.elapsed||0)+ECONOMY.fundingInterval),next_crisis_wave:saved.next_crisis_wave||saved.elapsed+900,next_upkeep:saved.next_upkeep||saved.elapsed+ECONOMY.upkeepInterval,conditions:saved.conditions||freshConditions(saved.elapsed||0),command_centers:migratedCenters,active_command_center_id:saved.active_command_center_id||migratedCenters[0].id,player_pois:saved.player_pois||[],personnel:saved.personnel||[],facilities:saved.facilities||[],planned_missions:saved.planned_missions||[],staging_areas:saved.staging_areas||[],complexes:saved.complexes||[],tasks:saved.tasks?.length?saved.tasks:makeCareerTasks(saved),achievements:saved.achievements||[],unit_groups:saved.unit_groups||[],patients:saved.patients||[],prisoners:saved.prisoners||[],trainings:saved.trainings||[],arrs:saved.arrs?.length?saved.arrs:clone(DEFAULT_ARRS)};
       merged.bases=(saved.bases||fresh.bases).map(base=>{const count=(saved.units||fresh.units).filter(unit=>unit.base_id===base.id).length;return {level:1,capacity:Math.max(2,count),staff_capacity:14,personnel:base.service==='fire'?10:6,extensions:[],specialization:'general',qualifications:{},command_center_id:migratedCenters[0].id,...base};});
@@ -627,6 +629,9 @@ export function loadLocalGame(){
       else merged.personnel=merged.personnel.map(person=>({unit_id:null,status:'available',qualifications:[],fatigue:0,...person}));
       merged.incidents=(saved.incidents||[]).map(incident=>{const responseDeadline=incident.response_deadline||incident.deadline||((incident.created||merged.elapsed)+1200);return {escalated:false,false_alarm:false,difficulty:{1:'Difícil',2:'Média',3:'Fácil'}[incident.priority]||'Média',casualties:0,detainees:0,required_vehicle_types:[],required_trainings:[],phase_requirements_applied:[incident.active_phase||0],required_personnel:Object.values(incident.needs||{}).reduce((sum,n)=>sum+n*2,0),command_center_id:migratedCenters[0].id,response_deadline:responseDeadline,resolution_deadline:incident.resolution_deadline||responseDeadline+900,deadline:responseDeadline,...incident};});
       merged.player_pois.forEach(poi=>{if(poi.node&&!POINTS[poi.node])POINTS[poi.node]={id:poi.node,node:poi.node,name:poi.name,city:poi.city,land:poi.land,lng:poi.lng,lat:poi.lat};});
+      merged.history=(merged.history||[]).map(stampRecord);
+      merged.logs=(merged.logs||[]).map(stampRecord);
+      if(merged.cooperation){merged.cooperation.log=(merged.cooperation.log||[]).map(stampRecord);merged.cooperation.chat=(merged.cooperation.chat||[]).map(stampRecord);}
       initializeAdvancedState(merged);
       ensureReserve(merged,null,'migração para a nova economia');
       return refreshProgression(merged);
