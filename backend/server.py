@@ -5,12 +5,13 @@ import re
 import secrets
 from pathlib import Path
 from uuid import UUID, uuid4
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Any
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, APIRouter, HTTPException, Header, Query
 from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo import ReturnDocument
 from pydantic import BaseModel, Field
 from starlette.middleware.cors import CORSMiddleware
 
@@ -115,9 +116,15 @@ async def authenticated_player(authorization: str | None) -> dict[str, Any]:
     token = authorization[7:].strip()
     if len(token) < 20:
         raise HTTPException(401, 'Sessão online inválida.')
-    player = await db.online_players.find_one({'token_hash': token_hash(token)}, {'_id': 0, 'token_hash': 0})
+    now = utcnow()
+    query = {'token_hash': token_hash(token), '$or': [{'expires_at': {'$gt': now}}, {'expires_at': {'$exists': False}}]}
+    player = await db.online_players.find_one(query, {'_id': 0, 'token_hash': 0})
     if not player:
         raise HTTPException(401, 'Sessão online inválida ou expirada.')
+    expires_at = player.get('expires_at') or (now + timedelta(days=90))
+    await db.online_players.update_one({'id': player['id']}, {'$set': {'last_seen_at': now, 'expires_at': expires_at}})
+    player['last_seen_at'] = now
+    player['expires_at'] = expires_at
     return player
 
 
