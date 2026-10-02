@@ -70,6 +70,16 @@ function calmCartography(map, detailed = false, palette = getMapThemePalette()) 
   }
 }
 
+function syncVehicleMarkerPresentation(map) {
+  const zoom = map.getZoom();
+  // Viaturas são contexto operacional, não devem competir visualmente com ocorrências.
+  // A escala cresce suavemente com o zoom, mas nunca regressa ao tamanho antigo.
+  const scale = Math.max(.66, Math.min(1, .66 + (zoom - 6) * .035));
+  const container = map.getContainer();
+  container.style.setProperty('--map-vehicle-scale', scale.toFixed(3));
+  container.dataset.vehicleDetail = zoom >= 14.25 ? 'full' : 'compact';
+}
+
 function positionAt(unit, travel) {
   const points = unit.route;
   const times = unit.route_times;
@@ -154,6 +164,7 @@ export const PortugalMap = ({ world, game, selected, onSelect, focusKey, theme, 
       map.addControl(new maplibregl.ScaleControl({ maxWidth: 90, unit: 'metric' }), 'bottom-left');
       map.on('load', () => {
         calmCartography(map, false);
+        syncVehicleMarkerPresentation(map);
         map.addSource('operational-routes', { type: 'geojson', data: EMPTY, lineMetrics: true });
         map.addLayer({ id: 'route-glow', type: 'line', source: 'operational-routes',
           layout: { 'line-cap': 'round', 'line-join': 'round' },
@@ -179,6 +190,7 @@ export const PortugalMap = ({ world, game, selected, onSelect, focusKey, theme, 
             'text-halo-width': 1.4, 'text-opacity': ['case', ['get', 'selected'], .95, .58] } });
         setLoaded(true); setError('');
       });
+      map.on('zoom', () => syncVehicleMarkerPresentation(map));
       map.on('error', event => {
         if (event.error?.message) setError('Não foi possível carregar parte da cartografia. Verifica a ligação ou tenta novamente.');
       });

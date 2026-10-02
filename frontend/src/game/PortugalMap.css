@@ -13,12 +13,13 @@
 .geo-priority { width: 7px; height: 7px; position: absolute; right: -1px; top: 0; border: 2px solid var(--distrito-edge); border-radius: 50%; background: var(--theme-info); }
 .geo-priority.priority-1 { background: var(--theme-danger); }
 .geo-priority.priority-2 { background: var(--theme-warning); }
-.geo-vehicle { width: 64px; height: 44px; z-index: 5; pointer-events: none; isolation: isolate; }
-.geo-vehicle-visual { position: absolute; inset: 0; display: grid; place-items: center; transform: rotate(calc(var(--vehicle-heading, 0deg) + 90deg)); transform-origin: center; transition: transform .18s linear; filter: drop-shadow(0 4px 3px color-mix(in srgb, var(--theme-shadow) 80.0%, transparent)) drop-shadow(0 0 4px color-mix(in srgb, var(--marker-color) 40%, transparent)); }
-.geo-vehicle-image { display: block; width: 64px; height: 44px; object-fit: contain; user-select: none; }
-.geo-vehicle-fallback { width: 28px; height: 28px; place-items: center; border: 1px solid var(--theme-border-strong); border-radius: 50%; background: var(--marker-color); color: var(--theme-on-accent); font: 800 12px var(--mono); }
+.geo-vehicle { --vehicle-scale: var(--map-vehicle-scale, .9); width: calc(46px * var(--vehicle-scale)); height: calc(32px * var(--vehicle-scale)); z-index: 5; pointer-events: none; isolation: isolate; }
+.geo-vehicle-visual { position: absolute; inset: 0; display: grid; place-items: center; transform: rotate(calc(var(--vehicle-heading, 0deg) + 90deg)); transform-origin: center; transition: transform .18s linear; filter: drop-shadow(0 2px 2px color-mix(in srgb, var(--theme-shadow) 72%, transparent)) drop-shadow(0 0 2px color-mix(in srgb, var(--marker-color) 32%, transparent)); }
+.geo-vehicle-image { display: block; width: calc(46px * var(--vehicle-scale)); height: calc(32px * var(--vehicle-scale)); object-fit: contain; user-select: none; }
+.geo-vehicle-fallback { width: calc(22px * var(--vehicle-scale)); height: calc(22px * var(--vehicle-scale)); place-items: center; border: 1px solid var(--theme-border-strong); border-radius: 50%; background: var(--marker-color); color: var(--theme-on-accent); font: 800 10px var(--mono); }
 .geo-vehicle-fallback:not([hidden]) { display: grid; }
-.geo-vehicle-label { display: block; position: absolute; top: 47px; left: 50%; transform: translateX(-50%); font: 700 8px var(--mono); letter-spacing: .2px; color: var(--distrito-text); white-space: nowrap; background: color-mix(in srgb, var(--theme-inset) 86.3%, transparent); border: 1px solid color-mix(in srgb, var(--marker-color) 45%, color-mix(in srgb, var(--theme-border-ink) 13.3%, transparent)); border-radius: 4px; padding: 3px 6px; box-shadow: 0 3px 9px color-mix(in srgb, var(--theme-shadow) 46.7%, transparent); }
+.geo-vehicle-label { display: block; position: absolute; top: calc(35px * var(--vehicle-scale)); left: 50%; transform: translateX(-50%); font: 700 7px var(--mono); letter-spacing: .15px; color: var(--distrito-text); white-space: nowrap; background: color-mix(in srgb, var(--theme-inset) 86.3%, transparent); border: 1px solid color-mix(in srgb, var(--marker-color) 38%, color-mix(in srgb, var(--theme-border-ink) 13.3%, transparent)); border-radius: 3px; padding: 2px 4px; box-shadow: 0 2px 6px color-mix(in srgb, var(--theme-shadow) 40%, transparent); }
+.portugal-map .maplibregl-map[data-vehicle-detail="compact"] .geo-vehicle-label { display: none; }
 .geo-vehicle[data-status="returning"] { opacity: .82; }
 .portugal-map .maplibregl-ctrl-bottom-left { bottom: 7px; left: 13px; max-width: calc(100% - 85px); z-index: 4; }
 .portugal-map .maplibregl-ctrl-attrib { color: var(--distrito-secondary); font: 9px 'Barlow', sans-serif; background: color-mix(in srgb, var(--theme-surface) 92.9%, transparent); border: 1px solid color-mix(in srgb, var(--theme-border-ink) 8.2%, transparent); border-radius: 5px; margin: 0; }
@@ -60,7 +61,7 @@
 .geo-style-control button { min-height: 27px; border-radius: 4px; color: var(--distrito-muted); font-size: 10px; }
 .geo-style-control button.active { color: var(--distrito-text); background: var(--theme-raised); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--theme-highlight) 7.1%, transparent); }
 @media(max-width:899px) {
-  .geo-vehicle-label { display: none; }
+  .geo-vehicle-label { display: none !important; }
   .geo-base { width: 23px; height: 23px; font-size: 12px; box-shadow: 0 2px 7px color-mix(in srgb, var(--theme-shadow) 53.3%, transparent); }
   .geo-incident { width: 34px; height: 34px; }
 }
