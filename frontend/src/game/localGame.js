@@ -406,7 +406,9 @@ export function tickGame(input,seconds){
       const qualified=onscene.flatMap(unit=>unit.personnel_ids||[]).map(id=>g.personnel.find(person=>person.id===id)).filter(Boolean).filter(person=>(person.qualifications||[]).length).length;
       const qualificationBoost=Math.min(.35,(qualified/Math.max(1,personnel)*.2)+(requiredTrainingCount*.15));
       const commandBoost=inc.command_center_id&&g.command_centers.some(center=>center.id===inc.command_center_id&&center.active!==false)?.08:0;
-      const efficiency=Math.min(2.5,personnelBoost+specialistBoost+specializationBoost+qualificationBoost+commandBoost);
+      const operationalScore=crewPeople.length?crewPeople.reduce((sum,person)=>sum+((person.skill??60)+(person.decision_making??60)+(person.teamwork??60)+(person.discipline??60)+(person.morale??80)+(person.health??100)+(100-(person.stress||0))+(100-(person.fatigue||0)))/800,0)/crewPeople.length:.6;
+      const crewPerformanceFactor=Math.max(.78,Math.min(1.22,.82+operationalScore*.4));
+      const efficiency=Math.min(2.5,(personnelBoost+specialistBoost+specializationBoost+qualificationBoost+commandBoost)*crewPerformanceFactor);
       const pace=(inc.false_alarm?45:180)/efficiency;
       inc.operational_efficiency=Number(efficiency.toFixed(2));
       inc.progress=Math.min(100,inc.progress+dt*(100/pace));

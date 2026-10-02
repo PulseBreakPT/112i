@@ -83,7 +83,7 @@ export function rarityLevelFor(definition={},scenario={}){
 }
 
 function requirementSets(definition,scenario,category,rarity){
-  const text=normalise(definition.name || scenario.title);
+  const text=normalise(`${definition.name || scenario.title} ${scenario.description || ''}`);
   const mandatory=[...(definition.vehicle||[])],recommended=[],support=[];
 
   if(category==='urban_fire'){
@@ -103,7 +103,9 @@ function requirementSets(definition,scenario,category,rarity){
     if(rarity>=4)recommended.push('command-unit');
   }
   if(category==='road'){
-    if(has(text,['encarcer','capot','tres viaturas','autocarro','em massa','ferroviario','descarrilamento']))mandatory.push('heavy-rescue');
+    if(has(text,['encarcer','capot','tres viaturas','autocarro','em massa','ferroviario','descarrilamento'])){
+      if(rarity>=4||(definition.vehicle||[]).includes('heavy-rescue'))mandatory.push('heavy-rescue');else recommended.push('heavy-rescue');
+    }
     recommended.push('traffic-unit');
     if((scenario.needs?.medical||0)>0)recommended.push(rarity>=4?'vmer':'ambulance');
     if(rarity>=5)recommended.push('command-unit');
@@ -119,7 +121,9 @@ function requirementSets(definition,scenario,category,rarity){
   }
   if(category==='medical'){
     mandatory.push('ambulance');
-    if(has(text,['inconsciente','toracica','cardiorrespiratoria','pediatrica grave','queimadura','parto','avc','enfarte']))mandatory.push('vmer');
+    if(has(text,['inconsciente','toracica','cardiorrespiratoria','pediatrica grave','queimadura','parto','avc','enfarte'])){
+      if(rarity>=4||(definition.vehicle||[]).includes('vmer'))mandatory.push('vmer');else recommended.push('vmer');
+    }
     if(rarity>=5)mandatory.push('mass-casualty-unit');else if(rarity>=4)recommended.push('mass-casualty-unit');
     if(rarity>=5)support.push('medical-helicopter');
   }
