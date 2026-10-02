@@ -239,12 +239,14 @@ async def create_online_player(req: PlayerCreate):
     suffix = secrets.randbelow(9000) + 1000
     display_name = f'{callsign}-{suffix}'
     token = secrets.token_urlsafe(32)
+    now = utcnow()
     player = {
         'id': str(uuid4()),
         'callsign': display_name,
         'token_hash': token_hash(token),
-        'created_at': utcnow(),
-        'last_seen_at': utcnow(),
+        'created_at': now,
+        'last_seen_at': now,
+        'expires_at': now + timedelta(days=90),
     }
     await db.online_players.insert_one(player)
     return {'player_id': player['id'], 'callsign': display_name, 'token': token}
@@ -263,9 +265,13 @@ async def create_online_room(req: RoomCreate, authorization: str | None = Header
         'host_id': player['id'],
         'members': [{'player_id': player['id'], 'callsign': player['callsign'], 'joined_at': now}],
         'revision': 0,
+        'engine_version': 'geo-v2',
         'game': game,
         'created_at': now,
         'updated_at': now,
+        'last_tick_at': now,
+        'next_tick_at': now + timedelta(seconds=2),
+        'expires_at': now + timedelta(hours=24),
     }
     await db.online_rooms.insert_one(room)
     return public_room(room)
