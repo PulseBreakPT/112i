@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { Radio, Pause, Play, Volume2, VolumeX, Save, Crosshair, SlidersHorizontal, ChevronRight } from 'lucide-react';
+import { Radio, Pause, Play, Volume2, VolumeX, Save, Crosshair, SlidersHorizontal, ChevronRight, Clock3, Sun, Sunset, Moon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { IconButton } from './Shell';
 import { money } from './common';
 import { APP_NAME, BRAND_WORD, BRAND_NUMBER } from './branding';
 
-export function GameHUD({ game, act, sound, setSound, onSave, error }) {
+const THEME_OPTIONS = [[Clock3, 'auto', 'Auto'], [Sun, 'morning', 'Manhã'], [Sunset, 'afternoon', 'Tarde'], [Moon, 'night', 'Noite']];\n\nexport function GameHUD({ game, act, sound, setSound, onSave, error, themeMode = 'auto', setThemeMode = () => {}, theme }) {
   const [optionsOpen, setOptionsOpen] = useState(false);
   const options = useRef(null);
   useEffect(() => {
