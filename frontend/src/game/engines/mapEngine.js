@@ -28,12 +28,12 @@ const WEATHER_TRANSITIONS = {
   fog:['fog','clear','rain','fog'],
 };
 
-export const freshConditions = (elapsed, previous = null, random = Math.random, location = null) => {
+export const freshConditions = (elapsed, previous = null, random = Math.random, location = null, timeValue = new Date()) => {
   const previousWeather=previous?.weather||'clear';
   const options=WEATHER_TRANSITIONS[previousWeather]||WEATHER_TRANSITIONS.clear;
   const weatherId=options[Math.floor(random()*options.length)];
   const weather=WEATHER.find(item=>item.id===weatherId)||WEATHER[0];
-  const hour=portugalHour(new Date());
+  const now=timeValue instanceof Date?timeValue:new Date(timeValue),hour=portugalHour(now);
   const rushHour=(hour>=7&&hour<=9)||(hour>=16&&hour<=19);
   const trafficRoll=random();
   const trafficId=rushHour?(trafficRoll<.55?'heavy':trafficRoll<.9?'moderate':'light'):(trafficRoll<.15?'heavy':trafficRoll<.55?'moderate':'light');
@@ -43,7 +43,7 @@ export const freshConditions = (elapsed, previous = null, random = Math.random, 
     weather:weather.id,weather_label:weather.label,weather_factor:weather.factor,
     traffic:traffic.id,traffic_label:traffic.label,traffic_factor:traffic.factor,
     roadworks:previous?.roadworks?(random()<.72):(random()<.16),
-    night:isPortugalNight(new Date(), location),updated_at:elapsed,next_change_at:elapsed+duration,
+    night:isPortugalNight(now, location),updated_at:elapsed,next_change_at:elapsed+duration,
   };
 };
 
@@ -90,6 +90,7 @@ export async function fetchRoadRoute(points,originId,destinationId,conditions=nu
       if(payload?.code!=='Ok'||!route?.geometry?.coordinates?.length)throw new Error('Não existe um percurso rodoviário entre estes locais.');
       road={coordinates:route.geometry.coordinates,distance:Math.round(route.distance),duration:Math.max(1,Math.round(route.duration))};
       roadRouteCache.set(key,road);
+      if(roadRouteCache.size>500)roadRouteCache.delete(roadRouteCache.keys().next().value);
     }catch(error){
       if(error?.name==='AbortError')throw new Error('O cálculo do percurso rodoviário demorou demasiado. Tenta novamente.');
       throw new Error(error?.message||'Não foi possível calcular o percurso rodoviário. Tenta novamente.');
