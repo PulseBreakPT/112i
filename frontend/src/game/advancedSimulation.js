@@ -94,6 +94,7 @@ export function initializeAdvancedState(game) {
     unit.max_response_km=Number(unit.max_response_km)||game.dispatch_policy.max_response_km;
     unit.fixed_crew=unit.fixed_crew===true;
     unit.resources={...resourceState(unit.service,unit.resource_capacity),...(unit.resources||{})};
+    Object.entries(unit.resource_capacity||{}).forEach(([key,capacity])=>{unit.resources[key]=Math.max(0,Math.min(Number(capacity)||0,Number(unit.resources[key])||0));});
     unit.operational_reserve=unit.operational_reserve===true;unit.auto_dispatch=unit.auto_dispatch!==false;unit.dispatch_priority=Math.max(0,Math.min(100,Number(unit.dispatch_priority)||50));
   });
   game.personnel=(game.personnel||[]).map((person,index)=>({...normalizePersonnelProfile(person,index),leave_until:person.leave_until||0}));
