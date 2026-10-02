@@ -284,15 +284,23 @@ async def join_online_room(room_id: str, authorization: str | None = Header(defa
         room = await read_room(room_id)
         if room['status'] != 'active':
             raise HTTPException(409, 'A sala já não está ativa.')
-        if not any(member.get('player_id') == player['id'] for member in room.get('members', [])):
-            if len(room.get('members', [])) >= 8:
-                raise HTTPException(409, 'A sala atingiu o limite de 8 jogadores.')
-            room['members'].append({'player_id': player['id'], 'callsign': player['callsign'], 'joined_at': utcnow()})
-            room['revision'] += 1
-            room['updated_at'] = utcnow()
-            await db.online_rooms.replace_one({'id': room_id}, room)
-        return public_room(room)
-
+        if any(member.get('player_id') == player['id'] for member in room.get('members', [])):
+            return public_room(room)
+        if len(room.get('members', [])) >= 8:
+            raise HTTPException(409, 'A sala atingiu o limite de 8 jogadores.')
+        expected = room.get('revision', 0)
+        now = utcnow()
+        updated = await db.online_rooms.find_one_and_update(
+            {'id': room_id, 'status': 'active', 'revision': expected, 'members.player_id': {'$ne': player['id']}},
+            {'$push': {'members': {'player_id': player['id'], 'callsign': player['callsign'], 'joined_at': now}},
+             '$inc': {'revision': 1},
+             '$set': {'updated_at': now}},
+            projection={'_id': 0},
+            return_document=ReturnDocument.AFTER,
+        )
+        if not updated:
+            raise HTTPException(409, 'A sala mudou entretanto. Sincroniza e tenta novamente.')
+        return public_room(updated)
 
 @api.get('/online/rooms/{room_id}')
 async def get_online_room(room_id: str, authorization: str | None = Header(default=None)):
@@ -336,11 +344,20 @@ async def finish_online_room(room_id: str, authorization: str | None = Header(de
         if room['host_id'] != player['id']:
             raise HTTPException(403, 'Só o anfitrião pode terminar a partida.')
         if room['status'] == 'finished':
-            return {'room_id': room_id, 'score': server_score(room['game'])}
-        room['status'] = 'finished'
-        room['revision'] += 1
-        room['updated_at'] = utcnow()
+            return {'room_id': room_id, 'score': server_score(room['game']), 'eligible': bool(room.get('leaderboard_eligible'))}
+        if room['status'] != 'active':
+            raise HTTPException(409, 'A partida já não está ativa.')
+        expected = room.get('revision', 0)
+        now = utcnow()
         score = server_score(room['game'])
+        eligible = int(room['game'].get('completed', 0)) >= 3 and float(room['game'].get('elapsed', 0)) >= 300
+        room['status'] = 'finished'
+        room['revision'] = expected + 1
+        room['updated_at'] = now
+        room['leaderboard_eligible'] = eligible
+        result = await db.online_rooms.replace_one({'id': room_id, 'status': 'active', 'revision': expected}, room)
+        if result.matched_count != 1:
+            raise HTTPException(409, 'A sala mudou entretanto. Sincroniza e tenta novamente.')
         entry = {
             'room_id': room_id,
             'score': score,
@@ -350,12 +367,11 @@ async def finish_online_room(room_id: str, authorization: str | None = Header(de
             'elapsed': float(room['game'].get('elapsed', 0)),
             'players': [member['callsign'] for member in room.get('members', [])],
             'player_count': len(room.get('members', [])),
-            'created_at': utcnow(),
+            'created_at': now,
         }
-        await db.online_rooms.replace_one({'id': room_id}, room)
-        await db.leaderboard.update_one({'room_id': room_id}, {'$set': entry}, upsert=True)
-        return {'room_id': room_id, **entry}
-
+        if eligible:
+            await db.leaderboard.update_one({'room_id': room_id}, {'$set': entry}, upsert=True)
+        return {'room_id': room_id, **entry, 'eligible': eligible}
 
 @api.get('/leaderboard')
 async def leaderboard(limit: int = Query(default=25, ge=1, le=100), player_count: int | None = Query(default=None, ge=1, le=8)):
