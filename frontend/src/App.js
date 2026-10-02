@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { HashRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Radio, LoaderCircle, X, Menu, PanelsTopLeft, Info, BarChart3, Building2, CarFront, Users } from 'lucide-react';
 import { useGame } from './game/useGame';
 import { Sidebar, Footer } from './game/Shell';
@@ -41,7 +41,26 @@ import './VehicleTechnical.css';
 import './ActionStates.css';
 import './DarkMode.css';
 import './GraphiteRefinement.css';
+import './WorkspaceArchitecture.css';
 
+const WORKSPACE_GROUPS = [
+  { id:'management', label:'Gestão', home:'/gestao', routes:[
+    ['/gestao','Visão geral'],['/comando','Comandos'],['/bases','Bases'],['/frota','Frota'],['/funcionarios','Funcionários'],['/infraestruturas','Infraestruturas'],
+  ]},
+  { id:'operations', label:'Operações', home:'/operacoes', routes:[
+    ['/operacoes','Operações'],['/estrategia','Estratégia'],['/alianca','Aliança'],
+  ]},
+  { id:'analysis', label:'Análise', home:'/relatorios', routes:[
+    ['/relatorios','Relatórios'],['/carreira','Carreira'],
+  ]},
+  { id:'system', label:'Sistema', home:'/definicoes', routes:[
+    ['/definicoes','Definições'],['/privacidade','Privacidade'],
+  ]},
+];
+
+const WORKSPACE_META = Object.fromEntries(WORKSPACE_GROUPS.flatMap(group =>
+  group.routes.map(([path,name]) => [path,{ group:group.id, section:group.label.toUpperCase(), name }])
+));
 function GameApp() {
   const { game, world, error, busy, act, retry, feedback, clearFeedback } = useGame();
   const location = useLocation();
@@ -103,8 +122,9 @@ function GameApp() {
   const incident = game.incidents.find(i => i.id === selected);
   const waitingIncidents = game.incidents.filter(item => item.status === 'waiting');
   const queueTone = waitingIncidents.some(item => item.priority === 1) ? 'danger' : waitingIncidents.length ? 'warning' : game.incidents.length ? 'active' : 'success';
-  const workspaceMeta = { '/gestao':['GESTÃO','Gestão'], '/comando':['GESTÃO','Comandos'], '/bases':['GESTÃO','Bases'], '/frota':['GESTÃO','Frota'], '/funcionarios':['GESTÃO','Funcionários'], '/infraestruturas':['GESTÃO','Infraestruturas'], '/operacoes':['OPERAÇÕES','Operações'], '/estrategia':['ESTRATÉGIA','Planeamento'], '/alianca':['ALIANÇA','Aliança operacional'], '/relatorios':['RELATÓRIOS','Desempenho'], '/carreira':['PERFIL','Carreira'], '/definicoes':['SISTEMA','Definições'], '/privacidade':['SISTEMA','Privacidade'] }[location.pathname] || ['SISTEMA','Setor não encontrado'];
-  const [workspaceSection, workspaceName] = workspaceMeta;
+  const workspaceMeta = WORKSPACE_META[location.pathname] || { group:'system', section:'SISTEMA', name:'Setor não encontrado' };
+  const { group:workspaceGroup, section:workspaceSection, name:workspaceName } = workspaceMeta;
+  const contextualRoutes = WORKSPACE_GROUPS.find(item => item.id === workspaceGroup)?.routes || [];
 
   return <div data-time-theme="night" data-time-theme-mode="night" className={`app-shell immersive-shell minimal-shell distrito-interface dark ${isCentral ? 'central-open' : 'workspace-open'} ${panel && isCentral ? `panel-open panel-${panel}` : ''} ${menuOpen ? 'menu-open' : ''}`}>
     <main className="world-stage" aria-label="Mapa operacional" inert={!isCentral || menuOpen}>
@@ -165,8 +185,17 @@ function GameApp() {
       </div>}
     </> : <>
       <div className="workspace-shade" aria-hidden="true" onClick={() => navigate('/')} />
-      <section className="game-workspace" aria-label={workspaceName} data-testid="game-workspace">
-        <div className="workspace-bar"><div className="workspace-breadcrumb"><PanelsTopLeft size={14} /><span>{workspaceSection}</span><span>/</span><strong>{workspaceName.toUpperCase()}</strong></div><button className="workspace-close" aria-label="Voltar ao mapa" data-testid="workspace-close" onClick={() => navigate('/')}><span>Voltar ao mapa</span><kbd>ESC</kbd><X size={17} /></button></div>
+      <section className="game-workspace" aria-label={workspaceName} data-testid="game-workspace" data-workspace-section={workspaceGroup} data-workspace-route={location.pathname.slice(1) || 'central'}>
+        <div className="workspace-bar">
+          <div className="workspace-breadcrumb"><PanelsTopLeft size={14} /><span>{workspaceSection}</span><span>/</span><strong>{workspaceName.toUpperCase()}</strong></div>
+          <nav className="workspace-group-nav" aria-label="Áreas principais">
+            {WORKSPACE_GROUPS.map(item => <NavLink key={item.id} to={item.home} className={item.id === workspaceGroup ? 'active' : ''}>{item.label}</NavLink>)}
+          </nav>
+          <button className="workspace-close" aria-label="Voltar ao mapa" data-testid="workspace-close" onClick={() => navigate('/')}><span>Voltar ao mapa</span><kbd>ESC</kbd><X size={17} /></button>
+          <nav className="workspace-subnav" aria-label={'Navegação de '+workspaceSection.toLowerCase()}>
+            {contextualRoutes.map(([path,name]) => <NavLink key={path} to={path} className={({isActive}) => isActive ? 'active' : ''}>{name}</NavLink>)}
+          </nav>
+        </div>
         <Routes>
           <Route path="/gestao" element={<ManagementHub game={game} />} />
           <Route path="/comando" element={<CommandCenters game={game} world={world} act={act} busy={busy} />} />
