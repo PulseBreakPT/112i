@@ -88,7 +88,7 @@ export const MISSION_DEFINITIONS = [
 ];
 
 export function basesForCommand(game, commandCenterId = null) {
-  const operational = game.bases.filter(base => !base.operational_at || base.operational_at <= (game.elapsed || 0));
+  const operational = game.bases.filter(base => base.enabled!==false && (!base.operational_at || base.operational_at <= (game.elapsed || 0)));
   if (!commandCenterId) return operational;
   return operational.filter(base => base.command_center_id === commandCenterId);
 }
