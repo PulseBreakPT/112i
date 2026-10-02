@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { WORLD, fetchRoadRoute, selectArrUnitIds, selectRecommendedUnitIds } from './localGame';
+import { WORLD, fetchRoadRoute, gamePoint, selectArrUnitIds, selectRecommendedUnitIds } from './localGame';
+import { hasOperationalResources } from './engines/dispatchEngine';
 import { localGameApi } from './gameApi';
 import { operationalText, presentGameCopy, presentWorldCopy } from './operationalLanguage';
 import { detectGameFeedback, failureFeedback } from './eventFeedback';
@@ -51,8 +52,8 @@ export function useGame() {
       if(type==='dispatch_group'){
         const group=current.current.unit_groups?.find(item=>item.id===data.group_id);
         if(!group)throw new Error('Grupo de meios inválido.');
-        const incident=current.current.incidents.find(item=>item.id===data.incident_id);
-        const unitIds=group.unit_ids.filter(id=>current.current.units.some(unit=>unit.id===id&&unit.enabled!==false&&['available','patrol','staged'].includes(unit.status)&&unit.land===incident?.land));
+        const incident=current.current.incidents.find(item=>item.id===data.incident_id),allowReturning=current.current.dispatch_policy?.allow_returning_redirect===true;
+        const unitIds=group.unit_ids.filter(id=>current.current.units.some(unit=>{const base=current.current.bases.find(item=>item.id===unit.base_id);return unit.id===id&&unit.enabled!==false&&base?.enabled!==false&&(['available','patrol','staged'].includes(unit.status)||(allowReturning&&unit.status==='returning'))&&unit.land===incident?.land&&(unit.condition||100)>20&&(unit.fatigue||0)<90&&hasOperationalResources(unit);}));
         if(!unitIds.length)throw new Error('Nenhuma viatura deste grupo está disponível.');
         data={incident_id:data.incident_id,unit_ids:unitIds,via_arr:true};
         type='dispatch';
@@ -86,10 +87,11 @@ export function useGame() {
       if(type==='transport_patient'||type==='transport_prisoner'){
         const isPatient=type==='transport_patient';
         const task=(isPatient?current.current.patients:current.current.prisoners).find(item=>item.id===data[isPatient?'patient_id':'prisoner_id']);
-        const facility=current.current.facilities.find(item=>item.id===data.facility_id);
+        const facility=current.current.facilities.find(item=>item.id===data.facility_id),source=task&&gamePoint(task.source_node);
         const service=isPatient?'medical':'police';
-        const unit=current.current.units.find(item=>item.id===data.unit_id)||current.current.units.find(item=>item.service===service&&['available','patrol'].includes(item.status)&&item.land===facility?.land);
-        if(!task||!facility||!unit)throw new Error(isPatient?'Sem ambulâncias disponíveis.':'Sem viaturas policiais disponíveis.');
+        const eligible=unit=>{const base=current.current.bases.find(item=>item.id===unit.base_id);return unit.service===service&&['available','patrol'].includes(unit.status)&&unit.enabled!==false&&base?.enabled!==false&&unit.land===source?.land&&hasOperationalResources(unit);};
+        const requested=current.current.units.find(item=>item.id===data.unit_id),unit=requested&&eligible(requested)?requested:current.current.units.find(eligible);
+        if(!task||!facility||!source||facility.land!==source.land||!unit)throw new Error(isPatient?'Sem ambulâncias compatíveis na mesma região.':'Sem viaturas policiais compatíveis na mesma região.');
         const base=current.current.bases.find(item=>item.id===unit.base_id);
         const [pickup,delivery,back]=await Promise.all([
           fetchRoadRoute({lng:unit.lng,lat:unit.lat},task.source_node,current.current.conditions),
@@ -99,8 +101,10 @@ export function useGame() {
         data={...data,unit_id:unit.id,routes:{pickup,delivery,back}};
       }
       if(type==='transport_medical_transfer'){
-        const transfer=current.current.medical_transfers?.find(item=>item.id===data.transfer_id),facility=transfer&&current.current.facilities.find(item=>item.id===transfer.target_facility_id),unit=current.current.units.find(item=>item.id===data.unit_id&&item.service==='medical'&&['available','patrol'].includes(item.status))||current.current.units.find(item=>item.service==='medical'&&['available','patrol'].includes(item.status));
-        if(!transfer||!facility||!unit)throw new Error('Sem meio médico disponível para a transferência.');
+        const transfer=current.current.medical_transfers?.find(item=>item.id===data.transfer_id),patient=transfer&&current.current.patients?.find(item=>item.id===transfer.patient_id),origin=patient&&current.current.facilities.find(item=>item.id===patient.hospital_id),facility=transfer&&current.current.facilities.find(item=>item.id===transfer.target_facility_id),source=transfer&&gamePoint(transfer.source_node);
+        const eligible=unit=>{const base=current.current.bases.find(item=>item.id===unit.base_id);return unit.service==='medical'&&['available','patrol'].includes(unit.status)&&unit.enabled!==false&&base?.enabled!==false&&unit.land===source?.land&&hasOperationalResources(unit);};
+        const requested=current.current.units.find(item=>item.id===data.unit_id),unit=requested&&eligible(requested)?requested:current.current.units.find(eligible);
+        if(!transfer||!patient||!origin||!facility||!source||origin.land!==facility.land||facility.land!==source.land||!unit)throw new Error('Sem meio médico compatível para a transferência.');
         const base=current.current.bases.find(item=>item.id===unit.base_id),[pickup,delivery,back]=await Promise.all([fetchRoadRoute({lng:unit.lng,lat:unit.lat},transfer.source_node,current.current.conditions),fetchRoadRoute(transfer.source_node,facility.node,current.current.conditions),fetchRoadRoute(facility.node,base.node,current.current.conditions)]);
         data={...data,unit_id:unit.id,routes:{pickup,delivery,back}};
       }
@@ -140,18 +144,26 @@ export function useGame() {
     if (busy) return;
     const snapshot=current.current,policy=snapshot?.dispatch_policy;
     const patient=policy?.auto_patient_transport&&snapshot.patients?.find(item=>item.status==='waiting'&&item.treatment_complete);
-    const hospital=patient&&snapshot.facilities?.filter(item=>{
-      const occupancy=(snapshot.patients||[]).filter(candidate=>candidate.hospital_id===item.id&&['transporting','admitted'].includes(candidate.status)).length;
+    const patientSource=patient&&gamePoint(patient.source_node);
+    const hospital=patient&&patientSource&&snapshot.facilities?.filter(item=>{
+      const bonus=item.network_capacity_bonus||0,capacity=(item.capacity||0)+bonus,queue=(item.queue_limit||item.capacity||0)+bonus;
+      const occupancy=(snapshot.patients||[]).filter(candidate=>candidate.hospital_id===item.id&&['transporting','admitted','transfer_scheduled','transfer_transporting'].includes(candidate.status)).length;
       const specialtyOccupancy=(snapshot.patients||[]).filter(candidate=>candidate.hospital_id===item.id&&['transporting','admitted'].includes(candidate.status)&&(candidate.specialty===patient.specialty||patient.specialty==='urgency')).length;
-      const specialtyCapacity=(item.specialty_capacity?.[patient.specialty]||0)+(patient.specialty==='urgency'?(item.capacity||0):0);
-      return item.type==='hospital'&&item.enabled!==false&&(!item.operational_at||item.operational_at<=snapshot.elapsed)&&item.land===snapshot.units.find(unit=>unit.service==='medical')?.land&&occupancy<(item.capacity||0)&&(specialtyCapacity>specialtyOccupancy||(item.specialties||[]).includes('urgency'));
+      const specialtyCapacity=(item.specialty_capacity?.[patient.specialty]||0)+(patient.specialty==='urgency'?capacity:0);
+      return item.type==='hospital'&&item.enabled!==false&&(!item.operational_at||item.operational_at<=snapshot.elapsed)&&item.land===patientSource.land&&occupancy<Math.min(capacity,queue)&&(specialtyCapacity>specialtyOccupancy||(item.specialties||[]).includes('urgency'));
     }).sort((a,b)=>Number(!(a.specialties||[]).includes(patient.specialty))-Number(!(b.specialties||[]).includes(patient.specialty)))[0];
     const prisoner=!patient&&policy?.auto_prisoner_transport&&snapshot.prisoners?.find(item=>item.status==='waiting');
-    const prison=prisoner&&snapshot.facilities?.find(item=>item.type==='prison'&&item.enabled!==false&&(!item.operational_at||item.operational_at<=snapshot.elapsed));
+    const prisonerSource=prisoner&&gamePoint(prisoner.source_node);
+    const prison=prisoner&&prisonerSource&&snapshot.facilities?.find(item=>{
+      const bonus=item.network_capacity_bonus||0,capacity=(item.capacity||0)+bonus,queue=(item.queue_limit||item.capacity||0)+bonus;
+      const occupancy=(snapshot.prisoners||[]).filter(candidate=>candidate.prison_id===item.id&&['transporting','detained'].includes(candidate.status)).length;
+      return item.type==='prison'&&item.enabled!==false&&(!item.operational_at||item.operational_at<=snapshot.elapsed)&&item.land===prisonerSource.land&&occupancy<Math.min(capacity,queue);
+    });
     if(!patient&&!prisoner)return;
     const timer=setTimeout(()=>{if(patient&&hospital)act('transport_patient',{patient_id:patient.id,facility_id:hospital.id});else if(prisoner&&prison)act('transport_prisoner',{prisoner_id:prisoner.id,facility_id:prison.id});},500);
     return()=>clearTimeout(timer);
   },[act,busy,game.elapsed,game.patients,game.prisoners,game.dispatch_policy,game.facilities]);
+
 
   const displayGame = useMemo(() => presentGameCopy(game), [game]);
   const clearFeedback = useCallback(id => setFeedback(currentFeedback => currentFeedback?.id === id ? null : currentFeedback), []);
