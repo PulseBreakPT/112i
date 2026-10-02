@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { Button } from '../components/ui/button';
 import { duration, money, STATUS } from './common';
 import { RESOURCE_PROFILE, taskProgress } from './advancedSimulation';
+import { reserveFloor } from './engines/economyEngine';
 import './StrategicOperations.css';
 import './StrategicControls.css';
 
