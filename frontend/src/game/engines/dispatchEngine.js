@@ -22,6 +22,7 @@ export const hasOperationalResources = unit => {
 
 const dispatchable = (g, unit, incident, distanceMeters) =>
   operationalUnit(unit, g.dispatch_policy?.allow_returning_redirect===true) &&
+  g.bases.find(base=>base.id===unit.base_id)?.enabled!==false &&
   unit.exclude_from_arr!==true &&
   unit.land===incident.land &&
   (unit.condition||100)>20 &&
