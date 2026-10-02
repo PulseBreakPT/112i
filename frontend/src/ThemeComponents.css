@@ -148,3 +148,12 @@
 .minimal-shell.distrito-interface :is(.employee-card, .fleet-card):hover {
   border-color: var(--theme-accent) !important;
 }
+
+
+/* Modal stacking contract: dialogs always sit above the persistent HUD and its popovers. */
+[data-game-overlay="true"] {
+  z-index: 1000 !important;
+}
+.game-modal {
+  z-index: 1001 !important;
+}
