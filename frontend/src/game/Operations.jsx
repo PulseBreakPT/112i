@@ -182,14 +182,14 @@ export default function Operations({ game, world, act, busy }) {
             ['Competência',selectedPerson.skill,Gauge],
             ['Moral',selectedPerson.morale,Heart],
             ['Saúde',selectedPerson.health,HeartPulse],
-            ['Stress',100-(selectedPerson.stress||0),Activity],
+            ['Stress',selectedPerson.stress||0,Activity,100-(selectedPerson.stress||0)],
             ['Decisão',selectedPerson.decision_making,Brain],
             ['Trabalho em equipa',selectedPerson.teamwork,Users],
             ['Disciplina',selectedPerson.discipline,ShieldCheck],
             ['Resistência',selectedPerson.endurance,Zap],
             ['Liderança',selectedPerson.leadership,Award],
             ['Comunicação',selectedPerson.communication,MessageCircle],
-          ].map(([label,value,Icon])=><div key={label} data-tone={statTone(Number(value)||0)}><Icon size={14}/><span><small>{label.toUpperCase()}</small><strong>{Math.round(Number(value)||0)}</strong></span><i><b style={{width:`${Math.max(0,Math.min(100,Number(value)||0))}%`}}/></i></div>)}
+          ].map(([label,value,Icon,toneValue])=><div key={label} data-tone={statTone(Number(toneValue??value)||0)}><Icon size={14}/><span><small>{label.toUpperCase()}</small><strong>{Math.round(Number(value)||0)}</strong></span><i><b style={{width:`${Math.max(0,Math.min(100,label==='Stress'?100-(Number(value)||0):Number(value)||0))}%`}}/></i></div>)}
         </div>
         <div className="personnel-detail-grid">
           <section><h3>Especialização</h3><strong>{selectedPerson.specialization||'Operações gerais'}</strong><small>Traço: {selectedPerson.trait||'Profissional'}</small></section>
