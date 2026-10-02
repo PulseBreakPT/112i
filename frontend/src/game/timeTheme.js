@@ -1,91 +1,10 @@
 import { useEffect, useState } from 'react';
+import { solarTimesFor, themeTimeZone } from './engines/solarEngine';
+
+export { solarTimesFor, themeTimeZone } from './engines/solarEngine';
 
 export const TIME_THEME_STORAGE_KEY = 'distrito112-time-theme';
 export const TIME_THEME_MODES = ['auto', 'morning', 'afternoon', 'night'];
-
-const DAY_MS = 86400000;
-const J1970 = 2440588;
-const J2000 = 2451545;
-const J0 = 0.0009;
-const RAD = Math.PI / 180;
-
-const PALETTES = {
-  morning: {
-    page: '#eaf4ff', shell: '#eef7ff', surface: '#f8fbff', raised: '#edf5fd', inset: '#dceaf7',
-    text: '#11263d', secondary: '#36516d', muted: '#6a7f93', edge: '#2c72b52b', divider: '#2c72b51c',
-    glassA: '#fbfdfff2', glassB: '#e7f3ffea', cardA: '#ffffffd1', cardB: '#eaf4ffba',
-    headerA: '#ffffffc7', headerB: '#dcecff70', controlA: '#ffffffd9', controlB: '#d9ecffc7',
-    hoverA: '#dceeffed', hoverB: '#c8e3ffdb', selectedA: '#d0e8ffec', selectedB: '#bcdcffdb',
-    hud: '#102b47', accent: '#2878d0', quickA: '#f8fcffe8', quickB: '#dceeffdc',
-    marker: '#f7fbfff2', mapControl: '#f7fbffeb', overlayTop: '#68a8dd16', overlayBottom: '#ffffff08',
-    saturation: 1.03, brightness: 1.09, contrast: 0.94, sepia: 0.01, dark: false,
-  },
-  afternoon: {
-    page: '#fff1e2', shell: '#fff4e8', surface: '#fff8f0', raised: '#ffead4', inset: '#f4d8bc',
-    text: '#3d2416', secondary: '#65422a', muted: '#85664f', edge: '#b35f282b', divider: '#b35f281e',
-    glassA: '#fffaf4f0', glassB: '#ffe5cbe8', cardA: '#fff8efd4', cardB: '#ffe1c1bd',
-    headerA: '#fff7efcf', headerB: '#ffd3a269', controlA: '#fff3e5dc', controlB: '#ffd8b2c9',
-    hoverA: '#ffe0c0f0', hoverB: '#ffc88fdc', selectedA: '#ffd5a8ef', selectedB: '#ffbd78dc',
-    hud: '#432716', accent: '#e8792e', quickA: '#fff8efea', quickB: '#ffd9b5df',
-    marker: '#fff8eff2', mapControl: '#fff4e8eb', overlayTop: '#f0a04b24', overlayBottom: '#8c4d2110',
-    saturation: 1.08, brightness: 1.03, contrast: 0.96, sepia: 0.12, dark: false,
-  },
-  night: {
-    page: '#05070a', shell: '#070a0f', surface: '#11151c', raised: '#1b2029', inset: '#090c11',
-    text: '#f0f2f5', secondary: '#c2c8d0', muted: '#a1a9b4', edge: '#ffffff18', divider: '#ffffff10',
-    glassA: '#11151cdd', glassB: '#070a10e8', cardA: '#ffffff09', cardB: '#ffffff04',
-    headerA: '#ffffff08', headerB: '#00000005', controlA: '#ffffff12', controlB: '#ffffff08',
-    hoverA: '#ffffff1e', hoverB: '#ffffff10', selectedA: '#ffffff17', selectedB: '#ffffff09',
-    hud: '#ffffff', accent: '#5ba6ef', quickA: '#11151ccd', quickB: '#070a10dc',
-    marker: '#111923f2', mapControl: '#101821ec', overlayTop: '#07101a10', overlayBottom: '#02060b38',
-    saturation: 0.74, brightness: 0.76, contrast: 1.08, sepia: 0, dark: true,
-  },
-};
-
-const toJulian = date => date.valueOf() / DAY_MS - 0.5 + J1970;
-const fromJulian = julian => new Date((julian + 0.5 - J1970) * DAY_MS);
-const toDays = date => toJulian(date) - J2000;
-const solarMeanAnomaly = day => RAD * (357.5291 + 0.98560028 * day);
-const eclipticLongitude = anomaly => anomaly + RAD * (1.9148 * Math.sin(anomaly) + 0.02 * Math.sin(2 * anomaly) + 0.0003 * Math.sin(3 * anomaly)) + RAD * 102.9372 + Math.PI;
-const declination = longitude => Math.asin(Math.sin(longitude) * Math.sin(RAD * 23.4397));
-const julianCycle = (day, lw) => Math.round(day - J0 - lw / (2 * Math.PI));
-const approxTransit = (angle, lw, cycle) => J0 + (angle + lw) / (2 * Math.PI) + cycle;
-const solarTransitJulian = (transit, anomaly, longitude) => J2000 + transit + 0.0053 * Math.sin(anomaly) - 0.0069 * Math.sin(2 * longitude);
-const hourAngle = (height, latitude, dec) => Math.acos((Math.sin(height) - Math.sin(latitude) * Math.sin(dec)) / (Math.cos(latitude) * Math.cos(dec)));
-const setJulian = (height, lw, latitude, dec, cycle, anomaly, longitude) => {
-  const angle = hourAngle(height, latitude, dec);
-  return solarTransitJulian(approxTransit(angle, lw, cycle), anomaly, longitude);
-};
-
-const localCalendarDate = (now, timeZone) => {
-  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
-    timeZone, year: 'numeric', month: '2-digit', day: '2-digit',
-  }).formatToParts(now).filter(part => part.type !== 'literal').map(part => [part.type, part.value]));
-  return new Date(Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day), 12));
-};
-
-export const themeTimeZone = location => ['sao-miguel', 'terceira', 'azores'].includes(location?.land) ? 'Atlantic/Azores' : 'Europe/Lisbon';
-
-export function solarTimesFor(now = new Date(), latitude = 39.5, longitude = -8, timeZone = 'Europe/Lisbon') {
-  const date = localCalendarDate(now, timeZone);
-  const lw = RAD * -longitude;
-  const phi = RAD * latitude;
-  const day = toDays(date);
-  const cycle = julianCycle(day, lw);
-  const transit = approxTransit(0, lw, cycle);
-  const anomaly = solarMeanAnomaly(transit);
-  const longitudeSun = eclipticLongitude(anomaly);
-  const dec = declination(longitudeSun);
-  const noon = solarTransitJulian(transit, anomaly, longitudeSun);
-
-  const pair = degrees => {
-    const set = setJulian(degrees * RAD, lw, phi, dec, cycle, anomaly, longitudeSun);
-    return [fromJulian(noon - (set - noon)), fromJulian(set)];
-  };
-  const [sunrise, sunset] = pair(-0.833);
-  const [dawn, dusk] = pair(-6);
-  return { dawn, sunrise, solarNoon: fromJulian(noon), sunset, dusk };
-}
 
 const clamp = value => Math.max(0, Math.min(1, value));
 const progress = (now, start, end) => clamp((now.valueOf() - start.valueOf()) / Math.max(1, end.valueOf() - start.valueOf()));
