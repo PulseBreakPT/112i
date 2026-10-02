@@ -6,6 +6,39 @@ export { solarTimesFor, themeTimeZone } from './engines/solarEngine';
 export const TIME_THEME_STORAGE_KEY = 'distrito112-time-theme';
 export const TIME_THEME_MODES = ['auto', 'morning', 'afternoon', 'night'];
 
+const PALETTES = {
+  morning: {
+    page: '#eaf4ff', shell: '#eef7ff', surface: '#f8fbff', raised: '#edf5fd', inset: '#dceaf7',
+    text: '#11263d', secondary: '#36516d', muted: '#6a7f93', edge: '#2c72b52b', divider: '#2c72b51c',
+    glassA: '#fbfdfff2', glassB: '#e7f3ffea', cardA: '#ffffffd1', cardB: '#eaf4ffba',
+    headerA: '#ffffffc7', headerB: '#dcecff70', controlA: '#ffffffd9', controlB: '#d9ecffc7',
+    hoverA: '#dceeffed', hoverB: '#c8e3ffdb', selectedA: '#d0e8ffec', selectedB: '#bcdcffdb',
+    hud: '#102b47', accent: '#2878d0', quickA: '#f8fcffe8', quickB: '#dceeffdc',
+    marker: '#f7fbfff2', mapControl: '#f7fbffeb', overlayTop: '#68a8dd16', overlayBottom: '#ffffff08',
+    saturation: 1.03, brightness: 1.09, contrast: 0.94, sepia: 0.01, dark: false,
+  },
+  afternoon: {
+    page: '#fff1e2', shell: '#fff4e8', surface: '#fff8f0', raised: '#ffead4', inset: '#f4d8bc',
+    text: '#3d2416', secondary: '#65422a', muted: '#85664f', edge: '#b35f282b', divider: '#b35f281e',
+    glassA: '#fffaf4f0', glassB: '#ffe5cbe8', cardA: '#fff8efd4', cardB: '#ffe1c1bd',
+    headerA: '#fff7efcf', headerB: '#ffd3a269', controlA: '#fff3e5dc', controlB: '#ffd8b2c9',
+    hoverA: '#ffe0c0f0', hoverB: '#ffc88fdc', selectedA: '#ffd5a8ef', selectedB: '#ffbd78dc',
+    hud: '#432716', accent: '#e8792e', quickA: '#fff8efea', quickB: '#ffd9b5df',
+    marker: '#fff8eff2', mapControl: '#fff4e8eb', overlayTop: '#f0a04b24', overlayBottom: '#8c4d2110',
+    saturation: 1.08, brightness: 1.03, contrast: 0.96, sepia: 0.12, dark: false,
+  },
+  night: {
+    page: '#05070a', shell: '#070a0f', surface: '#11151c', raised: '#1b2029', inset: '#090c11',
+    text: '#f0f2f5', secondary: '#c2c8d0', muted: '#a1a9b4', edge: '#ffffff18', divider: '#ffffff10',
+    glassA: '#11151cdd', glassB: '#070a10e8', cardA: '#ffffff09', cardB: '#ffffff04',
+    headerA: '#ffffff08', headerB: '#00000005', controlA: '#ffffff12', controlB: '#ffffff08',
+    hoverA: '#ffffff1e', hoverB: '#ffffff10', selectedA: '#ffffff17', selectedB: '#ffffff09',
+    hud: '#ffffff', accent: '#5ba6ef', quickA: '#11151ccd', quickB: '#070a10dc',
+    marker: '#111923f2', mapControl: '#101821ec', overlayTop: '#07101a10', overlayBottom: '#02060b38',
+    saturation: 0.74, brightness: 0.76, contrast: 1.08, sepia: 0, dark: true,
+  },
+};
+
 const clamp = value => Math.max(0, Math.min(1, value));
 const progress = (now, start, end) => clamp((now.valueOf() - start.valueOf()) / Math.max(1, end.valueOf() - start.valueOf()));
 const lerp = (a, b, amount) => a + (b - a) * amount;
