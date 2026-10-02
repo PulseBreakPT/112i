@@ -190,7 +190,7 @@ function GameApp() {
     <CallModal incident={game.incidents.find(i => i.id === callId)} open={!!callId} onClose={closeCall} act={act} busy={busy} />
     <HelpModal open={help} onClose={() => setHelp(false)} />
     <EventEffects event={feedback} onDone={clearFeedback} />
-    <Toaster theme="dark" position="top-center" richColors />
+    <Toaster theme="dark" position="top-right" visibleToasts={3} />
   </div>;
 }
 export default function App() { return <HashRouter><GameApp /></HashRouter>; }
