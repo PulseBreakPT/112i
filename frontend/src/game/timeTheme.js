@@ -8,24 +8,24 @@ export const TIME_THEME_MODES = ['auto', 'morning', 'afternoon', 'night'];
 
 const PALETTES = {
   morning: {
-    page: '#eaf4ff', shell: '#eef7ff', surface: '#f8fbff', raised: '#edf5fd', inset: '#dceaf7',
-    text: '#11263d', secondary: '#36516d', muted: '#6a7f93', edge: '#2c72b52b', divider: '#2c72b51c',
-    glassA: '#fbfdfff2', glassB: '#e7f3ffea', cardA: '#ffffffd1', cardB: '#eaf4ffba',
-    headerA: '#ffffffc7', headerB: '#dcecff70', controlA: '#ffffffd9', controlB: '#d9ecffc7',
-    hoverA: '#dceeffed', hoverB: '#c8e3ffdb', selectedA: '#d0e8ffec', selectedB: '#bcdcffdb',
-    hud: '#102b47', accent: '#2878d0', quickA: '#f8fcffe8', quickB: '#dceeffdc',
-    marker: '#f7fbfff2', mapControl: '#f7fbffeb', overlayTop: '#68a8dd16', overlayBottom: '#ffffff08',
-    saturation: 1.03, brightness: 1.09, contrast: 0.94, sepia: 0.01, dark: false,
+    page: '#08131d', shell: '#0a1722', surface: '#112536', raised: '#19344a', inset: '#0a1a27',
+    text: '#f3f8fc', secondary: '#c8d8e5', muted: '#91a9bb', edge: '#8bc8ff1c', divider: '#b8dcff12',
+    glassA: '#10283bdd', glassB: '#081824e8', cardA: '#8bc8ff12', cardB: '#6eb8ff08',
+    headerA: '#b9ddff0a', headerB: '#07121d05', controlA: '#b4dcff14', controlB: '#7bbfff0b',
+    hoverA: '#9ed2ff20', hoverB: '#67b4ff12', selectedA: '#8cc9ff18', selectedB: '#5dacfa0d',
+    hud: '#ffffff', accent: '#7dc3ff', quickA: '#10283bcc', quickB: '#081824dc',
+    marker: '#102433f2', mapControl: '#0e2230ec', overlayTop: '#7ac7ff0b', overlayBottom: '#06111b20',
+    saturation: 0.92, brightness: 0.98, contrast: 1.01, sepia: 0.01, dark: true,
   },
   afternoon: {
-    page: '#fff1e2', shell: '#fff4e8', surface: '#fff8f0', raised: '#ffead4', inset: '#f4d8bc',
-    text: '#3d2416', secondary: '#65422a', muted: '#85664f', edge: '#b35f282b', divider: '#b35f281e',
-    glassA: '#fffaf4f0', glassB: '#ffe5cbe8', cardA: '#fff8efd4', cardB: '#ffe1c1bd',
-    headerA: '#fff7efcf', headerB: '#ffd3a269', controlA: '#fff3e5dc', controlB: '#ffd8b2c9',
-    hoverA: '#ffe0c0f0', hoverB: '#ffc88fdc', selectedA: '#ffd5a8ef', selectedB: '#ffbd78dc',
-    hud: '#432716', accent: '#e8792e', quickA: '#fff8efea', quickB: '#ffd9b5df',
-    marker: '#fff8eff2', mapControl: '#fff4e8eb', overlayTop: '#f0a04b24', overlayBottom: '#8c4d2110',
-    saturation: 1.08, brightness: 1.03, contrast: 0.96, sepia: 0.12, dark: false,
+    page: '#18110c', shell: '#1b130d', surface: '#2a1d13', raised: '#382719', inset: '#1a120c',
+    text: '#fff8f1', secondary: '#ead8c6', muted: '#bca18a', edge: '#ffc58d1d', divider: '#ffd7ae12',
+    glassA: '#2c1d12dd', glassB: '#160f0ae8', cardA: '#ffbc7d12', cardB: '#e99a5408',
+    headerA: '#ffd0a00a', headerB: '#140c0705', controlA: '#ffc18b14', controlB: '#e9914a0b',
+    hoverA: '#ffc08a20', hoverB: '#e88b4312', selectedA: '#ffb77818', selectedB: '#db7d390d',
+    hud: '#ffffff', accent: '#f2a45f', quickA: '#2c1d12cc', quickB: '#160f0adc',
+    marker: '#291b12f2', mapControl: '#25180fec', overlayTop: '#e7984a12', overlayBottom: '#120a061f',
+    saturation: 0.86, brightness: 0.90, contrast: 1.04, sepia: 0.10, dark: true,
   },
   night: {
     page: '#05070a', shell: '#070a0f', surface: '#11151c', raised: '#1b2029', inset: '#090c11',
@@ -103,7 +103,7 @@ const formatTime = (value, timeZone) => new Intl.DateTimeFormat('pt-PT', {
 const manualSnapshot = mode => {
   const label = mode === 'morning' ? 'Manhã' : mode === 'afternoon' ? 'Tarde' : 'Noite';
   return {
-    mode, phase: mode, from: mode, to: mode, blend: 0, label, dark: mode === 'night',
+    mode, phase: mode, from: mode, to: mode, blend: 0, label, dark: true,
     detail: 'Pré-visualização manual', solar: null, cssVars: mixPalette(mode, mode, 0),
   };
 };
@@ -134,7 +134,7 @@ export function getTimeThemeSnapshot(now = new Date(), location = {}, mode = 'au
     from = 'afternoon'; to = 'night'; blend = progress(now, sunsetTransitionStart, solar.dusk); phase = 'sunset'; label = 'Entardecer';
   }
 
-  const dark = from === 'night' && to === 'night' ? true : to === 'night' && blend >= 0.58;
+  const dark = true;
   const place = location?.city || location?.name || 'Portugal';
   const detail = place + ' · Sol ' + formatTime(solar.sunrise, timeZone) + '–' + formatTime(solar.sunset, timeZone) + ' · Escuro ' + formatTime(solar.dusk, timeZone);
 
