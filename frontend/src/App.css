@@ -17,3 +17,37 @@
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 /* Personnel portraits */
 .crew-row{display:flex;align-items:center;gap:10px}.crew-row>span:not(.personnel-avatar){flex:1;min-width:0}.personnel-avatar{width:42px;height:42px;flex:0 0 42px;border-radius:50%;background-size:1000% 500%;background-repeat:no-repeat;background-color:color-mix(in srgb, var(--theme-tint) 6.0%, transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--theme-highlight) 12.0%, transparent);overflow:hidden}
+
+
+/* Vehicle systems: technical sheet, lifecycle and computed ratings */
+.vehicle-technical-section{display:grid;gap:14px}
+.vehicle-rating-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.vehicle-rating-grid>div,.vehicle-spec-grid>span,.vehicle-resource-grid>span{
+  border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.035);border-radius:10px;padding:10px;min-width:0
+}
+.vehicle-rating-grid small,.vehicle-spec-grid small,.vehicle-resource-grid small,.vehicle-lifecycle-actions small{
+  display:block;font-size:9px;letter-spacing:.09em;opacity:.62;margin-bottom:4px
+}
+.vehicle-rating-grid strong{font-size:18px}
+.vehicle-rating-track{height:4px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:7px}
+.vehicle-rating-track i{display:block;height:100%;background:var(--service-color,currentColor);border-radius:inherit}
+.vehicle-spec-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.vehicle-spec-grid b,.vehicle-resource-grid b{display:block;font-size:12px;line-height:1.35;overflow-wrap:anywhere}
+.vehicle-tags{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.vehicle-tags strong{font-size:10px;letter-spacing:.08em;text-transform:uppercase;opacity:.65;margin-right:3px}
+.vehicle-tags span{font-size:10px;padding:5px 8px;border:1px solid rgba(255,255,255,.09);border-radius:999px;background:rgba(255,255,255,.04)}
+.vehicle-resource-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.vehicle-lifecycle-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr)) auto auto;gap:8px;align-items:end}
+.vehicle-lifecycle-actions>div{padding:8px 0}
+.vehicle-lifecycle-actions strong{font-size:12px}
+.unit-control-grid article>small{display:block;margin:7px 0;opacity:.68;line-height:1.35}
+@media (max-width:900px){
+  .vehicle-spec-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .vehicle-resource-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .vehicle-lifecycle-actions{grid-template-columns:1fr 1fr}
+}
+@media (max-width:560px){
+  .vehicle-rating-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .vehicle-spec-grid,.vehicle-resource-grid{grid-template-columns:1fr 1fr}
+  .vehicle-lifecycle-actions{grid-template-columns:1fr}
+}
