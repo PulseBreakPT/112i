@@ -126,14 +126,14 @@ export function resaleValue(unit,definition=unit,elapsed=0){
   const ageFactor=Math.max(.42,1-ageDays*.0012);
   const conditionFactor=.45+.55*clamp(unit.condition??100)/100;
   const wearFactor=Math.max(.55,1-clamp(unit.wear||0)*.004);
-  const mileageFactor=Math.max(.55,1-Math.max(0,unit.mileage_km||0)/180000);
+  const mileageFactor=Math.max(.45,1-Math.max(0,unit.mileage_km||0)/Math.max(1,unit.service_life_km||definition.service_life_km||180000)*.55);
   return Math.max(0,Math.round(price*.78*ageFactor*conditionFactor*wearFactor*mileageFactor));
 }
 
 export function breakdownChance(unit,dt){
   const reliability=clamp(unit.reliability??85),condition=clamp(unit.condition??100),wear=clamp(unit.wear||0);
-  const overdue=unit.maintenance_due?1:0;
-  const rate=.0000008+(100-reliability)*.0000012+Math.max(0,55-condition)*.0000025+wear*.0000007+overdue*.00002;
+  const overdue=unit.maintenance_due?1:0,lifeRatio=Math.max(0,(unit.mileage_km||0)/Math.max(1,unit.service_life_km||180000));
+  const rate=.0000008+(100-reliability)*.0000012+Math.max(0,55-condition)*.0000025+wear*.0000007+overdue*.00002+Math.max(0,lifeRatio-.75)*.000035;
   return Math.min(.08,1-Math.exp(-Math.max(0,Number(dt)||0)*rate));
 }
 
@@ -156,7 +156,7 @@ export function normalizeVehicleUnit(unit,definition,elapsed=0){
     resource_capacity:{...spec.resource_capacity},maintenance_base_cost:spec.maintenance_base_cost,maintenance_duration:spec.maintenance_duration,
     condition:100,wear:0,mileage_km:0,operating_hours:0,emergency_distance_km:0,missions_total:0,missions_success:0,critical_incidents:0,breakdowns:0,
     purchased_at:elapsed,purchase_price:spec.price,last_maintenance_at:elapsed,last_maintenance_km:0,next_maintenance_km:5000,maintenance_due:false,
-    operational_reserve:false,auto_dispatch:true,dispatch_priority:50,maintenance_history:[]
+    operational_reserve:false,auto_dispatch:true,dispatch_priority:50,maintenance_history:[],breakdown_history:[],billed_mileage_km:0
   };
   const merged={...defaults,...unit};
   merged.resource_capacity={...defaults.resource_capacity,...(unit.resource_capacity||{})};
@@ -164,5 +164,6 @@ export function normalizeVehicleUnit(unit,definition,elapsed=0){
   merged.capabilities=Array.isArray(unit.capabilities)?unit.capabilities:[...defaults.capabilities];
   merged.required_trainings=Array.isArray(unit.required_trainings)?unit.required_trainings:[...defaults.required_trainings];
   merged.max_response_km=Number(unit.max_response_km)||spec.max_response_km;
+  if(unit.billed_mileage_km==null)merged.billed_mileage_km=Number(unit.mileage_km)||0;
   return merged;
 }
