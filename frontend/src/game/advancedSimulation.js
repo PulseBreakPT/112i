@@ -207,7 +207,20 @@ export function applyAdvancedAction(game,kind,data,log=()=>{}) {
     const person=game.personnel.find(item=>item.id===data.person_id),target=game.bases.find(item=>item.id===data.base_id);assert(person&&target&&person.service===target.service,'Transferência incompatível.');assert(!person.unit_id&&person.status==='available','O elemento tem de estar livre.');const origin=game.bases.find(item=>item.id===person.base_id);assert(origin&&origin.land===target.land&&origin.command_center_id===target.command_center_id,'A transferência de pessoal só pode ser feita dentro da mesma área operacional.');assert((target.personnel||0)<(target.staff_capacity||14),'Base de destino sem capacidade.');origin.personnel=Math.max(0,(origin.personnel||0)-1);target.personnel=(target.personnel||0)+1;person.base_id=target.id;log(game,`${person.name} transferido para ${target.name}.`,'success');return true;
   }
   if(kind==='update_advanced_unit'){
-    const unit=game.units.find(item=>item.id===data.unit_id);assert(unit,'Viatura inválida.');if(data.shift)unit.shift={...unit.shift,...data.shift,start:Number(data.shift.start),end:Number(data.shift.end)};if(data.callsign!==undefined)unit.callsign=String(data.callsign).trim()||unit.name;if(data.category!==undefined)unit.category=String(data.category).trim()||unit.service;if(data.max_response_km!==undefined)unit.max_response_km=Math.max(1,Number(data.max_response_km)||1);if(data.fixed_crew!==undefined)unit.fixed_crew=!!data.fixed_crew;log(game,`${unit.name}: configuração operacional atualizada.`,'success');return true;
+    const unit=game.units.find(item=>item.id===data.unit_id);assert(unit,'Viatura inválida.');
+    if(data.shift){
+      const rawStart=Number(data.shift.start),rawEnd=Number(data.shift.end);
+      const startHour=Number.isFinite(rawStart)?Math.max(0,Math.min(23,rawStart)):unit.shift?.start??0;
+      const endHour=Number.isFinite(rawEnd)?Math.max(0,Math.min(24,rawEnd)):unit.shift?.end??24;
+      const days=[...new Set((data.shift.days||unit.shift?.days||[]).map(Number).filter(day=>Number.isInteger(day)&&day>=0&&day<=6))];
+      assert(days.length,'Seleciona pelo menos um dia de turno.');
+      unit.shift={...unit.shift,...data.shift,start:startHour,end:endHour,days};
+    }
+    if(data.callsign!==undefined)unit.callsign=String(data.callsign).trim().slice(0,24)||unit.name;
+    if(data.category!==undefined)unit.category=String(data.category).trim().slice(0,24)||unit.service;
+    if(data.max_response_km!==undefined)unit.max_response_km=Math.max(1,Math.min(300,Number(data.max_response_km)||1));
+    if(data.fixed_crew!==undefined)unit.fixed_crew=!!data.fixed_crew;
+    log(game,`${unit.name}: configuração operacional atualizada.`,'success');return true;
   }
   if(kind==='toggle_building_generation'){
     const building=[...(game.bases||[]),...(game.facilities||[])].find(item=>item.id===data.building_id);assert(building,'Edifício inválido.');building.mission_generation_enabled=data.enabled!==false;building.enabled=data.enabled!==false;log(game,`${building.name}: ${data.enabled===false?'suspenso':'reativado'}.`,data.enabled===false?'alert':'success');return true;
