@@ -1,8 +1,11 @@
 import asyncio
+import sys
+from pathlib import Path
 
 from fastapi import HTTPException
 
-from backend.road_routing import RoadRouter
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from road_routing import RoadRouter
 
 
 class FakeCollection:
