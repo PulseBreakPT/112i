@@ -291,6 +291,14 @@ const resolveIncident=(g,incident,success)=>{
   else{const penalty=Math.min(250,Math.round(incident.reward*.03));payCost(g,penalty,{label:'penalização por ocorrência falhada',protectReserve:true});g.failed++;g.trust=Math.max(0,g.trust-4);}
   g.incidents=g.incidents.filter(i=>i.id!==incident.id);
 };
+const crewAdjustedRoute=(g,unit,plan)=>{
+  if(!plan?.times?.length)return plan;
+  const crew=(unit.personnel_ids||[]).map(id=>g.personnel.find(person=>person.id===id)).filter(Boolean);
+  if(!crew.length)return plan;
+  const roadSkill=crew.reduce((sum,person)=>sum+((person.response_speed??60)+(person.emergency_driving??60))/2,0)/crew.length;
+  const factor=Math.max(.9,Math.min(1.05,1.05-roadSkill*.0012));
+  return {...plan,duration:Math.max(1,(Number(plan.duration)||0)*factor),times:plan.times.map(time=>Math.max(0,Number(time)||0)*factor)};
+};
 const mobilize=(g,incident,units,routes={},returnRoutes={})=>{
   requireValue(units.length&&units.every(unit=>operationalUnit(unit,g.dispatch_policy?.allow_returning_redirect===true)&&unitBaseOperational(g,unit)),'Não existem meios disponíveis para este despacho.');
   requireValue(units.every(unit=>unit.land===incident.land),'Sem ligação rodoviária para esta ocorrência.');
@@ -298,7 +306,7 @@ const mobilize=(g,incident,units,routes={},returnRoutes={})=>{
   requireValue(units.every(unit=>(unit.fatigue||0)<90),'Uma das equipas precisa de descanso antes de nova mobilização.');
   requireValue(units.every(hasOperationalResources),'Uma das viaturas não tem combustível ou consumíveis suficientes.');
   requireValue(units.every(unit=>distanceMeters(unit,incident)/1000<=Math.min(Number(g.dispatch_policy?.max_response_km)||Infinity,Number(unit.max_response_km)||Infinity)),'Uma das viaturas está fora do raio máximo de resposta.');
-  units.forEach(unit=>{const plan=routes[unit.id],returnPlan=returnRoutes[unit.id];requireValue(plan?.coordinates?.length>1&&plan?.times?.length===plan.coordinates.length,'Percurso rodoviário não preparado. Tenta despachar novamente.');const returnDistance=returnPlan?.distance??plan.distance??0,requiredFuel=((Math.max(0,plan.distance||0)+Math.max(0,returnDistance))/1000)*.42+1;requireValue((unit.resources?.fuel??100)>=requiredFuel,`Combustível insuficiente na ${unit.name} para ida e regresso estimados.`);unit.road_return_plan=returnPlan?.coordinates?.length>1?returnPlan:reverseRoute(plan);startRoute(unit,plan,'enroute',incident.node);unit.incident_id=incident.id;if(!incident.assigned.includes(unit.id))incident.assigned.push(unit.id);});
+  units.forEach(unit=>{const plan=routes[unit.id],returnPlan=returnRoutes[unit.id];requireValue(plan?.coordinates?.length>1&&plan?.times?.length===plan.coordinates.length,'Percurso rodoviário não preparado. Tenta despachar novamente.');const returnDistance=returnPlan?.distance??plan.distance??0,requiredFuel=((Math.max(0,plan.distance||0)+Math.max(0,returnDistance))/1000)*.42+1;requireValue((unit.resources?.fuel??100)>=requiredFuel,`Combustível insuficiente na ${unit.name} para ida e regresso estimados.`);const outbound=crewAdjustedRoute(g,unit,plan),back=crewAdjustedRoute(g,unit,returnPlan?.coordinates?.length>1?returnPlan:reverseRoute(plan));unit.road_return_plan=back;startRoute(unit,outbound,'enroute',incident.node);unit.incident_id=incident.id;if(!incident.assigned.includes(unit.id))incident.assigned.push(unit.id);});
   incident.status='enroute';log(g,`${units.length} unidade(s) mobilizada(s) pela rede rodoviária.`);
 };
 export function selectArrUnitIds(g,incidentId,arrId){
@@ -376,7 +384,7 @@ export function tickGame(input,seconds){
       const personnel=onscene.reduce((sum,u)=>sum+(u.crew_assigned||0),0),required=Math.max(1,inc.required_personnel||1);
       const crewPeople=onscene.flatMap(unit=>unit.personnel_ids||[]).map(id=>g.personnel.find(person=>person.id===id)).filter(Boolean);
       const rankValue=rank=>rank==='Chefe'?.16:rank==='Graduado'?.08:0;
-      const quality=crewPeople.length?crewPeople.reduce((sum,person)=>{const competence=((person.skill??60)+(person.decision_making??60)+(person.teamwork??60)+(person.discipline??60))/400;const readiness=((person.morale??80)+(person.health??100))/200;const strain=((person.fatigue||0)+(person.stress||0))/200;return sum+rankValue(person.rank)+Math.min(.14,(person.experience||0)/4000)+(competence-.5)*.22+(readiness-.5)*.12-strain*.18;},0)/crewPeople.length:0;
+      const quality=crewPeople.length?crewPeople.reduce((sum,person)=>{const competence=((person.skill??60)+(person.decision_making??60)+(person.discipline??60))/300,coordination=((person.teamwork??60)+(person.communication??60)+(person.team_affinity??60))/300;const readiness=((person.morale??80)+(person.health??100))/200;const strain=((person.fatigue||0)+(person.stress||0))/200;return sum+rankValue(person.rank)+Math.min(.14,(person.experience||0)/4000)+(competence-.5)*.18+(coordination-.5)*.12+(readiness-.5)*.12-strain*.18;},0)/crewPeople.length:0;
       const leadershipBoost=crewPeople.length?Math.max(...crewPeople.map(person=>person.leadership??50))/100*.08:0;
       const personnelBoost=Math.min(1.9,Math.max(.65,personnel/required+quality+leadershipBoost));
       const specialistBoost=(inc.required_vehicle_types||[]).filter(type=>onscene.some(unit=>unit.vehicle_type===type)).length*.18;
