@@ -1,5 +1,6 @@
 import { NEW_VEHICLES, NEW_MISSION_DEFINITIONS } from './expansionContent';
 import { applyVehicleSpec } from './vehicleSystems';
+import { rarityLevelFor, RARITY_LEVELS } from './engines/missionDoctrine';
 
 export const EXTENSIONS = {
   fire: [
@@ -26,16 +27,19 @@ export const SPECIALIZATIONS = {
     { id: 'urban', name: 'Incêndios urbanos' },
     { id: 'wildfire', name: 'Incêndios florestais', extension: 'wildfire' },
     { id: 'industrial', name: 'Risco industrial', extension: 'hazmat' },
+    { id: 'water_rescue', name: 'Salvamento aquático', extension: 'water' },
   ],
   medical: [
     { id: 'general', name: 'Emergência geral' },
     { id: 'trauma', name: 'Trauma' },
     { id: 'advanced-care', name: 'Suporte avançado', extension: 'advanced-care' },
+    { id: 'hospital-network', name: 'Rede hospitalar', extension: 'hospital-network' },
   ],
   police: [
     { id: 'general', name: 'Patrulhamento' },
     { id: 'public-order', name: 'Ordem pública', extension: 'public-order' },
     { id: 'criminal', name: 'Investigação criminal' },
+    { id: 'explosives', name: 'Inativação de explosivos', extension: 'explosives' },
   ],
 };
 
@@ -151,12 +155,15 @@ export function eligibleMissions(game, commandCenterId = null) {
 export function weightedMission(game, commandCenterId = null, random = Math.random) {
   const pool = eligibleMissions(game, commandCenterId);
   if (!pool.length) return MISSION_DEFINITIONS[1];
-  // Specialising a base improves the response to matching incidents; it must
-  // not make those incidents artificially more likely to occur.
-  const weight = item => item.weight;
-  const total = pool.reduce((sum, item) => sum + weight(item), 0);
-  let roll = random() * total;
-  return pool.find(item => (roll -= weight(item)) <= 0) || pool[pool.length - 1];
+  const levelFor=item=>rarityLevelFor(item,{title:item.name,priority:item.tier>=3?1:item.tier===2?2:3,needs:item.min||{}});
+  const buckets=new Map();
+  pool.forEach(item=>{const level=levelFor(item);if(!buckets.has(level))buckets.set(level,[]);buckets.get(level).push(item);});
+  const available=[...buckets.keys()].sort((a,b)=>a-b),frequencyTotal=available.reduce((sum,level)=>sum+(RARITY_LEVELS[level]?.frequency||1),0);
+  let rarityRoll=random()*frequencyTotal,selectedLevel=available[available.length-1];
+  for(const level of available){rarityRoll-=RARITY_LEVELS[level]?.frequency||1;if(rarityRoll<=0){selectedLevel=level;break;}}
+  const candidates=buckets.get(selectedLevel)||pool,total=candidates.reduce((sum,item)=>sum+Math.max(.1,Number(item.weight)||1),0);
+  let roll=random()*total;
+  return candidates.find(item=>(roll-=Math.max(.1,Number(item.weight)||1))<=0)||candidates[candidates.length-1];
 }
 
 export function progressionSnapshot(game, services) {
