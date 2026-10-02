@@ -526,3 +526,101 @@
     width: min(300px, calc(100vw - 20px)) !important;
   }
 }
+
+
+/* ---------- Textured HUD iconography ---------- */
+
+/* Hidden SVG filter definitions: available document-wide, never visible. */
+.hud-svg-filters {
+  position: absolute !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Texture lives inside the icon strokes only. The HUD itself stays fully unboxed. */
+.minimal-shell.distrito-interface :is(
+  .minimal-brand > svg,
+  .minimal-readout > .icon-btn > svg,
+  .minimal-options-toggle > svg,
+  .menu-launcher > button > svg,
+  .map-layer-button > svg,
+  .map-zoom > .icon-btn > svg,
+  .central-management-rail > button > svg,
+  .central-quick-rail > button > svg,
+  .central-incidents-launcher > svg,
+  .incoming-call > svg,
+  .incoming-icon > svg
+) {
+  filter: url(#hud-icon-texture) !important;
+  opacity: .94;
+  transform: translateZ(0);
+  transition: opacity .16s ease, transform .16s ease;
+}
+
+/* A second level of detail: thin highlights read like worn graphite/etched metal,
+   without introducing a plate, fill or background around the control. */
+.minimal-shell.distrito-interface :is(
+  .minimal-brand > svg,
+  .minimal-readout > .icon-btn > svg,
+  .minimal-options-toggle > svg,
+  .menu-launcher > button > svg,
+  .map-layer-button > svg,
+  .map-zoom > .icon-btn > svg,
+  .central-management-rail > button > svg,
+  .central-quick-rail > button > svg,
+  .central-incidents-launcher > svg
+) :is(path, line, polyline, polygon, circle, rect) {
+  vector-effect: non-scaling-stroke;
+}
+
+/* Hover/active increases material clarity, not brightness or background. */
+@media (hover:hover) {
+  .minimal-shell.distrito-interface :is(
+    .minimal-readout > .icon-btn,
+    .minimal-options-toggle,
+    .menu-launcher > button,
+    .map-layer-button,
+    .map-zoom > .icon-btn,
+    .central-management-rail > button,
+    .central-quick-rail > button,
+    .central-incidents-launcher
+  ):is(:hover, :focus-visible, .active, [aria-expanded="true"]) > svg {
+    opacity: 1;
+    transform: translateY(-.5px) translateZ(0);
+  }
+}
+
+/* Keep smaller mobile symbols crisp: same texture, slightly softer intensity. */
+@media (max-width: 600px) {
+  .minimal-shell.distrito-interface :is(
+    .minimal-brand > svg,
+    .minimal-readout > .icon-btn > svg,
+    .minimal-options-toggle > svg,
+    .menu-launcher > button > svg,
+    .map-layer-button > svg,
+    .map-zoom > .icon-btn > svg,
+    .central-management-rail > button > svg,
+    .central-quick-rail > button > svg,
+    .central-incidents-launcher > svg
+  ) {
+    opacity: .9;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .minimal-shell.distrito-interface :is(
+    .minimal-brand > svg,
+    .minimal-readout > .icon-btn > svg,
+    .minimal-options-toggle > svg,
+    .menu-launcher > button > svg,
+    .map-layer-button > svg,
+    .map-zoom > .icon-btn > svg,
+    .central-management-rail > button > svg,
+    .central-quick-rail > button > svg,
+    .central-incidents-launcher > svg
+  ) {
+    transition: none !important;
+  }
+}
