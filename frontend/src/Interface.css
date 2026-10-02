@@ -629,3 +629,257 @@
   .minimal-shell.distrito-interface *, .minimal-shell.distrito-interface *::before, .minimal-shell.distrito-interface *::after,
   .game-modal, .game-modal *, .game-modal::before { animation: none !important; transition: none !important; }
 }
+
+
+/* Central HUD spatial model — left = information/control, right = management.
+   The map stays primary; these rails are shortcuts, not full navigation panels. */
+.minimal-shell.distrito-interface .central-quick-rail {
+  position: absolute;
+  top: 118px;
+  z-index: 24;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  pointer-events: auto;
+}
+.minimal-shell.distrito-interface .central-info-rail { left: 16px; }
+.minimal-shell.distrito-interface .central-management-rail { top: 76px; right: 16px; }
+.minimal-shell.distrito-interface .central-quick-rail > button,
+.minimal-shell.distrito-interface .map-layer-button {
+  width: 118px;
+  min-height: 36px;
+  padding: 7px 9px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  border: 1px solid #ffffff18 !important;
+  border-radius: 7px;
+  background: linear-gradient(135deg, #101216b8, #090b0ec2) !important;
+  color: #eef1f5 !important;
+  box-shadow: 0 4px 18px #0004 !important;
+  -webkit-backdrop-filter: blur(14px) saturate(.75) !important;
+  backdrop-filter: blur(14px) saturate(.75) !important;
+  font: 500 11px/1.2 var(--distrito-font);
+  text-shadow: var(--distrito-hud-text-shadow);
+  opacity: .88;
+}
+.minimal-shell.distrito-interface .central-quick-rail > button:hover,
+.minimal-shell.distrito-interface .central-quick-rail > button.active,
+.minimal-shell.distrito-interface .map-layer-button:hover,
+.minimal-shell.distrito-interface .map-layer-button.active {
+  opacity: 1;
+  border-color: #ffffff38 !important;
+  background: linear-gradient(135deg, #191c22d9, #0d1015df) !important;
+}
+.minimal-shell.distrito-interface .central-quick-rail > button > svg,
+.minimal-shell.distrito-interface .map-layer-button > svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  color: #fff !important;
+  filter: var(--distrito-hud-icon-shadow);
+}
+.minimal-shell.distrito-interface .central-quick-rail > button > span,
+.minimal-shell.distrito-interface .map-layer-button > span { flex: 1; text-align: left; }
+.minimal-shell.distrito-interface .central-quick-rail > button > b {
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: #ffffff12;
+  color: #fff;
+  font: 600 10px/19px var(--distrito-font);
+}
+.minimal-shell.distrito-interface .central-info-rail > button[data-tone="danger"] > b { background: #d94b4b33; }
+.minimal-shell.distrito-interface .central-info-rail > button[data-tone="warning"] > b { background: #d6a84b33; }
+
+/* Camadas is the first control in the information rail. */
+.minimal-shell.distrito-interface .map-layer-wrap {
+  top: 76px !important;
+  left: 16px !important;
+  right: auto !important;
+  z-index: 25;
+}
+.minimal-shell.distrito-interface .map-layer-button {
+  height: 36px !important;
+  padding: 7px 9px !important;
+  font-size: 11px !important;
+  gap: 8px !important;
+}
+.minimal-shell.distrito-interface .map-layer-wrap .layer-menu {
+  top: 42px;
+  left: 0;
+  right: auto;
+  width: 224px;
+}
+
+/* Map controls belong with information/control on the left. */
+.minimal-shell.distrito-interface .map-zoom {
+  left: 16px !important;
+  right: auto !important;
+  bottom: 126px !important;
+  z-index: 23;
+}
+
+/* Menu sits above MapLibre's scale/attribution instead of sharing the map edge. */
+.minimal-shell.distrito-interface .menu-launcher {
+  left: 16px !important;
+  bottom: 72px !important;
+  z-index: 35;
+}
+.minimal-shell.distrito-interface .game-menu {
+  left: 16px !important;
+  bottom: 116px !important;
+  max-height: calc(100dvh - 190px);
+}
+
+/* Quick information panels live beside the left rail and never become a workspace. */
+.minimal-shell.distrito-interface .central-glance-panel {
+  position: absolute;
+  top: 118px;
+  left: 144px;
+  z-index: 33;
+  width: min(310px, calc(100vw - 310px));
+  min-width: 270px;
+  padding: 10px;
+  background: var(--distrito-glass);
+  border: 1px solid var(--distrito-edge);
+  border-radius: var(--distrito-radius);
+  box-shadow: var(--distrito-shadow);
+  -webkit-backdrop-filter: var(--distrito-menu-blur);
+  backdrop-filter: var(--distrito-menu-blur);
+}
+.minimal-shell.distrito-interface .central-glance-panel > header {
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2px 8px 5px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--distrito-divider);
+  color: var(--distrito-muted);
+  font: 600 10px/1.2 var(--distrito-font);
+  letter-spacing: .9px;
+}
+.minimal-shell.distrito-interface .central-glance-panel > header button {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--distrito-secondary);
+  border-radius: 5px;
+}
+.minimal-shell.distrito-interface .central-glance-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.minimal-shell.distrito-interface .central-glance-grid > div {
+  min-width: 0;
+  min-height: 72px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  background: #ffffff05;
+  border: 1px solid #ffffff0d;
+  border-radius: 6px;
+}
+.minimal-shell.distrito-interface .central-glance-grid small {
+  color: var(--distrito-muted);
+  font: 600 9px/1.2 var(--distrito-font);
+  letter-spacing: .7px;
+}
+.minimal-shell.distrito-interface .central-glance-grid strong {
+  overflow: hidden;
+  color: var(--distrito-text);
+  font: 600 15px/1.2 var(--distrito-font);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.minimal-shell.distrito-interface .central-glance-grid span {
+  overflow: hidden;
+  color: var(--distrito-muted);
+  font-size: 10px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Tactical drawers take priority over shortcut rails on the same side. */
+.minimal-shell.distrito-interface.panel-incidents :is(.central-info-rail, .central-glance-panel, .map-layer-wrap, .map-zoom) {
+  opacity: 0;
+  pointer-events: none;
+}
+.minimal-shell.distrito-interface.panel-dispatch .central-management-rail {
+  opacity: 0;
+  pointer-events: none;
+}
+/* Cancel legacy rules that moved map controls toward a right-side dispatch drawer. */
+.minimal-shell.distrito-interface.panel-dispatch :is(.map-layer-wrap, .map-zoom) { right: auto !important; }
+
+/* The live-call action remains operational and separate from both semantic rails. */
+.minimal-shell.distrito-interface .map-bottom { right: 16px; bottom: 24px; }
+
+@media (max-width: 900px) {
+  .minimal-shell.distrito-interface .central-quick-rail > button,
+  .minimal-shell.distrito-interface .map-layer-button {
+    width: 44px;
+    min-width: 44px;
+    height: 44px !important;
+    min-height: 44px;
+    padding: 0 !important;
+    justify-content: center;
+  }
+  .minimal-shell.distrito-interface .central-quick-rail > button > span,
+  .minimal-shell.distrito-interface .map-layer-button > span { display: none; }
+  .minimal-shell.distrito-interface .central-quick-rail > button > b {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    min-width: 17px;
+    height: 17px;
+    padding: 0 4px;
+    font-size: 9px;
+    line-height: 17px;
+  }
+  .minimal-shell.distrito-interface .central-quick-rail > button { position: relative; }
+  .minimal-shell.distrito-interface .central-info-rail { top: 128px; }
+  .minimal-shell.distrito-interface .central-management-rail { top: 76px; }
+  .minimal-shell.distrito-interface .map-layer-button { width: 44px !important; }
+  .minimal-shell.distrito-interface .central-glance-panel {
+    top: 128px;
+    left: 70px;
+    width: min(300px, calc(100vw - 140px));
+    min-width: 0;
+  }
+}
+
+@media (max-width: 600px) {
+  .minimal-shell.distrito-interface .map-layer-wrap { top: 64px !important; left: 10px !important; }
+  .minimal-shell.distrito-interface .central-info-rail { top: 114px; left: 10px; gap: 4px; }
+  .minimal-shell.distrito-interface .central-management-rail { top: 64px; right: 10px; gap: 4px; }
+  .minimal-shell.distrito-interface .map-zoom { left: 10px !important; bottom: 132px !important; }
+  .minimal-shell.distrito-interface .menu-launcher { left: 10px !important; bottom: max(72px, calc(env(safe-area-inset-bottom) + 58px)) !important; }
+  .minimal-shell.distrito-interface .game-menu {
+    left: 10px !important;
+    bottom: max(120px, calc(env(safe-area-inset-bottom) + 106px)) !important;
+    max-height: min(64dvh, calc(100dvh - 180px));
+  }
+  .minimal-shell.distrito-interface .central-glance-panel {
+    top: 114px;
+    left: 60px;
+    right: 60px;
+    width: auto;
+    min-width: 0;
+  }
+  .minimal-shell.distrito-interface .central-glance-grid { grid-template-columns: minmax(0, 1fr); }
+  .minimal-shell.distrito-interface .central-glance-grid > div { min-height: 58px; }
+  .minimal-shell.distrito-interface .map-bottom { right: 10px; bottom: max(20px, env(safe-area-inset-bottom)); }
+}
