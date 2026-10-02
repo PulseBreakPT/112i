@@ -15,8 +15,17 @@ export default function Privacy() {
         <p>O Distrito 112 não utiliza PostHog, Google Analytics, publicidade comportamental, gravação de sessões ou perfis de marketing.</p>
       </div></div>
       <div className="setting-row"><HardDrive /><div>
-        <h3>Progresso guardado no teu dispositivo</h3>
-        <p>A carreira e as preferências de som são guardadas no armazenamento local do navegador. Estes dados não são enviados para uma conta do Distrito 112.</p>
+        <h3>Modo local e modo online</h3>
+        <p>No modo local, a carreira e as preferências são guardadas no navegador. Quando utilizares funcionalidades online, como partidas multijogador ou classificações, são enviados apenas os dados necessários para identificar a sessão e sincronizar a partida.</p>
+      </div></div>
+    </section>
+
+    <section className="settings-section">
+      <h2>Dados do modo online</h2>
+      <div className="setting-row"><ShieldCheck /><div>
+        <h3>Multijogador e classificações</h3>
+        <p>Quando o modo online estiver ativo, o serviço pode tratar um nome de jogador escolhido por ti, um identificador pseudónimo de jogador, identificadores de partida, pontuações, posição nas classificações, estado e eventos necessários para sincronizar a partida, bem como data e hora.</p>
+        <p>O nome de jogador, a pontuação, a posição e informação básica da partida podem ficar visíveis a outros jogadores. Não uses o teu nome real se não o quiseres tornar público.</p>
       </div></div>
     </section>
 
@@ -25,17 +34,18 @@ export default function Privacy() {
       <div className="setting-row"><Map /><div>
         <h3>Mapa e cálculo de rotas</h3>
         <p>O jogo carrega cartografia através do OpenFreeMap/OpenStreetMap e calcula percursos através do serviço público OSRM. Os pedidos de rotas contêm apenas coordenadas dos locais usados pela simulação, não a localização real do jogador.</p>
-        <p>Como acontece em qualquer pedido web, estes fornecedores e o serviço de alojamento podem receber metadados técnicos normais, como endereço IP, data/hora, navegador e informação necessária para entregar o conteúdo.</p>
+        <p>Como acontece em qualquer pedido web, estes fornecedores, o alojamento e o servidor do modo online podem receber metadados técnicos normais, como endereço IP, data/hora, navegador e informação necessária para segurança, prevenção de abuso e entrega do serviço.</p>
       </div></div>
       <div className="setting-row"><ShieldCheck /><div>
         <h3>O que não pedimos</h3>
-        <p>Não pedimos nome real, email, número de telefone, contactos, fotografias, microfone, câmara ou localização precisa. Não vendemos dados pessoais.</p>
+        <p>Não pedimos nome real, número de telefone, contactos, fotografias, microfone, câmara ou localização precisa para jogar. Não vendemos dados pessoais e não usamos dados do multiplayer para publicidade comportamental.</p>
       </div></div>
     </section>
 
     <section className="settings-section">
-      <h2>Controlo dos teus dados</h2>
-      <p>Podes reiniciar a carreira nas Definições. Também podes apagar totalmente os dados locais do Distrito 112 através das definições de dados do site no teu navegador. O relatório de turno é criado e descarregado localmente quando escolhes exportá-lo.</p>
+      <h2>Controlo e retenção dos teus dados</h2>
+      <p>Podes reiniciar a carreira nas Definições e apagar os dados locais através das definições do navegador. O relatório de turno é criado localmente quando escolhes exportá-lo.</p>
+      <p>Os dados das partidas online e classificações podem permanecer no servidor enquanto forem necessários para manter o histórico, a integridade competitiva e a segurança do serviço. Antes do lançamento público do multiplayer, o jogo deverá disponibilizar um mecanismo para pedir a eliminação dos dados associados ao teu identificador de jogador.</p>
       <p>O site é alojado através do GitHub Pages. O carregamento do mapa, das fontes e das rotas pode implicar ligações diretas do teu navegador aos respetivos fornecedores.</p>
     </section>
 
