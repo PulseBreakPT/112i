@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { toast } from 'sonner';
 import { WORLD, fetchRoadRoute, gamePoint, selectArrUnitIds, selectRecommendedUnitIds } from './localGame';
 import { hasOperationalResources } from './engines/dispatchEngine';
 import { localGameApi } from './gameApi';
@@ -134,7 +133,6 @@ export function useGame() {
       return update(localGameApi.action(current.current, type, data), requestedType);
     } catch (error) {
       const message = operationalText(error?.message || 'Não foi possível concluir a ação. Tenta novamente.');
-      toast.error(message, { 'data-testid': 'action-error-toast' });
       publishFeedback(failureFeedback(message, requestedType));
       return null;
     } finally { setBusy(false); }
