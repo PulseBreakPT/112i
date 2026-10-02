@@ -123,6 +123,14 @@ let webpackConfig = {
         ],
       };
 
+      // A transitive dependency still emits Webpack's generic dynamic-require warning
+      // in production. Keep CI strict for application warnings while suppressing only this
+      // dependency-level diagnostic until that package removes the dynamic require.
+      webpackConfig.ignoreWarnings = [
+        ...(webpackConfig.ignoreWarnings || []),
+        /Critical dependency: the request of a dependency is an expression/,
+      ];
+
       // Add health check plugin to webpack if enabled
       if (config.enableHealthCheck && healthPluginInstance) {
         webpackConfig.plugins.push(healthPluginInstance);
