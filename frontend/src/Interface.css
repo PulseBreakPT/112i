@@ -883,3 +883,165 @@
   .minimal-shell.distrito-interface .central-glance-grid > div { min-height: 58px; }
   .minimal-shell.distrito-interface .map-bottom { right: 10px; bottom: max(20px, env(safe-area-inset-bottom)); }
 }
+
+
+/* v1.3 HUD refinement — persistent shortcuts use the same transparent language
+   as budget, pause/options and zoom. Navigation is not duplicated in the menu. */
+.minimal-shell.distrito-interface .central-management-rail > button,
+.minimal-shell.distrito-interface .map-layer-button {
+  background: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  color: #fff !important;
+  text-shadow: var(--distrito-hud-text-shadow);
+  opacity: .84;
+}
+.minimal-shell.distrito-interface .central-management-rail > button:hover,
+.minimal-shell.distrito-interface .central-management-rail > button:focus-visible,
+.minimal-shell.distrito-interface .map-layer-button:hover,
+.minimal-shell.distrito-interface .map-layer-button:focus-visible,
+.minimal-shell.distrito-interface .map-layer-button.active {
+  background: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  opacity: 1;
+}
+.minimal-shell.distrito-interface .central-management-rail > button {
+  position: relative;
+}
+.minimal-shell.distrito-interface .central-management-rail > button::after,
+.minimal-shell.distrito-interface .map-layer-button::after {
+  content: '';
+  position: absolute;
+  left: 9px;
+  right: 9px;
+  bottom: 2px;
+  height: 1px;
+  background: #fff;
+  box-shadow: 0 1px 3px #000;
+  opacity: 0;
+  pointer-events: none;
+}
+.minimal-shell.distrito-interface .central-management-rail > button:hover::after,
+.minimal-shell.distrito-interface .central-management-rail > button:focus-visible::after,
+.minimal-shell.distrito-interface .map-layer-button:hover::after,
+.minimal-shell.distrito-interface .map-layer-button:focus-visible::after,
+.minimal-shell.distrito-interface .map-layer-button.active::after {
+  opacity: .75;
+}
+.minimal-shell.distrito-interface .central-management-rail > button > span,
+.minimal-shell.distrito-interface .map-layer-button > span {
+  color: #fff;
+  text-shadow: var(--distrito-hud-text-shadow);
+}
+.minimal-shell.distrito-interface .central-management-rail > button > svg,
+.minimal-shell.distrito-interface .map-layer-button > svg {
+  filter: var(--distrito-hud-icon-shadow);
+}
+
+/* Information that used to live in a left rail now belongs to the bottom of
+   the main menu, keeping the map free of duplicate navigation. */
+.minimal-shell.distrito-interface .menu-context-tools {
+  margin-top: 7px;
+  padding-top: 8px;
+  border-top: 1px solid var(--distrito-divider);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.minimal-shell.distrito-interface .menu-context-heading {
+  padding: 4px 10px 5px;
+  color: var(--distrito-muted);
+  font: 600 9px/1.3 var(--distrito-font);
+  letter-spacing: .9px;
+}
+.minimal-shell.distrito-interface .menu-context-tools > button {
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 10px;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  color: var(--distrito-secondary);
+  text-align: left;
+  border: 1px solid transparent;
+  border-radius: 6px;
+}
+.minimal-shell.distrito-interface .menu-context-tools > button > span {
+  min-width: 0;
+  font-size: 12px;
+}
+.minimal-shell.distrito-interface .menu-context-tools > button > b {
+  min-width: 21px;
+  height: 20px;
+  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: #ffffff0a;
+  color: var(--distrito-text);
+  font: 600 10px/20px var(--distrito-font);
+}
+.minimal-shell.distrito-interface .menu-context-tools > button:hover,
+.minimal-shell.distrito-interface .menu-context-tools > button.active {
+  color: var(--distrito-text);
+  background: #ffffff08;
+  border-color: #ffffff14;
+}
+.minimal-shell.distrito-interface .menu-context-tools > button[data-tone="danger"] > b { color: #ffb2ae; background: #ff767615; }
+.minimal-shell.distrito-interface .menu-context-tools > button[data-tone="warning"] > b { color: #f6d28d; background: #f4be5715; }
+
+.minimal-shell.distrito-interface .menu-context-summary {
+  margin: 1px 5px 5px 28px;
+  padding: 7px 8px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px 10px;
+  border-left: 1px solid #ffffff16;
+  background: #00000012;
+  border-radius: 0 5px 5px 0;
+}
+.minimal-shell.distrito-interface .menu-context-summary > div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.minimal-shell.distrito-interface .menu-context-summary small {
+  color: var(--distrito-muted);
+  font: 600 8px/1.2 var(--distrito-font);
+  letter-spacing: .45px;
+  text-transform: uppercase;
+}
+.minimal-shell.distrito-interface .menu-context-summary strong {
+  overflow: hidden;
+  color: var(--distrito-text);
+  font: 600 11px/1.25 var(--distrito-font);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.minimal-shell.distrito-interface .menu-context-summary span {
+  overflow: hidden;
+  color: var(--distrito-muted);
+  font: 9px/1.3 var(--distrito-font);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The old floating information panel is intentionally retired. */
+.minimal-shell.distrito-interface .central-glance-panel,
+.minimal-shell.distrito-interface .central-info-rail {
+  display: none !important;
+}
+
+@media (max-width: 600px) {
+  .minimal-shell.distrito-interface .menu-context-tools > button { min-height: 42px; }
+  .minimal-shell.distrito-interface .menu-context-summary {
+    margin-left: 22px;
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
