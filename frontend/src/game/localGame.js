@@ -293,12 +293,14 @@ const resolveIncident=(g,incident,success)=>{
   else{const penalty=Math.min(250,Math.round(incident.reward*.03));payCost(g,penalty,{label:'penalização por ocorrência falhada',protectReserve:true});g.failed++;g.trust=Math.max(0,g.trust-4);}
   g.incidents=g.incidents.filter(i=>i.id!==incident.id);
 };
-const crewAdjustedRoute=(g,unit,plan)=>{
+const crewAdjustedRoute=(g,unit,plan,incident=null)=>{
   if(!plan?.times?.length)return plan;
   const crew=(unit.personnel_ids||[]).map(id=>g.personnel.find(person=>person.id===id)).filter(Boolean);
-  if(!crew.length)return plan;
-  const roadSkill=crew.reduce((sum,person)=>sum+((person.response_speed??60)+(person.emergency_driving??60))/2,0)/crew.length;
-  const factor=Math.max(.9,Math.min(1.05,1.05-roadSkill*.0012));
+  const roadSkill=crew.length?crew.reduce((sum,person)=>sum+((person.response_speed??60)+(person.emergency_driving??60))/2,0)/crew.length:60;
+  const crewFactor=Math.max(.9,Math.min(1.05,1.05-roadSkill*.0012));
+  const weather=String(g.conditions?.weather||'clear'),weatherPenalty=weather==='storm'?1+Math.max(0,100-(unit.weather_resistance||60))*.0035:weather==='rain'?1+Math.max(0,100-(unit.weather_resistance||60))*.0012:1;
+  const terrainPenalty=incident?.specialization==='wildfire'?1+Math.max(0,100-(unit.offroad||20))*.0022:1;
+  const factor=crewFactor*weatherPenalty*terrainPenalty;
   return {...plan,duration:Math.max(1,(Number(plan.duration)||0)*factor),times:plan.times.map(time=>Math.max(0,Number(time)||0)*factor)};
 };
 const mobilize=(g,incident,units,routes={},returnRoutes={})=>{
@@ -308,7 +310,7 @@ const mobilize=(g,incident,units,routes={},returnRoutes={})=>{
   requireValue(units.every(unit=>crewFatigue(g,unit)<90),'Uma das equipas precisa de descanso antes de nova mobilização.');
   requireValue(units.every(hasOperationalResources),'Uma das viaturas não tem combustível ou consumíveis suficientes.');
   requireValue(units.every(unit=>distanceMeters(unit,incident)/1000<=Math.min(Number(g.dispatch_policy?.max_response_km)||Infinity,Number(unit.max_response_km)||Infinity)),'Uma das viaturas está fora do raio máximo de resposta.');
-  units.forEach(unit=>{const plan=routes[unit.id],returnPlan=returnRoutes[unit.id];requireValue(plan?.coordinates?.length>1&&plan?.times?.length===plan.coordinates.length,'Percurso rodoviário não preparado. Tenta despachar novamente.');const returnDistance=returnPlan?.distance??plan.distance??0,requiredFuel=fuelPercentForDistance(unit,Math.max(0,plan.distance||0)+Math.max(0,returnDistance),3);requireValue((unit.resources?.fuel??100)>=requiredFuel,`Combustível insuficiente na ${unit.name} para ida e regresso estimados.`);const outbound=crewAdjustedRoute(g,unit,plan),back=crewAdjustedRoute(g,unit,returnPlan?.coordinates?.length>1?returnPlan:reverseRoute(plan));unit.road_return_plan=back;startRoute(unit,outbound,'enroute',incident.node);unit.incident_id=incident.id;if(!incident.assigned.includes(unit.id))incident.assigned.push(unit.id);});
+  units.forEach(unit=>{const plan=routes[unit.id],returnPlan=returnRoutes[unit.id];requireValue(plan?.coordinates?.length>1&&plan?.times?.length===plan.coordinates.length,'Percurso rodoviário não preparado. Tenta despachar novamente.');const returnDistance=returnPlan?.distance??plan.distance??0,requiredFuel=fuelPercentForDistance(unit,Math.max(0,plan.distance||0)+Math.max(0,returnDistance),3);requireValue((unit.resources?.fuel??100)>=requiredFuel,`Combustível insuficiente na ${unit.name} para ida e regresso estimados.`);const outbound=crewAdjustedRoute(g,unit,plan,incident),back=crewAdjustedRoute(g,unit,returnPlan?.coordinates?.length>1?returnPlan:reverseRoute(plan),incident);unit.road_return_plan=back;startRoute(unit,outbound,'enroute',incident.node);unit.incident_id=incident.id;if(!incident.assigned.includes(unit.id))incident.assigned.push(unit.id);});
   incident.status='enroute';log(g,`${units.length} unidade(s) mobilizada(s) pela rede rodoviária.`);
 };
 export function selectArrUnitIds(g,incidentId,arrId){
@@ -349,7 +351,7 @@ export function tickGame(input,seconds){
     if(['available','staged','patrol','offshift','uncrewed'].includes(u.status)){const offDuty=['offshift','uncrewed'].includes(u.status);u.fatigue=Math.max(0,(u.fatigue||0)-dt/(offDuty?60:120));(u.personnel_ids||[]).forEach(personId=>{const person=g.personnel.find(item=>item.id===personId);if(person){person.fatigue=Math.max(0,(person.fatigue||0)-dt/(offDuty?80:160));if(offDuty||u.status==='available'){person.stress=Math.max(0,(person.stress||0)-dt/(offDuty?90:260));person.health=Math.min(100,(person.health??100)+dt/1800);person.morale=Math.min(100,(person.morale??80)+dt/2400);}}});}
     if(!['enroute','returning','transporting','patrol','staging_enroute','base_transfer'].includes(u.status))return;
     u.service_seconds=(u.service_seconds||0)+dt;u.travel=Math.min(u.travel_total,u.travel+dt);locate(u);
-    if(u.status==='enroute'&&gameRandom(g)<breakdownChance(u,dt)){u.status='broken';u.breakdowns=(u.breakdowns||0)+1;const quote=maintenanceQuote(u,vehicleDefinition(u.service,u.vehicle_type));u.repair_until=g.elapsed+Math.max(120,Math.round(quote.duration*.7));u.incident_id=null;u.route=[];u.route_times=[];const cost=Math.max(180,Math.round(quote.cost*.65));payCost(g,cost,{label:'reparação de avaria',log});log(g,`Avaria na ${u.name}. Reparação de emergência iniciada (-${cost} €).`,'alert');return;}
+    if(u.status==='enroute'&&gameRandom(g)<breakdownChance(u,dt)){u.status='broken';u.breakdowns=(u.breakdowns||0)+1;u.breakdown_history=[{time:g.elapsed,mileage_km:u.mileage_km||0,condition:u.condition||0},...(u.breakdown_history||[])].slice(0,20);const quote=maintenanceQuote(u,vehicleDefinition(u.service,u.vehicle_type));u.repair_until=g.elapsed+Math.max(120,Math.round(quote.duration*.7));u.incident_id=null;u.route=[];u.route_times=[];const cost=Math.max(180,Math.round(quote.cost*.65));payCost(g,cost,{label:'reparação de avaria',log});log(g,`Avaria na ${u.name}. Reparação de emergência iniciada (-${cost} €).`,'alert');return;}
     if(u.travel<u.travel_total)return;u.node=u.destination;
     if(u.status==='base_transfer'){completeUnitTransfer(g,u);}
     else if(u.status==='returning'){if((u.fatigue||0)>=70){u.status='resting';u.rest_until=g.elapsed+90;}else u.status='available';u.incident_id=null;u.route=[];u.route_times=[];}
@@ -419,10 +421,11 @@ export function tickGame(input,seconds){
   g.level=1+Math.floor(g.xp/200);
   if(g.elapsed>=g.next_upkeep){
     const discountFor=(kind,id)=>Math.max(0,...(g.complexes||[]).filter(complex=>complex.shared_services!==false&&(complex[kind]||[]).includes(id)).map(complex=>complex.operating_cost_discount||0));
-    const maintenance=g.units.reduce((sum,unit)=>{const discount=discountFor('base_ids',unit.base_id);return sum+((unit.condition<60?25:0)+(unit.fatigue>60?10:0)+35)*(1-discount);},0);
+    let distanceCost=0;
+    const maintenance=g.units.reduce((sum,unit)=>{const discount=discountFor('base_ids',unit.base_id),fatigue=crewFatigue(g,unit),distanceDelta=Math.max(0,(unit.mileage_km||0)-(unit.billed_mileage_km||0));distanceCost+=distanceDelta*Math.max(0,unit.operating_cost_per_km||0);unit.billed_mileage_km=unit.mileage_km||0;return sum+((unit.condition<60?25:0)+(fatigue>60?10:0)+(unit.maintenance_due?30:0)+(unit.wear||0)*.15+35)*(1-discount);},0);
     const infrastructure=g.bases.filter(base=>base.enabled!==false).reduce((sum,base)=>sum+60*(1-discountFor('base_ids',base.id)),0)+g.facilities.filter(facility=>facility.enabled!==false).reduce((sum,facility)=>sum+80*(1-discountFor('facility_ids',facility.id)),0);
     const personnelCost=(g.personnel||[]).reduce((sum,person)=>sum+Math.max(900,Number(person.salary)||1400)/100,0);
-    const cost=Math.max(0,Math.round(maintenance+infrastructure+personnelCost));
+    const cost=Math.max(0,Math.round(maintenance+distanceCost+infrastructure+personnelCost));
     payCost(g,cost,{label:'custos operacionais do turno',log});
     log(g,`Custos operacionais: -${cost} €. Reserva protegida: ${reserveFloor(g)} €.`);
     g.next_upkeep=g.elapsed+ECONOMY.upkeepInterval;
