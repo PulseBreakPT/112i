@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Building2, Users, ShieldCheck, HeartPulse, Plus, CarFront, Target, Clock3, Trash2, ArrowUpRight, UserMinus } from 'lucide-react';
+import { Building2, Users, ShieldCheck, HeartPulse, Plus, CarFront, Target, Clock3, Trash2, ArrowUpRight, UserMinus, Activity, Brain, Gauge, Heart, Award, MessageCircle, Zap, BadgeCheck } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../components/ui/dialog';
 import { Button } from '../components/ui/button';
 import { toast } from 'sonner';
@@ -24,6 +24,7 @@ export default function Operations({ game, world, act, busy }) {
   const [arr, setArr] = useState({ name:'', fire:1, medical:0, police:0, vehicles:{} });
   const [unitGroup, setUnitGroup] = useState({ name:'', unit_ids:[] });
   const [specialtyChoices, setSpecialtyChoices] = useState({});
+  const [selectedPersonnelId, setSelectedPersonnelId] = useState(null);
 
   const facilities = game.facilities || [];
   const patients = game.patients || [];
@@ -40,6 +41,11 @@ export default function Operations({ game, world, act, busy }) {
   const sharedAcademy = (game.cooperation?.support?.academy||0)>0;
   const academy = localAcademy || sharedAcademy;
   const trainingPrice = Math.round((selectedCourse?.cost||0) * trainingCount * (sharedAcademy&&!localAcademy ? .65 : .75));
+  const selectedPerson=(game.personnel||[]).find(person=>person.id===selectedPersonnelId)||null;
+  const selectedPersonBase=selectedPerson?game.bases.find(base=>base.id===selectedPerson.base_id):null;
+  const selectedPersonUnit=selectedPerson?game.units.find(unit=>unit.id===selectedPerson.unit_id):null;
+  const personState=person=>person.status==='training'?'Em formação':person.unit_id?'Atribuído':person.status==='available'?'Disponível':person.status||'Indisponível';
+  const statTone=value=>value>=80?'high':value>=60?'good':value>=40?'mid':'low';
 
   const run = async (kind, data, success) => {
     const next = await act(kind, data);
@@ -129,7 +135,21 @@ export default function Operations({ game, world, act, busy }) {
       <div className="section-line"><h2>Qualificações disponíveis</h2><span>PESSOAL FORMADO</span></div>
       <div className="qualification-grid">{game.bases.map(base => <article key={base.id}><ServiceIcon service={base.service} size={18} /><div><strong>{base.name}</strong><small>{Object.entries(base.qualifications || {}).filter(([,count]) => count).map(([id,count]) => `${world.training_catalog.find(course => course.id === id)?.name}: ${count}`).join(' · ') || 'Sem qualificações especializadas'}</small></div></article>)}</div>
       <div className="section-line"><h2>Efetivo individual</h2><span>{game.personnel?.length || 0} ELEMENTOS</span></div>
-      <div className="personnel-grid">{(game.personnel||[]).map(person=>{const base=game.bases.find(item=>item.id===person.base_id),unit=game.units.find(item=>item.id===person.unit_id);return <article key={person.id}><span className={`person-status ${person.status}`}/><div><strong>{person.name} · {person.rank||'Operacional'}</strong><small>{base?.name} · {unit?unit.name:person.status==='training'?'Em formação':'Disponível'} · {person.experience||0} XP{person.qualifications?.length?` · ${person.qualifications.map(id=>world.training_catalog.find(course=>course.id===id)?.name||id).join(', ')}`:''}</small></div>{!person.unit_id&&person.status==='available'&&<select aria-label={`Transferir ${person.name}`} value={person.base_id} onChange={event=>run('transfer_personnel',{person_id:person.id,base_id:event.target.value},'Elemento transferido.')}>{game.bases.filter(item=>item.service===person.service).map(item=><option value={item.id} key={item.id}>{item.name}</option>)}</select>}<button disabled={busy||!!person.unit_id||person.status!=='available'} title="Dispensar elemento" aria-label={`Dispensar ${person.name}`} onClick={()=>act('dismiss_personnel',{person_id:person.id})}><UserMinus size={14}/></button></article>})}</div>
+      <div className="personnel-grid">{(game.personnel||[]).map(person=>{const base=game.bases.find(item=>item.id===person.base_id),unit=game.units.find(item=>item.id===person.unit_id);return <article className="personnel-card" role="button" tabIndex={0} key={person.id} onClick={()=>setSelectedPersonnelId(person.id)} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();setSelectedPersonnelId(person.id);}}}>
+        <div className="personnel-card-head"><span className={`person-status ${person.status}`}/><div><strong>{person.name}</strong><small>{person.rank||'Operacional'} · Nível {person.level||1} · {SERVICE[person.service]?.short}</small></div><span className="personnel-state">{personState(person)}</span></div>
+        <div className="personnel-card-location"><span>{base?.name||'Base por definir'}</span><b>{unit?unit.callsign||unit.name:person.specialization||'Operações gerais'}</b></div>
+        <div className="personnel-card-stats">
+          <span><small>EXPERIÊNCIA</small><b>{person.experience||0} XP</b></span>
+          <span data-tone={statTone(100-(person.fatigue||0))}><small>FADIGA</small><b>{Math.round(person.fatigue||0)}%</b></span>
+          <span data-tone={statTone(person.morale??80)}><small>MORAL</small><b>{Math.round(person.morale??80)}</b></span>
+          <span data-tone={statTone(person.skill??60)}><small>COMPETÊNCIA</small><b>{Math.round(person.skill??60)}</b></span>
+        </div>
+        <div className="personnel-card-specialty"><BadgeCheck size={12}/><span>{person.specialization||'Operações gerais'}</span><em>{person.trait||'Profissional'}</em></div>
+        <div className="personnel-card-actions" onClick={event=>event.stopPropagation()}>
+          {!person.unit_id&&person.status==='available'&&<select aria-label={`Transferir ${person.name}`} value={person.base_id} onChange={event=>run('transfer_personnel',{person_id:person.id,base_id:event.target.value},'Elemento transferido.')}>{game.bases.filter(item=>item.service===person.service).map(item=><option value={item.id} key={item.id}>{item.name}</option>)}</select>}
+          <button disabled={busy||!!person.unit_id||person.status!=='available'} title="Dispensar elemento" aria-label={`Dispensar ${person.name}`} onClick={()=>act('dismiss_personnel',{person_id:person.id})}><UserMinus size={14}/> Dispensar</button>
+        </div>
+      </article>})}</div>
     </>}
 
     {tab === 'automation' && <div className="automation-grid">
@@ -145,6 +165,40 @@ export default function Operations({ game, world, act, busy }) {
       </section>
     </div>}
 
+    <Dialog open={!!selectedPerson} onOpenChange={open=>!open&&setSelectedPersonnelId(null)}><DialogContent className="game-modal personnel-detail-modal">
+      {selectedPerson&&<>
+        <div className="modal-eyebrow"><Users size={15}/> PERFIL DO FUNCIONÁRIO</div>
+        <DialogTitle>{selectedPerson.name}</DialogTitle>
+        <DialogDescription>{SERVICE[selectedPerson.service]?.name} · {selectedPerson.rank||'Operacional'} · nível {selectedPerson.level||1}</DialogDescription>
+        <div className="personnel-detail-summary">
+          <div className="personnel-monogram">{selectedPerson.name.split(' ').slice(0,2).map(part=>part[0]).join('').toUpperCase()}</div>
+          <div><span className={`person-status ${selectedPerson.status}`}/><strong>{personState(selectedPerson)}</strong><small>{selectedPersonBase?.name||'Base por definir'}{selectedPersonUnit?` · ${selectedPersonUnit.callsign||selectedPersonUnit.name}`:''}</small></div>
+          <div><b>{selectedPerson.age||'-'}</b><small>IDADE</small></div>
+          <div><b>{selectedPerson.service_years||0}</b><small>ANOS SERVIÇO</small></div>
+          <div><b>{money(selectedPerson.salary||0)}</b><small>SALÁRIO</small></div>
+        </div>
+        <div className="personnel-primary-stats">
+          {[
+            ['Competência',selectedPerson.skill,Gauge],
+            ['Moral',selectedPerson.morale,Heart],
+            ['Saúde',selectedPerson.health,HeartPulse],
+            ['Stress',100-(selectedPerson.stress||0),Activity],
+            ['Decisão',selectedPerson.decision_making,Brain],
+            ['Trabalho em equipa',selectedPerson.teamwork,Users],
+            ['Disciplina',selectedPerson.discipline,ShieldCheck],
+            ['Resistência',selectedPerson.endurance,Zap],
+            ['Liderança',selectedPerson.leadership,Award],
+            ['Comunicação',selectedPerson.communication,MessageCircle],
+          ].map(([label,value,Icon])=><div key={label} data-tone={statTone(Number(value)||0)}><Icon size={14}/><span><small>{label.toUpperCase()}</small><strong>{Math.round(Number(value)||0)}</strong></span><i><b style={{width:`${Math.max(0,Math.min(100,Number(value)||0))}%`}}/></i></div>)}
+        </div>
+        <div className="personnel-detail-grid">
+          <section><h3>Especialização</h3><strong>{selectedPerson.specialization||'Operações gerais'}</strong><small>Traço: {selectedPerson.trait||'Profissional'}</small></section>
+          <section><h3>Competências técnicas</h3><span>Primeiros socorros <b>{selectedPerson.first_aid??60}</b></span><span>Condução de emergência <b>{selectedPerson.emergency_driving??60}</b></span><span>Velocidade de resposta <b>{selectedPerson.response_speed??60}</b></span><span>Coesão de equipa <b>{selectedPerson.team_affinity??60}</b></span></section>
+          <section><h3>Carreira</h3><span>Experiência <b>{selectedPerson.experience||0} XP</b></span><span>Missões <b>{selectedPerson.missions_completed||0}</b></span><span>Sucessos <b>{selectedPerson.successes||0}</b></span><span>Falhas <b>{selectedPerson.failures||0}</b></span><span>Ferimentos <b>{selectedPerson.injuries||0}</b></span><span>Condecorações <b>{selectedPerson.commendations||0}</b></span></section>
+          <section><h3>Formações</h3><div className="personnel-qualifications">{selectedPerson.qualifications?.length?selectedPerson.qualifications.map(id=><span key={id}>{world.training_catalog.find(course=>course.id===id)?.name||id}</span>):<small>Sem certificações especializadas.</small>}</div></section>
+        </div>
+      </>}
+    </DialogContent></Dialog>
     <Dialog open={buildOpen} onOpenChange={setBuildOpen}><DialogContent className="game-modal"><div className="modal-eyebrow"><Building2 size={15} /> INFRAESTRUTURA DE APOIO</div><DialogTitle>Construir instalação</DialogTitle><DialogDescription>Estas instalações desbloqueiam transporte, internamento, custódia e formação. Investimentos elegíveis preservam sempre a reserva operacional.</DialogDescription><label className="field-label">Centro de Comando<select value={commandCenterId} onChange={event=>setCommandCenterId(event.target.value)}>{(game.command_centers||[]).filter(center=>center.active!==false).map(center=><option value={center.id} key={center.id}>{center.name}</option>)}</select></label><label className="field-label">Tipo<select value={facilityType} onChange={event => setFacilityType(event.target.value)}>{Object.entries(world.facility_catalog).map(([id,item]) => <option value={id} key={id}>{item.name}</option>)}</select></label><label className="field-label">Localização<select value={site} onChange={event => setSite(event.target.value)}>{world.sites.map(option => <option value={option.id} key={option.id} disabled={facilities.some(facility => facility.type === facilityType && facility.node === option.node)}>{option.name}</option>)}</select></label><div className="purchase-total"><span>Capacidade inicial</span><b>{definition.capacity}</b><strong>{money(buildPrice)}</strong></div><Button className="primary-button" disabled={busy || !commandCenterId} onClick={build}><Building2 size={16} /> Construir {definition.name.toLowerCase()}</Button></DialogContent></Dialog>
   </main>;
 }
