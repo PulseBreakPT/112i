@@ -44,9 +44,9 @@ const DEFAULT_ARRS = [
   {id:'arr-medica',name:'Emergência médica',resources:{fire:0,medical:1,police:0}},
 ];
 const makeCareerTasks = g => [
-  {id:uid(),type:'completed',title:'Resolver 3 ocorrências',target:3,baseline:g.completed||0,progress:0,reward:1200,claimed:false},
-  {id:uid(),type:'earned',title:'Gerar 5 000 € em receita',target:5000,baseline:g.earned||0,progress:0,reward:900,claimed:false},
-  {id:uid(),type:'personnel',title:'Recrutar 2 elementos',target:2,baseline:g.personnel?.length||0,progress:0,reward:600,claimed:false},
+  {id:uid(),type:'completed',title:'Resolver 3 ocorrências',target:3,baseline:g.completed||0,progress:0,reward:1800,claimed:false},
+  {id:uid(),type:'earned',title:'Gerar 5 000 € em receita',target:5000,baseline:g.earned||0,progress:0,reward:1300,claimed:false},
+  {id:uid(),type:'personnel',title:'Recrutar 2 elementos',target:2,baseline:g.personnel?.length||0,progress:0,reward:900,claimed:false},
 ];
 const PERSONNEL_NAMES = ['Ana Silva','Miguel Santos','Inês Costa','João Ferreira','Mariana Oliveira','Rui Pereira','Beatriz Martins','Diogo Rodrigues','Sofia Almeida','Tiago Sousa','Catarina Fernandes','André Gomes','Leonor Lopes','Pedro Marques','Marta Ribeiro','Gonçalo Carvalho','Carolina Teixeira','Bruno Correia','Matilde Neves','Hugo Monteiro'];
 
