@@ -7,6 +7,7 @@ import { taskProgress } from './advancedSimulation';
 export default function Career({ game, act, busy }) {
   const run=async(kind,data,message)=>{const next=await act(kind,data);if(next&&message)toast.success(message);return next;};
   const rotating=[...(game.rotating_tasks?.daily||[]),...(game.rotating_tasks?.weekly||[])];
+  const careerTasks=game.tasks||[];
   const title=game.level===1?'Operador em formação':game.level<4?'Operador':'Coordenador de operações';
   return <main className="management-page strategy-page">
     <div className="page-heading"><div><span className="page-eyebrow">PERFIL DO OPERADOR</span><h1>Carreira</h1><p>Progressão, campanha, objetivos e marcos do teu percurso operacional.</p></div></div>
@@ -22,6 +23,8 @@ export default function Career({ game, act, busy }) {
     </div>
 
     <section className="strategy-panel"><header><Trophy/><div><h2>Objetivos diários e semanais</h2><p>Desafios de progressão com recompensas próprias.</p></div></header><div className="task-list">{rotating.map(task=>{const progress=taskProgress(game,task),done=progress>=task.target;return <article key={task.id} className={done?'done':''}><div className="task-icon">{done?<CheckCircle2/>:<Trophy/>}</div><div><strong>{task.title}</strong><span><i style={{width:String(Math.min(100,progress/task.target*100))+'%'}}/></span><small>{task.period==='daily'?'DIÁRIO':'SEMANAL'} · {progress}/{task.target} · {money(task.reward)}</small></div><Button disabled={busy||!done||task.claimed} onClick={()=>run('claim_rotating_task',{task_id:task.id},'Recompensa recebida.')}>{task.claimed?'Recebida':'Recolher'}</Button></article>})}</div><div className="event-banner">{(game.seasonal_events||[]).filter(item=>item.status==='active').map(event=><span key={event.id}><Flag size={14}/><b>{event.title}</b> · recompensas ×{event.reward_multiplier}</span>)}</div></section>
+
+    {!!careerTasks.length && <section className="strategy-panel"><header><Flag/><div><h2>Objetivos de carreira</h2><p>Metas permanentes da campanha, separadas dos objetivos rotativos.</p></div></header><div className="task-list">{careerTasks.map(task=>{const progress=Math.min(task.target,Math.max(0,task.progress||0)),done=progress>=task.target;return <article key={task.id} className={done?'done':''}><div className="task-icon">{done?<CheckCircle2/>:<Flag/>}</div><div><strong>{task.title}</strong><span><i style={{width:String(Math.min(100,progress/task.target*100))+'%'}}/></span><small>CARREIRA · {progress}/{task.target} · {money(task.reward)}</small></div><Button disabled={busy||!done||task.claimed} onClick={()=>run('claim_task',{task_id:task.id},'Recompensa de carreira recebida.')}>{task.claimed?'Recebida':'Recolher'}</Button></article>})}</div></section>}
 
     {!!game.medals?.length && <section className="strategy-panel"><header><Trophy/><div><h2>Medalhas operacionais</h2><p>Reconhecimento por respostas excecionais em grandes ocorrências.</p></div></header><div className="milestones">{game.medals.slice(0,8).map(medal=><div key={medal.id} className="unlocked"><Trophy size={20}/><div><strong>{medal.title}</strong><p>{medal.incident}</p></div><span>{medal.score}/100</span></div>)}</div></section>}
 
