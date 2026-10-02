@@ -16,5 +16,5 @@ export const hospitalCanReceive = (g,facility,patient,operationalFacility) =>
   facility?.type==='hospital'&&
   operationalFacility(g,facility)&&
   facility.enabled!==false&&
-  facilityOccupancy(g,facility)<Math.min(facility.capacity,facility.queue_limit||facility.capacity)&&
+  facilityOccupancy(g,facility)<Math.min((facility.capacity||0)+(facility.network_capacity_bonus||0),(facility.queue_limit||facility.capacity||0)+(facility.network_capacity_bonus||0))&&
   (hospitalSpecialtyCapacity(facility,patient.specialty)>hospitalSpecialtyOccupancy(g,facility,patient.specialty)||(facility.specialties||[]).includes('urgency'));
