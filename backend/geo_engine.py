@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from engine import uid, log, require, action as common_action, add_unit
 from geo_world import MODE, POINTS, PLACES, SITES
 from world import SCENARIOS, SERVICES
+from economy import STARTING_CASH, FUNDING_INTERVAL, ensure_reserve, pay_cost, apply_periodic_funding, mission_payout
 
 
 def game_random(g):
@@ -27,8 +28,9 @@ def game_choice(g, values):
 
 def new_game():
     seed = secrets.randbits(32) or 1
-    g = {'id': uid(), 'mode': MODE, 'rng_seed': seed, 'rng_state': seed, 'rng_counter': 0, 'city': 'Porto', 'money': 24500, 'xp': 0, 'level': 1,
-         'trust': 98, 'elapsed': 0, 'speed': 1, 'completed': 0, 'failed': 0, 'earned': 0,
+    g = {'id': uid(), 'mode': MODE, 'rng_seed': seed, 'rng_state': seed, 'rng_counter': 0, 'city': 'Porto', 'money': STARTING_CASH, 'xp': 0, 'level': 1,
+         'trust': 98, 'elapsed': 0, 'speed': 1, 'completed': 0, 'failed': 0, 'earned': 0, 'expenses': 0,
+         'public_funding': 0, 'operating_debt': 0, 'next_public_funding': FUNDING_INTERVAL,
          'next_spawn': 180, 'sequence': 101, 'incidents': [], 'units': [], 'bases': [],
          'logs': [], 'history': [], 'saved_at': datetime.now(timezone.utc).isoformat()}
     for service, key in [('fire', 'porto-boavista'), ('medical', 'porto-asprela'), ('police', 'porto-bonfim')]:
@@ -161,8 +163,10 @@ def tick(g, seconds):
         response_deadline = incident.get('response_deadline', incident['deadline'])
         resolution_deadline = incident.get('resolution_deadline', response_deadline + 900)
         if incident['progress'] >= 100:
-            g['money'] += incident['reward']
-            g['earned'] += incident['reward']
+            payout = mission_payout(g, incident, incident['reward'])
+            incident['final_reward'] = payout
+            g['money'] += payout
+            g['earned'] += payout
             g['xp'] += incident['xp']
             g['completed'] += 1
             g['trust'] = min(100, g['trust'] + 1)
@@ -172,6 +176,8 @@ def tick(g, seconds):
             g['trust'] = max(0, g['trust'] - 6)
             resolve(g, incident, False)
     g['level'] = 1 + g['xp'] // 200
+    apply_periodic_funding(g, log)
+    ensure_reserve(g, log, 'garantia mínima de continuidade operacional')
     if g['elapsed'] >= g['next_spawn']:
         if len(g['incidents']) < 7:
             spawn(g)
@@ -210,17 +216,25 @@ async def action(g, kind, data, router):
         require(service in SERVICES and site is not None, 'Seleciona um serviço e um local válidos.')
         require(not any(b['node'] == site['node'] and b['service'] == service for b in g['bases']), 'Este serviço já tem uma base neste local.')
         price = SERVICES[service]['base_price']
-        require(g['money'] >= price, 'Orçamento insuficiente.')
-        g['money'] -= price
+        pay_cost(g, price, 'construção de base', log)
         g['bases'].append(make_base(service, site))
         log(g, f"Nova base construída em {site['name']}.", 'success')
     elif kind == 'new_incident':
         require(len(g['incidents']) < 7, 'Limite de 7 ocorrências ativas atingido.')
         spawn(g)
+    elif kind == 'buy_vehicle':
+        base = next((b for b in g['bases'] if b['id'] == data.get('base_id')), None)
+        require(base is not None, 'Base inválida.')
+        advanced = data.get('advanced') is True
+        require(not advanced or g['level'] >= 2, 'Unidades especializadas disponíveis no nível 2.')
+        require(sum(u['base_id'] == base['id'] for u in g['units']) < 6, 'Garagem cheia. Constrói outra base.')
+        price = SERVICES[base['service']]['price'] * (2 if advanced else 1)
+        pay_cost(g, price, 'aquisição de viatura', log)
+        add_unit(g, base, advanced)
+        unit = g['units'][-1]
+        unit.update(lng=base['lng'], lat=base['lat'], land=base['land'])
+        log(g, f'Nova unidade adquirida: {base["name"]}.', 'success')
     else:
         common_action(g, kind, data)
-        if kind == 'buy_vehicle':
-            unit = g['units'][-1]
-            base = next(b for b in g['bases'] if b['id'] == unit['base_id'])
-            unit.update(lng=base['lng'], lat=base['lat'], land=base['land'])
+    ensure_reserve(g, log, 'reserva operacional protegida')
     return g
