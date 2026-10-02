@@ -67,7 +67,8 @@ export function selectRecommendedUnitIds(g,incidentId,mode='safe',{requireValue,
     const definition=vehicleDefinition(unit.service,unit.vehicle_type);
     const aliases={urban:'urban-fire',industrial:'hazmat',criminal:'investigation',wildfire:'wildfire'};
     const capability=aliases[inc.specialization]||inc.specialization;
-    const specialist=(inc.required_vehicle_types||[]).includes(unit.vehicle_type)||(capability&&unit.capabilities?.includes(capability));
+    const doctrineVehicles=[...(inc.required_vehicle_types||[]),...(inc.recommended_vehicle_types||[]),...(inc.support_vehicle_types||[])];
+    const specialist=doctrineVehicles.includes(unit.vehicle_type)||(capability&&unit.capabilities?.includes(capability));
     const trained=(unit.personnel_ids||[]).some(id=>{
       const person=(g.personnel||[]).find(item=>item.id===id);
       return (inc.required_trainings||[]).some(training=>(person?.qualifications||[]).includes(training));
@@ -99,6 +100,8 @@ export function selectRecommendedUnitIds(g,incidentId,mode='safe',{requireValue,
     else if(required)throw new Error('Não há meios compatíveis suficientes dentro do raio operacional.');
   };
   (inc.required_vehicle_types||[]).forEach(type=>pickUnit(unit=>unit.vehicle_type===type));
+  if(modeKey!=='minimum')(inc.recommended_vehicle_types||[]).forEach(type=>{if(!assigned.some(unit=>unit.vehicle_type===type)&&!chosen.some(unit=>unit.vehicle_type===type))pickUnit(unit=>unit.vehicle_type===type,false);});
+  if(modeKey==='full')(inc.support_vehicle_types||[]).forEach(type=>{if(!assigned.some(unit=>unit.vehicle_type===type)&&!chosen.some(unit=>unit.vehicle_type===type))pickUnit(unit=>unit.vehicle_type===type,false);});
   (inc.required_trainings||[]).forEach(training=>pickUnit(unit=>(unit.personnel_ids||[]).some(id=>(g.personnel||[]).find(person=>person.id===id)?.qualifications?.includes(training))));
   Object.entries(inc.needs||{}).forEach(([service,count])=>{
     const already=assigned.filter(unit=>unit.service===service).length+chosen.filter(unit=>unit.service===service).length;
