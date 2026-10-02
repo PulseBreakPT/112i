@@ -26,7 +26,7 @@ export default function Personnel({game,world,act,busy}){
   const [sort,setSort]=useState('name');
   const [selectedId,setSelectedId]=useState(null);
 
-  const people=game.personnel||[];
+  const people=useMemo(()=>game.personnel||[],[game.personnel]);
   const selected=people.find(person=>person.id===selectedId)||null;
   const selectedBase=selected?game.bases.find(base=>base.id===selected.base_id):null;
   const selectedUnit=selected?game.units.find(unit=>unit.id===selected.unit_id):null;

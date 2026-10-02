@@ -17,6 +17,7 @@ export default function CommandCenters({ game, world, act, busy }) {
   const [createOpen, setCreateOpen] = useState(false);
   const [poiOpen, setPoiOpen] = useState(false);
   const [drafts, setDrafts] = useState({});
+  const [zoneDrafts, setZoneDrafts] = useState({});
   const [centerDraft, setCenterDraft] = useState({ name:'Comando Regional', site_id:world.command_center_sites[0]?.id || '', radius_km:35 });
   const [poiDraft, setPoiDraft] = useState({ name:'', type:'industrial', site_id:world.command_center_sites[0]?.id || '', command_center_id:game.active_command_center_id || centers[0]?.id || '', custom:false, lng:'', lat:'', city:'' });
   const unassignedBases = game.bases.filter(base => !centers.some(center => center.id === base.command_center_id));
@@ -37,6 +38,13 @@ export default function CommandCenters({ game, world, act, busy }) {
   const draftFor = center => drafts[center.id] || { name:center.name, radius_km:center.radius_km };
   const setDraft = (center, key, value) => setDrafts(current => ({...current,[center.id]:{...draftFor(center),[key]:value}}));
   const saveCenter = center => run('update_command_center',{command_center_id:center.id,...draftFor(center)},'Área operacional atualizada.');
+  const zoneDraftFor = center => zoneDrafts[center.id] || {name:'Zona operacional',mission_key:'default',radius_km:Math.min(10,center.radius_km||10)};
+  const setZoneDraft = (center,key,value) => setZoneDrafts(current=>({...current,[center.id]:{...zoneDraftFor(center),[key]:value}}));
+  const createZone = center => {
+    const draft=zoneDraftFor(center),radius=Math.max(1,Math.min(center.radius_km||120,Number(draft.radius_km)||5)),latDelta=radius/111,lngDelta=radius/(111*Math.max(.2,Math.cos((center.lat||0)*Math.PI/180)));
+    const points=[{lng:center.lng-lngDelta,lat:center.lat-latDelta},{lng:center.lng+lngDelta,lat:center.lat-latDelta},{lng:center.lng+lngDelta,lat:center.lat+latDelta},{lng:center.lng-lngDelta,lat:center.lat+latDelta}];
+    return run('add_spawn_zone',{command_center_id:center.id,name:draft.name,mission_key:draft.mission_key,points},'Zona de geração criada.');
+  };
   const createCenter = async () => { if(await run('create_command_center',centerDraft,'Centro de Comando criado.'))setCreateOpen(false); };
   const createPoi = async () => { if(await run('create_player_poi',poiDraft,'PDI adicionado à cobertura.')){setPoiOpen(false);setPoiDraft(current=>({...current,name:''}));} };
 
@@ -51,11 +59,13 @@ export default function CommandCenters({ game, world, act, busy }) {
 
     <div className="section-line"><h2>Rede de comando</h2><span>RECURSOS ISOLADOS POR ÁREA</span></div>
     <div className="command-grid">{centers.map(center => {
-      const data=stats[center.id],draft=draftFor(center),isActive=center.id===game.active_command_center_id;
+      const data=stats[center.id],draft=draftFor(center),zoneDraft=zoneDraftFor(center),isActive=center.id===game.active_command_center_id;
       return <article key={center.id} className={`command-card ${isActive?'active':''}`}>
         <header><div className="command-emblem"><RadioTower size={22}/></div><div><span>{isActive?'VISTA ATIVA':'CENTRO DE COMANDO'}</span><h3>{center.name}</h3><p><MapPin size={12}/>{center.city} · {center.land==='mainland'?'Continente':'Região autónoma'}</p></div>{!isActive&&<button onClick={()=>run('set_active_command',{command_center_id:center.id})}>Abrir área</button>}</header>
         <div className="coverage-band"><div className="coverage-sweep"/><span><Crosshair size={14}/> RAIO</span><strong>{draft.radius_km} km</strong><input aria-label={`Raio de ${center.name}`} type="range" min="5" max="120" step="5" value={draft.radius_km} onChange={event=>setDraft(center,'radius_km',Number(event.target.value))}/></div>
         <div className="mission-range-grid">{[['fire','Bombeiros'],['medical','Emergência médica'],['police','Polícia']].map(([key,label])=><label key={key}>{label}<input type="number" min="2" max="200" defaultValue={center.mission_ranges?.[key]||center.radius_km} onBlur={event=>run('set_mission_range',{command_center_id:center.id,mission_key:key,radius_km:event.target.value},'Raio específico atualizado.')}/><span>km</span></label>)}</div>
+        <div className="command-edit"><input aria-label="Nome da zona de geração" value={zoneDraft.name} onChange={event=>setZoneDraft(center,'name',event.target.value)}/><select aria-label="Serviço da zona de geração" value={zoneDraft.mission_key} onChange={event=>setZoneDraft(center,'mission_key',event.target.value)}><option value="default">Todos os serviços</option><option value="fire">Bombeiros</option><option value="medical">Emergência médica</option><option value="police">Polícia</option></select><input aria-label="Raio da zona de geração" type="number" min="1" max={center.radius_km||120} value={zoneDraft.radius_km} onChange={event=>setZoneDraft(center,'radius_km',Number(event.target.value))}/><button disabled={busy||!zoneDraft.name.trim()} onClick={()=>createZone(center)}><Radar size={13}/> Criar zona</button></div>
+        {!!(center.spawn_zones||[]).length&&<div className="poi-board">{center.spawn_zones.map(zone=><article key={zone.id}><Radar size={15}/><div><strong>{zone.name}</strong><small>{zone.mission_key==='default'?'Todos os serviços':zone.mission_key} · {zone.points?.length||0} vértices</small></div><button data-action-tone="danger" aria-label={'Remover '+zone.name} onClick={()=>run('delete_spawn_zone',{command_center_id:center.id,zone_id:zone.id},'Zona removida.')}><Trash2 size={14}/></button></article>)}</div>}
         <div className="command-metrics"><span><Building2/><b>{data.bases.length}</b><small>bases</small></span><span><Warehouse/><b>{data.facilities.length}</b><small>instalações</small></span><span><RadioTower/><b>{data.units.length}</b><small>viaturas</small></span><span><Radar/><b>{data.progression?.unlocked_missions?.length||0}</b><small>cenários</small></span></div>
         <div className="command-edit"><input aria-label="Nome do Centro de Comando" value={draft.name} onChange={event=>setDraft(center,'name',event.target.value)}/><button disabled={busy} onClick={()=>saveCenter(center)}><Save size={13}/> Guardar</button></div>
         <div className="command-assignments"><strong>BASES ATRIBUÍDAS</strong>{game.bases.map(base=><label key={base.id} className={base.command_center_id===center.id?'owned':''}><span style={{'--service':SERVICE[base.service].ink}}/><em>{base.name}</em><select aria-label={`Comando de ${base.name}`} value={base.command_center_id||''} onChange={event=>run('assign_base_command',{base_id:base.id,command_center_id:event.target.value})}>{centers.map(option=><option value={option.id} key={option.id}>{option.name}</option>)}</select></label>)}</div><div className="command-assignments"><strong>INSTALAÇÕES ATRIBUÍDAS</strong>{(game.facilities||[]).map(facility=><label key={`facility-${facility.id}`} className={facility.command_center_id===center.id?'owned':''}><Warehouse size={14}/><em>{facility.name}</em><select aria-label={`Comando de ${facility.name}`} value={facility.command_center_id||''} onChange={event=>run('assign_facility_command',{facility_id:facility.id,command_center_id:event.target.value})}>{centers.map(option=><option value={option.id} key={option.id}>{option.name}</option>)}</select></label>)}</div>

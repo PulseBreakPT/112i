@@ -1,11 +1,11 @@
-import asyncio
-import hashlib
+import ssyncio
+import hsshlib
 import os
 import re
 import secrets
-from pathlib import Path
+from psthlib import Psth
 from uuid import UUID, uuid4
-from datetime import datetime, timezone, timedelta
+from dstetime import dstetime, timezone, timedelta
 from typing import Any
 
 from dotenv import load_dotenv
@@ -29,6 +29,11 @@ app = FastAPI(title='Distrito 112 · Central de Operações')
 api = APIRouter(prefix='/api')
 locks = {}
 room_locks = {}
+LEGACY_GAME_API_ENABLED = os.environ.get('ENABLE_LEGACY_GAME_API', 'false').strip().lower() in {'1','true','yes','on'}
+
+def require_legacy_game_api():
+    if not LEGACY_GAME_API_ENABLED:
+        raise HTTPException(410, 'O motor de jogo remoto legado está desativado. O jogo atual usa o motor local; o backend ativo serve rotas e serviços compatíveis.')
 
 CALLSIGNS = [
     'Alpha', 'Bravo', 'Charlie', 'Delta', 'Echo', 'Foxtrot', 'Golf', 'Hotel',
@@ -71,6 +76,17 @@ class ActionRequest(BaseModel):
 
 class TickRequest(BaseModel):
     seconds: float = Field(default=2, gt=0, le=3)
+
+
+class RoutePoint(BaseModel):
+    lng: float = Field(ge=-180, le=180)
+    lat: float = Field(ge=-90, le=90)
+    land: str = Field(default='mainland', min_length=1, max_length=32)
+
+
+class CoordinateRouteRequest(BaseModel):
+    origin: RoutePoint
+    destination: RoutePoint
 
 
 class PlayerCreate(BaseModel):
@@ -116,6 +132,7 @@ def public_room(room: dict[str, Any]) -> dict[str, Any]:
 
 
 async def authenticated_player(authorization: str | None) -> dict[str, Any]:
+    require_legacy_game_api()
     if not authorization or not authorization.startswith('Bearer '):
         raise HTTPException(401, 'Sessão online necessária.')
     token = authorization[7:].strip()
@@ -182,7 +199,7 @@ def ensure_member(room: dict[str, Any], player_id: str):
 
 @api.get('/')
 async def health():
-    return {'status': 'operational', 'name': 'Distrito 112'}
+    return {'status': 'operational', 'name': 'Distrito 112', 'routing': 'active', 'legacy_game_api': LEGACY_GAME_API_ENABLED}
 
 
 @api.get('/road-routes/{origin_id}/{destination_id}')
@@ -190,6 +207,13 @@ async def road_route(origin_id: str, destination_id: str):
     if origin_id not in POINTS or destination_id not in POINTS:
         raise HTTPException(422, 'Localização desconhecida.')
     return await road_router.get(POINTS[origin_id], POINTS[destination_id])
+
+
+@api.post('/road-routes/coordinates')
+async def coordinate_road_route(req: CoordinateRouteRequest):
+    origin=req.origin.model_dump()
+    destination=req.destination.model_dump()
+    return await road_router.get(origin,destination)
 
 
 @api.get('/world')
@@ -391,6 +415,9 @@ async def leaderboard(limit: int = Query(default=25, ge=1, le=100), player_count
 
 async def online_tick_loop():
     while True:
+        if not LEGACY_GAME_API_ENABLED:
+            await asyncio.sleep(5)
+            continue
         try:
             now = utcnow()
             query = {'status': 'active', '$or': [{'next_tick_at': {'$lte': now}}, {'next_tick_at': {'$exists': False}}]}

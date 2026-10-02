@@ -244,9 +244,11 @@ export function missionPerformance(incident,assignedUnits=[],elapsed=0){
   let bonus=0;const reasons=[];
   if(responseRatio<=.5){bonus+=.10;reasons.push('resposta muito rápida');}else if(responseRatio<=.75){bonus+=.05;reasons.push('resposta rápida');}
   if(mandatoryReady){bonus+=.10;reasons.push('despacho adequado');}
-  if(!(incident.escalation_stage>0)){bonus+=.05;reasons.push('sem agravamento');}
+  if(!(incident.escalation_stage>0)){bonus+=.05;reasons.push(['urban_fire','wildfire','hazmat'].includes(incident.category)?'propagação controlada':'sem agravamento');}
+  const victimStates=incident.victim_states||{},criticalVictims=(victimStates.critical||0)+(victimStates.pcr||0);
+  if((incident.casualties||0)>0&&criticalVictims===0&&(incident.clinical_deteriorations||0)===0){bonus+=.08;reasons.push('vítimas estabilizadas');}
   if(assignedUnits.length<=serviceNeed+Math.max(1,recommended)){bonus+=.05;reasons.push('uso eficiente de meios');}
-  const deteriorationPenalty=Math.min(.16,(incident.clinical_deteriorations||0)*.025);
+  const deteriorationPenalty=Math.min(.20,(incident.clinical_deteriorations||0)*.03+criticalVictims*.012);
   const multiplier=Math.max(.84,Math.min(1.35,1+bonus-deteriorationPenalty));
   const score=Math.max(0,Math.min(100,Math.round(70+bonus*100-deteriorationPenalty*120-(incident.escalation_stage||0)*6)));
   return {score,multiplier:Number(multiplier.toFixed(3)),bonus:Number(bonus.toFixed(3)),deterioration_penalty:Number(deteriorationPenalty.toFixed(3)),reasons};

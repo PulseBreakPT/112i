@@ -158,7 +158,7 @@ test('dispatch policy stores reserve and maximum response distance', () => {
 });
 
 test('vehicle shifts and consumables are simulated', () => {
-  let game=newGame();const unit=game.units[0];
+  let game=newGame();game.clock_start_hour=2;game.clock_start_day=0;const unit=game.units[0];
   expect(unit.resources.water).toBe(unit.resource_capacity.water);
   expect(unit.resource_capacity.water).toBeGreaterThan(3000);
   game=applyAction(game,'update_advanced_unit',{unit_id:unit.id,shift:{start:0,end:1},max_response_km:25,fixed_crew:true});
@@ -175,6 +175,25 @@ test('mission-specific ranges are stored by command center', () => {
   expect(game.command_centers[0].mission_ranges.fire).toBe(18);
 });
 
+test('changing the general command radius also updates the default generation radius', () => {
+  let game=newGame();const center=game.command_centers[0];
+  game=applyAction(game,'update_command_center',{command_center_id:center.id,radius_km:60});
+  expect(game.command_centers[0].radius_km).toBe(60);
+  expect(game.command_centers[0].mission_ranges.default).toBe(60);
+});
+
+test('spawn zones can be created and removed', () => {
+  let game=newGame();const center=game.command_centers[0];
+  game=applyAction(game,'add_spawn_zone',{command_center_id:center.id,name:'Teste',mission_key:'fire',points:[
+    {lng:center.lng-.01,lat:center.lat-.01},{lng:center.lng+.01,lat:center.lat-.01},
+    {lng:center.lng+.01,lat:center.lat+.01},{lng:center.lng-.01,lat:center.lat+.01},
+  ]});
+  expect(game.command_centers[0].spawn_zones).toHaveLength(1);
+  const zoneId=game.command_centers[0].spawn_zones[0].id;
+  game=applyAction(game,'delete_spawn_zone',{command_center_id:center.id,zone_id:zoneId});
+  expect(game.command_centers[0].spawn_zones).toHaveLength(0);
+});
+
 test('custom coordinate POIs must belong to their command area', () => {
   let game=newGame();game.money=100000;
   const porto=game.command_centers[0];
@@ -186,13 +205,16 @@ test('custom coordinate POIs must belong to their command area', () => {
 });
 
 
-test('triage and alliance sharing do not extend the response deadline', () => {
+test('triage keeps the deadline while alliance sharing adds a bounded response margin', () => {
   let game=newGame();
   const incident=game.incidents[0],deadline=incident.response_deadline;
-  game=applyAction(game,'answer',{incident_id:incident.id,choice:game.incidents[0].scenario===0?0:0});
+  game=applyAction(game,'answer',{incident_id:incident.id,choice:0});
   expect(game.incidents.find(item=>item.id===incident.id).response_deadline).toBe(deadline);
   game=applyAction(game,'share_incident_to_alliance',{incident_id:incident.id});
-  expect(game.incidents.find(item=>item.id===incident.id).response_deadline).toBe(deadline);
+  const shared=game.incidents.find(item=>item.id===incident.id);
+  expect(shared.response_deadline).toBeGreaterThan(deadline);
+  expect(shared.response_deadline-deadline).toBeGreaterThanOrEqual(60);
+  expect(shared.response_deadline-deadline).toBeLessThanOrEqual(180);
 });
 
 test('recommended dispatch respects the configured maximum response distance', () => {
@@ -421,4 +443,44 @@ test('base prices scale smoothly even for a nationwide network', () => {
   const price=nextBuildingCost(game,'fire',10000);
   expect(price).toBeLessThanOrEqual(25000);
   expect(price).toBeGreaterThan(10000);
+});
+
+
+test('medical transport uses the configured patient capacity', () => {
+  let game=newGame();
+  const unit=game.units.find(item=>item.service==='medical');
+  unit.patient_capacity=2;
+  const base=game.bases.find(item=>item.id===unit.base_id);
+  const hospital={id:'hospital-test',type:'hospital',node:'porto-trindade',name:'Hospital teste',city:'Porto',land:'mainland',lng:-8.6089,lat:41.1537,capacity:5,queue_limit:5,specialties:['urgency'],specialty_capacity:{urgency:5},enabled:true};
+  game.facilities=[hospital];
+  game.patients=[
+    {id:'p1',source_node:'porto-aliados',city:'Porto',severity:1,specialty:'urgency',status:'waiting',treatment_complete:true},
+    {id:'p2',source_node:'porto-aliados',city:'Porto',severity:1,specialty:'urgency',status:'waiting',treatment_complete:true},
+  ];
+  const route=(from,to)=>({coordinates:[[from.lng,from.lat],[to.lng,to.lat]],times:[0,10],duration:10,distance:500});
+  const source={lng:-8.6110,lat:41.1496},target={lng:hospital.lng,lat:hospital.lat},home={lng:base.lng,lat:base.lat};
+  game=applyAction(game,'transport_patient',{patient_id:'p1',facility_id:hospital.id,unit_id:unit.id,routes:{pickup:route(unit,source),delivery:route(source,target),back:route(target,home)}});
+  const transporting=game.units.find(item=>item.id===unit.id);
+  expect(transporting.task_ids).toHaveLength(2);
+  expect(game.patients.filter(item=>item.status==='transporting')).toHaveLength(2);
+});
+
+test('prisoner transport uses the configured detainee capacity', () => {
+  let game=newGame();
+  const unit=game.units.find(item=>item.service==='police');
+  unit.detainee_capacity=4;
+  const base=game.bases.find(item=>item.id===unit.base_id);
+  const prison={id:'prison-test',type:'prison',node:'porto-trindade',name:'Prisão teste',city:'Porto',land:'mainland',lng:-8.6089,lat:41.1537,capacity:10,queue_limit:10,enabled:true};
+  game.facilities=[prison];
+  game.prisoners=[
+    {id:'d1',source_node:'porto-aliados',city:'Porto',status:'waiting'},
+    {id:'d2',source_node:'porto-aliados',city:'Porto',status:'waiting'},
+    {id:'d3',source_node:'porto-aliados',city:'Porto',status:'waiting'},
+  ];
+  const route=(from,to)=>({coordinates:[[from.lng,from.lat],[to.lng,to.lat]],times:[0,10],duration:10,distance:500});
+  const source={lng:-8.6110,lat:41.1496},target={lng:prison.lng,lat:prison.lat},home={lng:base.lng,lat:base.lat};
+  game=applyAction(game,'transport_prisoner',{prisoner_id:'d1',facility_id:prison.id,unit_id:unit.id,routes:{pickup:route(unit,source),delivery:route(source,target),back:route(target,home)}});
+  const transporting=game.units.find(item=>item.id===unit.id);
+  expect(transporting.task_ids).toHaveLength(3);
+  expect(game.prisoners.filter(item=>item.status==='transporting')).toHaveLength(3);
 });
