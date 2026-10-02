@@ -87,6 +87,8 @@ export function detectGameFeedback(previous, next, action = 'tick') {
 
   if ((next.level || 1) > (previous.level || 1)) return event('upgrade', 'positive', `Nível ${next.level} alcançado`, 'Novas capacidades operacionais disponíveis', 60);
 
+  if (action === 'save') return event('success', 'positive', 'Progresso guardado', 'Guardado neste navegador', 35);
+
   const success = logs.find(item => item.kind === 'success');
   if (success) return event('success', 'positive', 'Objetivo concluído', success.text, 45);
 
