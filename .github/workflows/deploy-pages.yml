@@ -24,8 +24,8 @@ jobs:
       run:
         working-directory: frontend
     env:
-      CI: "false"
-      REACT_APP_BACKEND_URL: ${{ vars.REACT_APP_BACKEND_URL || 'https://menu-standardization.preview.emergentagent.com' }}
+      CI: "true"
+      REACT_APP_BACKEND_URL: ${{ vars.REACT_APP_BACKEND_URL }}
     steps:
       - name: Obter código
         uses: actions/checkout@v4
