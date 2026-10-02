@@ -116,8 +116,9 @@ export function missionCap(game, commandCenterId = null) {
 
 export function nextBuildingCost(game, service, basePrice) {
   const total = game.bases.length;
-  if (total < 25) return Math.round(basePrice * (1 + total * 0.07));
-  return Math.round(100000 + 200000 * Math.log2(Math.max(2, total - 22)));
+  const sameService = game.bases.filter(base => base.service === service).length;
+  const multiplier = Math.min(2.5, 1 + Math.max(0, sameService - 1) * 0.12 + total * 0.015);
+  return Math.round(basePrice * multiplier);
 }
 
 export function activeExtensions(game, commandCenterId = null) {
