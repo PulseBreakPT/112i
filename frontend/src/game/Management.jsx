@@ -6,10 +6,32 @@ import { toast } from 'sonner';
 import { SERVICE, ServiceIcon, money, STATUS, duration } from './common';
 import { vehicleImage, VehicleThumbnail } from './vehicleMedia';
 import { fetchRoadRoute } from './localGame';
-import PERSONNEL_ATLAS_0 from './personnelAtlasPart0';
-import PERSONNEL_ATLAS_1 from './personnelAtlasPart1';
+import { PERSONNEL_ATLAS } from './personnelAtlas';
 
-const PersonnelAvatar = ({ person }) => { const index=Number.isInteger(person?.avatar_index)?person.avatar_index:0; const atlas=index<50?PERSONNEL_ATLAS_0:PERSONNEL_ATLAS_1; const local=index%50,col=local%10,row=Math.floor(local/10); return <span className="personnel-avatar" style={{backgroundImage:`url(${atlas})`,backgroundPosition:`${col*100/9}% ${row*100/4}%`}} aria-hidden="true" />; };
+const PersonnelAvatar = ({ person, size = 42 }) => {
+  const index = Math.max(0, Math.min(99, Number(person?.avatar_index ?? person?.profile_index ?? 0)));
+  const col = index % 10;
+  const row = Math.floor(index / 10);
+  return <span
+    className="personnel-avatar"
+    role="img"
+    aria-label={`Retrato de ${person?.name || 'elemento'}`}
+    style={{
+      width: size,
+      height: size,
+      minWidth: size,
+      display: 'inline-block',
+      flex: '0 0 auto',
+      borderRadius: '50%',
+      backgroundImage: `url(${PERSONNEL_ATLAS})`,
+      backgroundSize: `${size * 10}px ${size * 10}px`,
+      backgroundPosition: `-${col * size}px -${row * size}px`,
+      backgroundRepeat: 'no-repeat',
+      backgroundColor: 'rgba(255,255,255,.06)',
+      boxShadow: '0 0 0 1px rgba(255,255,255,.12)',
+    }}
+  />;
+};
 
 const VehicleArt = ({ service, vehicleType, name }) => {
   const [failed, setFailed] = useState(false);
