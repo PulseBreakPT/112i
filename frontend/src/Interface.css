@@ -1134,8 +1134,8 @@
   transform-origin: center;
 }
 .minimal-shell.distrito-interface:is(.menu-open, .panel-open, .workspace-open) .geographic-canvas {
-  filter: blur(7px) brightness(.62) saturate(.72) !important;
-  transform: scale(1.012);
+  filter: blur(3px) brightness(.78) saturate(.86) !important;
+  transform: scale(1.006);
 }
 
 /* HUD and persistent UI never disappear when another modal opens. */
