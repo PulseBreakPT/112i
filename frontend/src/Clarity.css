@@ -217,7 +217,7 @@
 .minimal-shell .checkbox.checked { background: #e2edfd; color: #151e2a; border-color: #e2edfd; }
 .minimal-shell .unit-choice .unit-road-eta { font-size: 11px; color: #c8dffe; }
 .minimal-shell .assigned-units { padding: 17px 20px; background: #9cc5ff05; border-color: var(--ui-line); }
-.minimal-shell .assigned-units > div:not(.resolution-progress) { display: grid; grid-template-columns: 18px 1fr auto; gap: 5px 8px; padding: 9px 0; font-size: 12px; }
+.minimal-shell .assigned-units > div:not(.resolution-progress) { display: grid; grid-template-columns: 46px 1fr auto; gap: 5px 8px; padding: 9px 0; font-size: 12px; align-items: center; }
 .minimal-shell .assigned-units > div > .route-distance { color: #bec9d8; font-size: 11px; margin: 0; }
 .minimal-shell .assigned-units .state-label { grid-column: 2 / -1; justify-self: start; margin: 0; font: 12px 'Barlow', sans-serif; color: var(--status-active); }
 .minimal-shell .assigned-units .state-label.broken { color: var(--status-danger); }

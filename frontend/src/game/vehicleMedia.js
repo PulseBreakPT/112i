@@ -24,3 +24,7 @@ const VEHICLE_MEDIA = {
 export const VEHICLE_MEDIA_VERSION = '2026-10-02-2';
 
 export const vehicleImage = vehicleType => `${process.env.PUBLIC_URL}/assets/vehicles/${VEHICLE_MEDIA[vehicleType] || 'patrol'}.webp?v=${VEHICLE_MEDIA_VERSION}`;
+
+export const VehicleThumbnail = ({ unit, className = '' }) => <span className={`vehicle-thumbnail ${className}`} aria-hidden="true">
+  <img src={vehicleImage(unit?.vehicle_type)} alt="" draggable="false" decoding="async" onError={event => { event.currentTarget.style.display = 'none'; }} />
+</span>;
