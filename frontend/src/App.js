@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { HashRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
-import { Radio, LoaderCircle, X, Menu, PanelsTopLeft, Info, BarChart3, FileText, Bell, Building2, CarFront, Users } from 'lucide-react';
+import { Radio, LoaderCircle, X, Menu, PanelsTopLeft, Info, BarChart3, Bell, Building2, CarFront, Users } from 'lucide-react';
 import { Toaster, toast } from './components/ui/sonner';
 import { useGame } from './game/useGame';
 import { Sidebar, Footer } from './game/Shell';
@@ -107,12 +107,6 @@ function GameApp() {
       <button className={menuOpen ? 'active' : ''} data-testid="game-menu-toggle" aria-label={menuOpen ? 'Fechar menu do jogo' : 'Abrir menu do jogo'} aria-expanded={menuOpen} aria-controls="game-menu" onClick={() => { setMenuOpen(value => !value); setPanel(null); setCentralWidget(null); }}>{menuOpen ? <X size={17} /> : <Menu size={17} />}<span>Menu</span></button>
     </div>
     {isCentral && <>
-      <nav className="central-quick-rail central-info-rail" aria-label="Informação e controlo">
-        <button className={centralWidget === 'info' ? 'active' : ''} title="Informação da central" aria-label="Informação da central" aria-expanded={centralWidget === 'info'} onClick={() => toggleCentralWidget('info')}><Info size={17}/><span>Informação</span></button>
-        <button className={centralWidget === 'stats' ? 'active' : ''} title="Estatísticas da central" aria-label="Estatísticas da central" aria-expanded={centralWidget === 'stats'} onClick={() => toggleCentralWidget('stats')}><BarChart3 size={17}/><span>Estatísticas</span></button>
-        <button title="Relatórios" aria-label="Abrir relatórios" onClick={() => navigate('/relatorios')}><FileText size={17}/><span>Relatórios</span></button>
-        <button className={panel === 'incidents' ? 'active' : ''} data-tone={queueTone} title="Alertas e ocorrências" aria-label={`${game.incidents.length} ocorrências, ${waitingIncidents.length} a aguardar mobilização`} aria-expanded={panel === 'incidents'} onClick={() => openPanel(panel === 'incidents' ? null : 'incidents')}><Bell size={17}/><span>Alertas</span><b>{game.incidents.length}</b></button>
-      </nav>
       <nav className="central-quick-rail central-management-rail" aria-label="Gestão rápida">
         <button title="Gestão" aria-label="Abrir gestão" onClick={() => navigate('/gestao')}><PanelsTopLeft size={17}/><span>Gestão</span></button>
         <button title="Bases" aria-label="Abrir bases" onClick={() => navigate('/bases')}><Building2 size={17}/><span>Bases</span></button>
@@ -139,6 +133,12 @@ function GameApp() {
       <div className="game-menu" id="game-menu" data-testid="game-menu">
         <div className="game-menu-heading"><span data-testid="operations-title">MENU PRINCIPAL</span></div>
         <Sidebar onNavigate={() => setMenuOpen(false)} onHelp={() => { setMenuOpen(false); setHelp(true); }} />
+        {isCentral && <div className="menu-context-tools" aria-label="Informação rápida">
+          <div className="menu-context-heading">CENTRAL</div>
+          <button className={centralWidget === 'info' ? 'active' : ''} aria-label="Informação da central" onClick={() => toggleCentralWidget('info')}><Info size={16}/><span>Informação</span></button>
+          <button className={centralWidget === 'stats' ? 'active' : ''} aria-label="Estatísticas da central" onClick={() => toggleCentralWidget('stats')}><BarChart3 size={16}/><span>Estatísticas</span></button>
+          <button data-tone={queueTone} aria-label={`${game.incidents.length} ocorrências, ${waitingIncidents.length} a aguardar mobilização`} onClick={() => openPanel(panel === 'incidents' ? null : 'incidents')}><Bell size={16}/><span>Alertas e ocorrências</span><b>{game.incidents.length}</b></button>
+        </div>}
       </div>
     </>}
     {isCentral ? <>
