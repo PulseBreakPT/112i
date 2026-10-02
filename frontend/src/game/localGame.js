@@ -424,7 +424,7 @@ export function applyAction(input,kind,data={}){
     requireValue(g.level>=unlock,`Esta região desbloqueia no nível ${unlock}.`);
     requireValue(!g.bases.some(b=>b.node===site.node&&b.service===service),'Este serviço já tem uma base neste local.');
     const price=nextBuildingCost(g,service,SERVICES[service].base_price);requireValue(g.money>=price,'Orçamento insuficiente.');
-    const command=commandCenterFor(g,data.command_center_id)||commandCenterFor(g,g.active_command_center_id);requireValue(command,'Cria primeiro um Centro de Comando.');
+    const command=commandCenterFor(g,data.command_center_id)||commandCenterFor(g,g.active_command_center_id);requireValue(command,'Cria primeiro um Centro de Comando.');requireValue(withinCommandArea(command,site),'A base tem de ficar dentro da área e região do Centro de Comando.');
     g.money-=price;g.expenses+=price;const base=makeBase(service,site);base.command_center_id=command.id;base.operational_at=g.elapsed+180;g.bases.push(base);log(g,`Construção iniciada em ${site.name}. Conclusão prevista em 3 minutos.`,'success');
   }
   else if(kind==='upgrade_base'){
@@ -446,7 +446,8 @@ export function applyAction(input,kind,data={}){
     const base=g.bases.find(b=>b.id===data.base_id);requireValue(base,'Base inválida.');
     const definition=SPECIALIZATIONS[base.service]?.find(item=>item.id===data.specialization);requireValue(definition,'Especialização inválida.');
     if(definition.extension)requireValue((base.extensions||[]).some(ext=>ext.id===definition.extension&&ext.active),'Ativa primeiro a extensão necessária.');
-    base.specialization=definition.id;log(g,`${base.name}: especialização alterada para ${definition.name}.`);
+    requireValue(g.units.filter(unit=>unit.base_id===base.id).every(unit=>['available','offshift','uncrewed','resting'].includes(unit.status)),'Recolhe primeiro as viaturas desta base.');
+    if(base.specialization!==definition.id){const cost=definition.id==='general'?250:500;requireValue(g.money>=cost,'Orçamento insuficiente para reorganizar a base.');g.money-=cost;g.expenses+=cost;base.specialization=definition.id;base.specialization_ready_at=g.elapsed+120;log(g,`${base.name}: reorganização para ${definition.name} iniciada (-${cost} €).`,'success');}
   }
   else if(kind==='recruit_personnel'){
     const base=g.bases.find(b=>b.id===data.base_id);requireValue(base,'Base inválida.');
@@ -461,7 +462,7 @@ export function applyAction(input,kind,data={}){
     const type=data.type,site=POINTS[data.site_id],definition=FACILITY_CATALOG[type];requireValue(definition&&site,'Seleciona uma instalação e localização válidas.');
     requireValue(!g.facilities.some(facility=>facility.type===type&&facility.node===site.node),'Esta instalação já existe neste local.');
     const price=Math.round(definition.cost*(1+g.facilities.length*.12));requireValue(g.money>=price,'Orçamento insuficiente.');
-    const command=commandCenterFor(g,data.command_center_id)||commandCenterFor(g,g.active_command_center_id);requireValue(command,'Cria primeiro um Centro de Comando.');
+    const command=commandCenterFor(g,data.command_center_id)||commandCenterFor(g,g.active_command_center_id);requireValue(command,'Cria primeiro um Centro de Comando.');requireValue(withinCommandArea(command,site),'A instalação tem de ficar dentro da área e região do Centro de Comando.');
     g.money-=price;g.expenses+=price;const facility=makeFacility(type,site);facility.command_center_id=command.id;facility.operational_at=g.elapsed+180;g.facilities.push(facility);log(g,`Construção de ${definition.name} iniciada em ${site.name}.`,'success');
   }
   else if(kind==='upgrade_facility'){
@@ -510,22 +511,22 @@ export function applyAction(input,kind,data={}){
     const center=commandCenterFor(g,data.command_center_id);requireValue(center,'Centro de Comando inválido.');if(data.name!==undefined){const name=String(data.name).trim().slice(0,48);requireValue(name,'O nome não pode ficar vazio.');center.name=name;}if(data.radius_km!==undefined)center.radius_km=Math.max(5,Math.min(120,Number(data.radius_km)||35));if(data.active!==undefined)center.active=!!data.active;log(g,`${center.name} atualizado.`,'success');
   }
   else if(kind==='assign_base_command'){
-    const base=g.bases.find(item=>item.id===data.base_id),center=commandCenterFor(g,data.command_center_id);requireValue(base&&center,'Base ou Centro de Comando inválido.');base.command_center_id=center.id;log(g,`${base.name} atribuída a ${center.name}.`,'success');
+    const base=g.bases.find(item=>item.id===data.base_id),center=commandCenterFor(g,data.command_center_id);requireValue(base&&center,'Base ou Centro de Comando inválido.');requireValue(withinCommandArea(center,base),'A base fica fora da área operacional deste comando.');base.command_center_id=center.id;log(g,`${base.name} atribuída a ${center.name}.`,'success');
   }
   else if(kind==='assign_facility_command'){
-    const facility=g.facilities.find(item=>item.id===data.facility_id),center=commandCenterFor(g,data.command_center_id);requireValue(facility&&center,'Instalação ou Centro de Comando inválido.');facility.command_center_id=center.id;log(g,`${facility.name} atribuída a ${center.name}.`,'success');
+    const facility=g.facilities.find(item=>item.id===data.facility_id),center=commandCenterFor(g,data.command_center_id);requireValue(facility&&center,'Instalação ou Centro de Comando inválido.');requireValue(withinCommandArea(center,facility),'A instalação fica fora da área operacional deste comando.');facility.command_center_id=center.id;log(g,`${facility.name} atribuída a ${center.name}.`,'success');
   }
   else if(kind==='set_active_command'){
     const center=commandCenterFor(g,data.command_center_id);requireValue(center,'Centro de Comando inválido.');g.active_command_center_id=center.id;g.city=center.city;log(g,`Vista operacional alterada para ${center.name}.`);
   }
   else if(kind==='create_player_poi'){
-    const fallback=POINTS[data.site_id],lng=Number(data.lng),lat=Number(data.lat),custom=data.custom===true&&data.lng!==''&&data.lat!==''&&Number.isFinite(lng)&&Number.isFinite(lat),site=custom?{id:`custom-${uid()}`,node:null,name:data.name,city:data.city||'Local personalizado',land:data.land||'mainland',lng,lat}:fallback,center=commandCenterFor(g,data.command_center_id),name=String(data.name||'').trim().slice(0,48),type=String(data.type||'').trim();requireValue(site&&center&&name&&type,'Preenche o tipo, nome, localização e Centro de Comando.');requireValue(!g.player_pois.some(poi=>poi.type===type&&distanceMeters(poi,site)<20),'Já existe um PDI deste tipo nesta localização.');POINTS[site.id]=site;g.player_pois.push({id:uid(),type,name,node:site.id,city:site.city,land:site.land,lng:site.lng,lat:site.lat,command_center_id:center.id,created_at:new Date().toISOString()});log(g,`PDI criado: ${name} (${type}).`,'success');
+    const fallback=POINTS[data.site_id],lng=Number(data.lng),lat=Number(data.lat),validCoordinate=Number.isFinite(lng)&&Number.isFinite(lat)&&lng>=-180&&lng<=180&&lat>=-90&&lat<=90,custom=data.custom===true&&data.lng!==''&&data.lat!==''&&validCoordinate,land=['mainland','madeira','azores'].includes(data.land)?data.land:'mainland',site=custom?{id:`custom-${uid()}`,node:null,name:data.name,city:String(data.city||'Local personalizado').trim().slice(0,48),land,lng,lat}:fallback,center=commandCenterFor(g,data.command_center_id),name=String(data.name||'').trim().slice(0,48),type=String(data.type||'').trim().slice(0,32);requireValue(site&&center&&name&&type,'Preenche o tipo, nome, localização e Centro de Comando.');requireValue(withinCommandArea(center,site),'O PDI tem de ficar dentro da área e região do Centro de Comando.');requireValue(!g.player_pois.some(poi=>poi.type===type&&distanceMeters(poi,site)<20),'Já existe um PDI deste tipo nesta localização.');POINTS[site.id]=site;g.player_pois.push({id:uid(),type,name,node:site.id,city:site.city,land:site.land,lng:site.lng,lat:site.lat,command_center_id:center.id,created_at:new Date().toISOString()});log(g,`PDI criado: ${name} (${type}).`,'success');
   }
   else if(kind==='delete_player_poi'){
     const poi=g.player_pois.find(item=>item.id===data.poi_id);requireValue(poi,'PDI inválido.');g.player_pois=g.player_pois.filter(item=>item.id!==poi.id);log(g,`PDI removido: ${poi.name}.`);
   }
   else if(kind==='create_planned_mission'){
-    const center=commandCenterFor(g,data.command_center_id)||commandCenterFor(g,g.active_command_center_id),site=POINTS[data.site_id],scenario=Math.max(0,Math.min(SCENARIOS.length-1,Number(data.scenario)||0)),delay=Math.max(60,Math.min(86400,Number(data.delay)||600)),title=String(data.title||SCENARIOS[scenario].title).trim().slice(0,64);requireValue(center&&site&&title,'Preenche a operação, localização e Centro de Comando.');g.planned_missions=g.planned_missions||[];g.planned_missions.push({id:uid(),title,scenario,node:site.id,command_center_id:center.id,starts_at:g.elapsed+delay,status:'scheduled',created_at:g.elapsed});log(g,`Operação planeada: ${title}.`,'success');
+    const center=commandCenterFor(g,data.command_center_id)||commandCenterFor(g,g.active_command_center_id),site=POINTS[data.site_id],scenario=Math.max(0,Math.min(SCENARIOS.length-1,Number(data.scenario)||0)),delay=Math.max(300,Math.min(86400,Number(data.delay)||600)),title=String(data.title||SCENARIOS[scenario].title).trim().slice(0,64);requireValue(center&&site&&title,'Preenche a operação, localização e Centro de Comando.');requireValue(withinCommandArea(center,site),'A operação tem de ficar dentro da área operacional do comando.');g.planned_missions=g.planned_missions||[];requireValue(g.planned_missions.filter(item=>item.player_created&&item.status==='scheduled').length<5,'Já tens cinco operações próprias agendadas.');const planningCost=250;requireValue(g.money>=planningCost,'Orçamento insuficiente para planear a operação.');g.money-=planningCost;g.expenses+=planningCost;g.planned_missions.push({id:uid(),title,scenario,node:site.id,command_center_id:center.id,starts_at:g.elapsed+delay,status:'scheduled',created_at:g.elapsed,player_created:true,planning_cost:planningCost});log(g,`Operação planeada: ${title} (-${planningCost} €).`,'success');
   }
   else if(kind==='cancel_planned_mission'){
     const planned=(g.planned_missions||[]).find(item=>item.id===data.planned_id);requireValue(planned&&planned.status==='scheduled','Só é possível cancelar operações ainda agendadas.');planned.status='cancelled';log(g,`Operação planeada cancelada: ${planned.title}.`,'alert');
