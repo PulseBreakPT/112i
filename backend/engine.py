@@ -11,7 +11,7 @@ def uid():
     return str(uuid.uuid4())
 
 def log(g, text, kind='info'):
-    g['logs'].insert(0, {'id': uid(), 'text': text, 'kind': kind, 'time': g['elapsed']})
+    g['logs'].insert(0, {'id': uid(), 'text': text, 'kind': kind, 'time': g['elapsed'], 'real_time': datetime.now(timezone.utc).isoformat()})
     g['logs'] = g['logs'][:50]
 
 def spawn(g, scenario=None, node=None):
@@ -109,7 +109,7 @@ def tick(g, seconds):
 def resolve(g, inc, success):
     reward = inc.get('final_reward', inc['reward']) if success else 0
     log(g, f'{inc["title"]} — ' + (f'resolvida. +{reward} €' if success else 'prazo de resposta excedido.'), 'success' if success else 'alert')
-    g['history'].insert(0, {'id': inc['id'], 'title': inc['title'], 'service': inc['service'], 'success': success, 'reward': reward, 'time': g['elapsed']})
+    g['history'].insert(0, {'id': inc['id'], 'title': inc['title'], 'service': inc['service'], 'success': success, 'reward': reward, 'time': g['elapsed'], 'real_time': datetime.now(timezone.utc).isoformat()})
     g['history'] = g['history'][:100]
     for u in g['units']:
         if u['incident_id'] == inc['id']:
