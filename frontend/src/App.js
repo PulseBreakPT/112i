@@ -13,6 +13,7 @@ import Management from './game/Management';
 import Operations from './game/Operations';
 import Reports from './game/Reports';
 import Settings from './game/Settings';
+import Privacy from './game/Privacy';
 import CommandCenters from './game/CommandCenters';
 import StrategicOperations from './game/StrategicOperations';
 import Cooperation from './game/Cooperation';
@@ -89,7 +90,7 @@ function GameApp() {
   const incident = game.incidents.find(i => i.id === selected);
   const waitingIncidents = game.incidents.filter(item => item.status === 'waiting');
   const queueTone = waitingIncidents.some(item => item.priority === 1) ? 'danger' : waitingIncidents.length ? 'warning' : game.incidents.length ? 'active' : 'success';
-  const workspaceName = { '/comando':'Áreas operacionais', '/estrategia':'Estratégia operacional', '/alianca':'Aliança operacional', '/bases': 'Rede de bases', '/frota': 'Frota de emergência', '/operacoes': 'Operações e apoio', '/relatorios': 'Relatório do turno', '/definicoes': 'Definições' }[location.pathname] || 'Setor não encontrado';
+  const workspaceName = { '/comando':'Áreas operacionais', '/estrategia':'Estratégia operacional', '/alianca':'Aliança operacional', '/bases': 'Rede de bases', '/frota': 'Frota de emergência', '/operacoes': 'Operações e apoio', '/relatorios': 'Relatório do turno', '/definicoes': 'Definições', '/privacidade': 'Privacidade' }[location.pathname] || 'Setor não encontrado';
 
   return <div className={`app-shell immersive-shell minimal-shell distrito-interface dark ${isCentral ? 'central-open' : 'workspace-open'} ${panel && isCentral ? `panel-open panel-${panel}` : ''}`}>
     <main className="world-stage" aria-label="Mapa operacional" inert={!isCentral || menuOpen}>
@@ -128,6 +129,7 @@ function GameApp() {
           <Route path="/operacoes" element={<Operations game={game} world={world} act={act} busy={busy} />} />
           <Route path="/relatorios" element={<Reports game={game} />} />
           <Route path="/definicoes" element={<Settings game={game} act={act} sound={sound} setSound={setSound} onSave={save} onHelp={() => setHelp(true)} busy={busy} />} />
+          <Route path="/privacidade" element={<Privacy />} />
           <Route path="*" element={<div className="empty-state" data-testid="page-not-found"><h1>Setor não encontrado</h1><button className="primary-button" data-testid="return-to-central" onClick={() => navigate('/')}>Voltar à central</button></div>} />
         </Routes>
       </section>
