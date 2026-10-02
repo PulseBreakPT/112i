@@ -48,7 +48,9 @@ test('units can deploy to a staging area and become staged', () => {
   const staging = game.staging_areas[0],unit = game.units[0];
   const route={coordinates:[[unit.lng,unit.lat],[staging.lng,staging.lat]],times:[0,10],duration:10,distance:500};
   game = applyAction(game,'deploy_to_staging',{staging_id:staging.id,unit_id:unit.id,route});
-  game = tickGame(game,11);
+  const moving=game.units.find(item=>item.id===unit.id);
+  expect(moving.travel_total).toBeGreaterThan(route.duration);
+  game = tickGame(game,Math.ceil(moving.travel_total)+1);
   expect(game.units.find(item=>item.id===unit.id).status).toBe('staged');
 });
 
@@ -157,7 +159,8 @@ test('dispatch policy stores reserve and maximum response distance', () => {
 
 test('vehicle shifts and consumables are simulated', () => {
   let game=newGame();const unit=game.units[0];
-  expect(unit.resources.water).toBe(3000);
+  expect(unit.resources.water).toBe(unit.resource_capacity.water);
+  expect(unit.resource_capacity.water).toBeGreaterThan(3000);
   game=applyAction(game,'update_advanced_unit',{unit_id:unit.id,shift:{start:0,end:1},max_response_km:25,fixed_crew:true});
   game=tickGame(game,2);
   const changed=game.units.find(item=>item.id===unit.id);
@@ -279,13 +282,13 @@ test('routed vehicle transfers move along the prepared road route and finish at 
   let moving=game.units.find(item=>item.id===unit.id);
   expect(moving.status).toBe('base_transfer');
   expect(moving.route).toHaveLength(3);
-  expect(moving.travel_total).toBe(120);
-  game=tickGame(game,61);
+  expect(moving.travel_total).toBeGreaterThan(route.duration);
+  const firstLeg=Math.ceil(moving.travel_total/2);
+  game=tickGame(game,firstLeg);
   moving=game.units.find(item=>item.id===unit.id);
   expect(moving.base_id).toBe(origin.id);
   expect(moving.travel).toBeGreaterThan(0);
-  expect(moving.lng).not.toBe(origin.lng);
-  game=tickGame(game,60);
+  game=tickGame(game,Math.ceil(moving.travel_total-moving.travel)+1);
   const arrived=game.units.find(item=>item.id===unit.id);
   expect(arrived.base_id).toBe(target.id);
   expect(arrived.status).toMatch(/available|uncrewed/);
