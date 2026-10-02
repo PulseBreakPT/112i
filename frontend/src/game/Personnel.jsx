@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react';
 import { Activity, Award, BadgeCheck, Brain, Heart, HeartPulse, Search, ShieldCheck, SlidersHorizontal, UserMinus, Users, Zap, Gauge, MessageCircle, MapPin, CarFront } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '../components/ui/dialog';
-import { SERVICE, money } from './common';
+import { Button } from '../components/ui/button';
+import { SERVICE, money, duration } from './common';
 import { toast } from 'sonner';
+import TrainingPanel from './TrainingPanel';
 import './Personnel.css';
 
 const STATUS_LABELS={
@@ -69,6 +71,15 @@ export default function Personnel({game,world,act,busy}){
       <article><Brain size={18}/><div><small>EM FORMAÇÃO</small><strong>{training}</strong></div></article>
       <article><Gauge size={18}/><div><small>COMPETÊNCIA MÉDIA</small><strong>{averageSkill}</strong></div></article>
     </section>
+
+    <div className="strategy-columns">
+      <section className="strategy-panel">
+        <header><Users/><div><h2>Recrutamento</h2><p>Reforça o efetivo de cada base e acompanha os processos de seleção em curso.</p></div></header>
+        <div className="recruitment-grid">{game.bases.map(base=><article key={base.id}><div><strong>{base.name}</strong><small>{base.personnel}/{base.staff_capacity} elementos</small></div><Button disabled={busy||(base.personnel||0)>=base.staff_capacity} onClick={()=>run('queue_recruitment',{base_id:base.id,amount:1},'Recrutamento iniciado.')}>Recrutar · {money(225)}</Button></article>)}</div>
+        <div className="strategy-list">{(game.recruitment_queue||[]).filter(item=>item.status==='pending').map(item=><article key={item.id}><div><strong>{game.bases.find(base=>base.id===item.base_id)?.name}</strong><small>{item.amount} elemento(s) · T−{duration(item.completes_at-game.elapsed)}</small></div></article>)}</div>
+      </section>
+      <TrainingPanel game={game} world={world} act={act} busy={busy}/>
+    </div>
 
     <section className="personnel-toolbar">
       <label className="personnel-search"><Search size={15}/><input value={query} onChange={event=>setQuery(event.target.value)} placeholder="Pesquisar funcionário, especialização ou traço" aria-label="Pesquisar funcionários"/></label>
