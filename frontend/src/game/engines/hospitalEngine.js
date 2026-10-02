@@ -1,5 +1,5 @@
 export const facilityOccupancy = (g,facility) => facility.type==='hospital'
-  ? (g.patients||[]).filter(p=>p.hospital_id===facility.id&&['transporting','admitted'].includes(p.status)).length
+  ? (g.patients||[]).filter(p=>(p.hospital_id===facility.id&&['transporting','admitted'].includes(p.status))||(p.reserved_hospital_id===facility.id&&['transfer_scheduled','transfer_transporting'].includes(p.status))).length
   : (g.prisoners||[]).filter(p=>p.prison_id===facility.id&&['transporting','detained'].includes(p.status)).length;
 
 export const hospitalSpecialtyCapacity = (facility,specialty) => facility.type!=='hospital'
@@ -7,8 +7,7 @@ export const hospitalSpecialtyCapacity = (facility,specialty) => facility.type!=
   : (facility.specialty_capacity?.[specialty]||0)+(specialty==='urgency'?facility.capacity:0);
 
 export const hospitalSpecialtyOccupancy = (g,facility,specialty) => (g.patients||[]).filter(patient=>
-  patient.hospital_id===facility.id&&
-  ['transporting','admitted'].includes(patient.status)&&
+  ((patient.hospital_id===facility.id&&['transporting','admitted'].includes(patient.status))||(patient.reserved_hospital_id===facility.id&&['transfer_scheduled','transfer_transporting'].includes(patient.status)))&&
   (patient.specialty===specialty||specialty==='urgency')
 ).length;
 
