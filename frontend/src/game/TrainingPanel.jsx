@@ -17,7 +17,7 @@ export default function TrainingPanel({ game, world, act, busy }) {
   const localAcademy=!!selectedTrainingBase&&facilities.some(facility=>facility.type==='academy'&&facility.command_center_id===selectedTrainingBase.command_center_id&&facility.enabled!==false&&(!facility.operational_at||facility.operational_at<=game.elapsed));
   const sharedAcademy=(game.cooperation?.support?.academy||0)>0;
   const academy=localAcademy||sharedAcademy;
-  const trainingPrice=Math.round((selectedCourse?.cost||0)*Number(trainingCount)*(sharedAcademy&&!localAcademy?.65:.75));
+  const trainingPrice=Math.round((selectedCourse?.cost||0)*Number(trainingCount)*(sharedAcademy&&!localAcademy ? .65 : .75));
   const run=async(kind,data,message)=>{const next=await act(kind,data);if(next&&message)toast.success(message);return next;};
   const chooseCourse=id=>{setCourse(id);const item=world.training_catalog.find(candidate=>candidate.id===id);setTrainingBase(game.bases.find(base=>base.service===item?.service)?.id||'');};
 
