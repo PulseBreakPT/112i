@@ -104,6 +104,7 @@ def public_room(room: dict[str, Any]) -> dict[str, Any]:
         'host_id': room['host_id'],
         'members': room.get('members', []),
         'revision': room.get('revision', 0),
+        'state_revision': room.get('state_revision', room.get('revision', 0)),
         'game': room['game'],
         'created_at': room['created_at'],
         'updated_at': room['updated_at'],
@@ -265,6 +266,7 @@ async def create_online_room(req: RoomCreate, authorization: str | None = Header
         'host_id': player['id'],
         'members': [{'player_id': player['id'], 'callsign': player['callsign'], 'joined_at': now}],
         'revision': 0,
+        'state_revision': 0,
         'engine_version': 'geo-v2',
         'game': game,
         'created_at': now,
@@ -288,12 +290,11 @@ async def join_online_room(room_id: str, authorization: str | None = Header(defa
             return public_room(room)
         if len(room.get('members', [])) >= 8:
             raise HTTPException(409, 'A sala atingiu o limite de 8 jogadores.')
-        expected = room.get('revision', 0)
         now = utcnow()
         updated = await db.online_rooms.find_one_and_update(
-            {'id': room_id, 'status': 'active', 'revision': expected, 'members.player_id': {'$ne': player['id']}},
+            {'id': room_id, 'status': 'active', 'members.player_id': {'$ne': player['id']}, '$expr': {'$lt': [{'$size': '$members'}, 8]}},
             {'$push': {'members': {'player_id': player['id'], 'callsign': player['callsign'], 'joined_at': now}},
-             '$inc': {'revision': 1},
+             '$inc': {'state_revision': 1},
              '$set': {'updated_at': now}},
             projection={'_id': 0},
             return_document=ReturnDocument.AFTER,
@@ -325,6 +326,7 @@ async def online_room_action(room_id: str, req: OnlineActionRequest, authorizati
         game = room['game']
         await geo_engine.action(game, req.type, req.data, road_router)
         room['revision'] += 1
+        room['state_revision'] = room.get('state_revision', 0) + 1
         room['updated_at'] = utcnow()
         result = await db.online_rooms.replace_one(
             {'id': room_id, 'revision': req.expected_revision},
@@ -353,6 +355,7 @@ async def finish_online_room(room_id: str, authorization: str | None = Header(de
         eligible = int(room['game'].get('completed', 0)) >= 3 and float(room['game'].get('elapsed', 0)) >= 300
         room['status'] = 'finished'
         room['revision'] = expected + 1
+        room['state_revision'] = room.get('state_revision', 0) + 1
         room['updated_at'] = now
         room['leaderboard_eligible'] = eligible
         result = await db.online_rooms.replace_one({'id': room_id, 'status': 'active', 'revision': expected}, room)
@@ -407,7 +410,8 @@ async def online_tick_loop():
                 last_tick = claimed.get('last_tick_at')
                 seconds = max(0.1, min(3.0, (now - last_tick).total_seconds())) if isinstance(last_tick, datetime) else 2.0
                 geo_engine.tick(claimed['game'], seconds)
-                claimed['revision'] = expected + 1
+                claimed['revision'] = expected
+                claimed['state_revision'] = claimed.get('state_revision', 0) + 1
                 claimed['updated_at'] = now
                 claimed['last_tick_at'] = now
                 claimed['expires_at'] = expires_at or (now + timedelta(hours=24))
