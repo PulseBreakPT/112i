@@ -1,10 +1,9 @@
+import { adjustedRoutePlan, applyTripUsage } from '../vehicleSystems';
+
 export const startRoute = (unit,plan,status,destination) => {
-  unit.status=status;unit.route=plan.coordinates;unit.route_times=plan.times;unit.travel=0;unit.travel_total=plan.duration;unit.route_distance=plan.distance;unit.destination=destination;unit.lng=plan.coordinates[0][0];unit.lat=plan.coordinates[0][1];unit.x=unit.lng;unit.y=unit.lat;
-  if(unit.resources&&Number.isFinite(plan.distance)){
-    const kilometres=Math.max(0,plan.distance)/1000;
-    const fuelUse=Math.max(.2,kilometres*.42);
-    unit.resources.fuel=Math.max(0,(unit.resources.fuel??100)-fuelUse);
-  }
+  const adjusted=adjustedRoutePlan(unit,plan,status);
+  unit.status=status;unit.route=adjusted.coordinates;unit.route_times=adjusted.times;unit.travel=0;unit.travel_total=adjusted.duration;unit.route_distance=adjusted.distance;unit.destination=destination;unit.lng=adjusted.coordinates[0][0];unit.lat=adjusted.coordinates[0][1];unit.x=unit.lng;unit.y=unit.lat;
+  if(Number.isFinite(adjusted.distance))applyTripUsage(unit,adjusted.distance,adjusted.duration,status);
 };
 
 export const locate = unit => {
