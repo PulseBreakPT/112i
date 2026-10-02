@@ -116,6 +116,8 @@ export const WORLD = {
 };
 
 const uid = () => globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2) + Date.now().toString(36);
+const randomSeed=()=>{if(globalThis.crypto?.getRandomValues){const value=new Uint32Array(1);globalThis.crypto.getRandomValues(value);return value[0]||1;}return (Date.now()>>>0)||1;};
+const gameRandom=g=>{let x=(Number(g.rng_state??g.rng_seed)||1)>>>0;x^=x<<13;x^=x>>>17;x^=x<<5;g.rng_state=(x>>>0)||1;g.rng_counter=(g.rng_counter||0)+1;return g.rng_state/4294967296;};
 const clone = value => globalThis.structuredClone ? globalThis.structuredClone(value) : JSON.parse(JSON.stringify(value));
 const requireValue = (condition, message) => { if (!condition) throw new Error(message); };
 const log = (g,text,kind='info') => { g.logs.unshift({id:uid(),text,kind,time:g.elapsed}); g.logs=g.logs.slice(0,50); };
@@ -166,7 +168,7 @@ const refreshGuidance=g=>{
   return g;
 };
 const refreshProgression=g=>{g.progression=progressionSnapshot(g,SERVICES);refreshGuidance(g);return refreshMeta(g);};
-const rollRange=value=>{const [min,max]=value||[0,0];return min+Math.floor(Math.random()*(Math.max(min,max)-min+1));};
+const rollRange=(g,value)=>{const [min,max]=value||[0,0];return min+Math.floor(gameRandom(g)*(Math.max(min,max)-min+1));};
 const pointInPolygon=(point,polygon=[])=>{
   if(polygon.length<3)return true;
   let inside=false;
@@ -183,29 +185,29 @@ const allowedBySpawnZones=(center,service,point)=>{
 };
 const spawn=(g,scenarioIndex=null,nodeId=null,requestedCommandCenterId=null)=>{
   const availableCenters=(g.command_centers||[]).filter(center=>center.active!==false&&g.bases.some(base=>base.command_center_id===center.id&&base.mission_generation_enabled!==false)).filter(center=>g.incidents.filter(incident=>incident.command_center_id===center.id).length<(g.progression?.command_centers?.[center.id]?.mission_cap||3));
-  const commandCenter=commandCenterFor(g,requestedCommandCenterId)||availableCenters[Math.floor(Math.random()*Math.max(1,availableCenters.length))]||commandCenterFor(g,g.active_command_center_id)||g.command_centers?.[0];
-  const definition=scenarioIndex===null?weightedMission(g,commandCenter?.id):MISSION_DEFINITIONS.find(item=>item.scenario===scenarioIndex);
+  const commandCenter=commandCenterFor(g,requestedCommandCenterId)||availableCenters[Math.floor(gameRandom(g)*Math.max(1,availableCenters.length))]||commandCenterFor(g,g.active_command_center_id)||g.command_centers?.[0];
+  const definition=scenarioIndex===null?weightedMission(g,commandCenter?.id,()=>gameRandom(g)):MISSION_DEFINITIONS.find(item=>item.scenario===scenarioIndex);
   const choice=definition?.scenario??1;
   const s=SCENARIOS[choice]||SCENARIOS[1];
   let point=nodeId?POINTS[nodeId]:null;
   if(!point&&definition?.poi){
     const coveredCities=new Set(g.bases.filter(base=>base.mission_generation_enabled!==false&&(!commandCenter||base.command_center_id===commandCenter.id)).map(b=>b.city));
     const candidates=[...POIS,...(g.player_pois||[])].filter(p=>p.type===definition.poi&&(p.command_center_id?p.command_center_id===commandCenter?.id:coveredCities.has(p.city))).map(p=>POINTS[p.node]||p).filter(point=>point&&allowedBySpawnZones(commandCenter,s.service,point));
-    point=candidates[Math.floor(Math.random()*candidates.length)];
+    point=candidates[Math.floor(gameRandom(g)*candidates.length)];
   }
   if(!point){
     const areaBases=g.bases.filter(base=>base.mission_generation_enabled!==false&&(!commandCenter||base.command_center_id===commandCenter.id));
     const cities=[...new Set(areaBases.map(b=>b.city))];
-    const city=cities[Math.floor(Math.random()*cities.length)]||commandCenter?.city||'Porto';
+    const city=cities[Math.floor(gameRandom(g)*cities.length)]||commandCenter?.city||'Porto';
     const occupied=new Set(g.incidents.map(i=>i.node));
     const specificRange=commandCenter?.mission_ranges?.[s.service]||commandCenter?.mission_ranges?.default||commandCenter?.radius_km||35;
     const withinRadius=point=>!commandCenter||distanceMeters(commandCenter,point)<=specificRange*1000;
     const candidates=places.filter(p=>withinRadius(p)&&allowedBySpawnZones(commandCenter,s.service,p)&&!occupied.has(p.id)&&(p.city===city||cities.includes(p.city)));
     const fallback=places.filter(p=>withinRadius(p)&&allowedBySpawnZones(commandCenter,s.service,p)&&(p.city===city||cities.includes(p.city)));
-    point=(candidates.length?candidates:fallback)[Math.floor(Math.random()*Math.max(1,(candidates.length||fallback.length)))]||POINTS['porto-aliados'];
+    point=(candidates.length?candidates:fallback)[Math.floor(gameRandom(g)*Math.max(1,(candidates.length||fallback.length)))]||POINTS['porto-aliados'];
   }
   const requiredPersonnel=Object.values(s.needs).reduce((sum,n)=>sum+n*2,0);
-  const created={...clone(s),id:uid(),number:g.sequence++,scenario:choice,definition:definition?.name||s.title,difficulty:definition?.difficulty||({1:'Difícil',2:'Média',3:'Fácil'}[s.priority]),command_center_id:commandCenter?.id||null,evolution:clone(generatedEvolution(choice,s.service,s.priority)),operational_phases:operationalPhasesFor(s.service),phase_requirements_applied:[0],active_phase:0,transport_probability:s.service==='medical'?.86:.34,detention_probability:s.service==='police'?.62:.12,casualties:rollRange(definition?.victims),detainees:rollRange(definition?.prisoners),required_vehicle_types:[...(definition?.vehicle||[])],required_trainings:requiredTrainingsFor(definition),required_personnel:requiredPersonnel,node:point.id,lng:point.lng,lat:point.lat,x:point.lng,y:point.lat,land:point.land,address:point.name,district:point.city,status:'waiting',created:g.elapsed,response_deadline:g.elapsed+({1:900,2:1200,3:1500}[s.priority]),resolution_deadline:g.elapsed+({1:1800,2:2250,3:2700}[s.priority]),deadline:g.elapsed+({1:900,2:1200,3:1500}[s.priority]),assigned:[],progress:0,call_answered:false,escalated:false,false_alarm:Math.random()<(definition?.false_alarm_chance??.08),call:{text:s.caller,choices:s.choices}};
+  const created={...clone(s),id:uid(),number:g.sequence++,scenario:choice,definition:definition?.name||s.title,difficulty:definition?.difficulty||({1:'Difícil',2:'Média',3:'Fácil'}[s.priority]),command_center_id:commandCenter?.id||null,evolution:clone(generatedEvolution(choice,s.service,s.priority)),operational_phases:operationalPhasesFor(s.service),phase_requirements_applied:[0],active_phase:0,transport_probability:s.service==='medical'?.86:.34,detention_probability:s.service==='police'?.62:.12,casualties:rollRange(g,definition?.victims),detainees:rollRange(g,definition?.prisoners),required_vehicle_types:[...(definition?.vehicle||[])],required_trainings:requiredTrainingsFor(definition),required_personnel:requiredPersonnel,node:point.id,lng:point.lng,lat:point.lat,x:point.lng,y:point.lat,land:point.land,address:point.name,district:point.city,status:'waiting',created:g.elapsed,response_deadline:g.elapsed+({1:900,2:1200,3:1500}[s.priority]),resolution_deadline:g.elapsed+({1:1800,2:2250,3:2700}[s.priority]),deadline:g.elapsed+({1:900,2:1200,3:1500}[s.priority]),assigned:[],progress:0,call_answered:false,escalated:false,false_alarm:gameRandom(g)<(definition?.false_alarm_chance??.08),call:{text:s.caller,choices:s.choices}};
   const risk=RISK_ZONES[point.id]?.[created.service]||RISK_ZONES[point.id]?.fire||1;
   created.zone_risk=RISK_ZONES[point.id]?.label||'normal';
   if(risk>1.1){created.reward=Math.round(created.reward*risk);created.response_deadline=Math.max(g.elapsed+420,created.response_deadline-Math.round((risk-1)*180));created.deadline=created.response_deadline;}
@@ -214,7 +216,8 @@ const spawn=(g,scenarioIndex=null,nodeId=null,requestedCommandCenterId=null)=>{
   return created;
 };
 export function newGame(){
-  const g={id:uid(),mode:'portugal-offline-v5',city:'Porto',money:24500,xp:0,level:1,trust:98,elapsed:0,speed:1,completed:0,failed:0,earned:0,expenses:0,operating_debt:0,next_spawn:180,next_crisis_wave:900,next_upkeep:300,sequence:101,incidents:[],units:[],bases:[],facilities:[],command_centers:[],active_command_center_id:null,player_pois:[],personnel:[],planned_missions:[],staging_areas:[],complexes:[],tasks:[],achievements:[],unit_groups:[],patients:[],prisoners:[],trainings:[],arrs:clone(DEFAULT_ARRS),logs:[],history:[],conditions:freshConditions(0),saved_at:new Date().toISOString()};
+  const seed=randomSeed();
+  const g={id:uid(),mode:'portugal-offline-v5',rng_seed:seed,rng_state:seed,rng_counter:0,city:'Porto',money:24500,xp:0,level:1,trust:98,elapsed:0,speed:1,completed:0,failed:0,earned:0,expenses:0,operating_debt:0,next_spawn:180,next_crisis_wave:900,next_upkeep:300,sequence:101,incidents:[],units:[],bases:[],facilities:[],command_centers:[],active_command_center_id:null,player_pois:[],personnel:[],planned_missions:[],staging_areas:[],complexes:[],tasks:[],achievements:[],unit_groups:[],patients:[],prisoners:[],trainings:[],arrs:clone(DEFAULT_ARRS),logs:[],history:[],conditions:null,saved_at:new Date().toISOString()};g.conditions=freshConditions(0,null,()=>gameRandom(g));
   [['fire','porto-boavista'],['medical','porto-asprela'],['police','porto-bonfim']].forEach(([service,key])=>{const base=makeBase(service,POINTS[key]);g.bases.push(base);addUnit(g,base);addUnit(g,base);});
   g.bases.forEach(base=>addPersonnel(g,base,base.personnel||0));g.units.forEach(unit=>{unit.personnel_ids=[];unit.crew_assigned=0;assignUnitCrew(g,unit,vehicleDefinition(unit.service,unit.vehicle_type));});
   g.tasks=makeCareerTasks(g);
@@ -229,7 +232,7 @@ const createAftercare=(g,incident,careQuality=.5)=>{
   if((incident.casualties||0)>0){
     const count=incident.casualties;
     const specialtyPool=['urgency','trauma','burns','pediatrics','cardiology','neurology','obstetrics','intensive-care'];
-    for(let index=0;index<count;index++){const severity=1+Math.floor(Math.random()*3),specialty=severity===1?'urgency':specialtyPool[1+Math.floor(Math.random()*(specialtyPool.length-1))];g.patients.push({id:uid(),incident:incident.title,source_node:incident.node,city:incident.district,severity,specialty,needs_doctor:severity===3,transport_required:severity===3||Math.random()<(incident.transport_probability||.58),treatment_progress:Math.round(18+careQuality*22),care_quality:careQuality,stability:Math.max(35,100-severity*14+careQuality*8),status:'waiting',created:g.elapsed,hospital_id:null});}
+    for(let index=0;index<count;index++){const severity=1+Math.floor(gameRandom(g)*3),specialty=severity===1?'urgency':specialtyPool[1+Math.floor(gameRandom(g)*(specialtyPool.length-1))];g.patients.push({id:uid(),incident:incident.title,source_node:incident.node,city:incident.district,severity,specialty,needs_doctor:severity===3,transport_required:severity===3||gameRandom(g)<(incident.transport_probability||.58),treatment_progress:Math.round(18+careQuality*22),care_quality:careQuality,stability:Math.max(35,100-severity*14+careQuality*8),status:'waiting',created:g.elapsed,hospital_id:null});}
     log(g,`${count} vítima(s) aguardam transporte hospitalar.`,'alert');
   }
   if((incident.detainees||0)>0){
@@ -249,7 +252,7 @@ const resolveIncident=(g,incident,success)=>{
   log(g,`${incident.title} — ${success?(incident.false_alarm?'falso alarme confirmado.':'resolvida.'):'prazo de resposta excedido.'}`,success?'success':'alert');
   g.history.unshift({id:incident.id,title:incident.title,service:incident.service,success,reward:payout,time:g.elapsed});g.history=g.history.slice(0,100);
   g.units.filter(u=>u.incident_id===incident.id).forEach(u=>{u.fatigue=Math.min(100,(u.fatigue||0)+24);u.condition=Math.max(10,(u.condition||100)-6);(u.personnel_ids||[]).forEach(personId=>{const person=g.personnel.find(item=>item.id===personId);if(person){person.experience=(person.experience||0)+(success?12:4);person.rank=person.experience>=500?'Chefe':person.experience>=200?'Graduado':'Operacional';person.fatigue=Math.min(100,(person.fatigue||0)+18);}});if(u.resources){const use=u.service==='fire'?{water:650,foam:35,fuel:8}:u.service==='medical'?{oxygen:14,medical:18,fuel:7}:{equipment:9,fuel:7};Object.entries(use).forEach(([key,value])=>{u.resources[key]=Math.max(0,(u.resources[key]||0)-value);});}returnToBase(g,u);});
-  if(success){g.money+=payout;g.earned+=payout;g.xp+=incident.false_alarm?20:incident.xp;g.completed++;g.trust=Math.min(100,g.trust+(incident.false_alarm?0:1));createAftercare(g,incident,careQuality);if(!incident.false_alarm&&incident.service==='police'&&(incident.detainees>0||/assalto|roubo|sequestro|tráfico|desaparecid/i.test(incident.title))&&Math.random()<.45){const next=spawn(g,9,incident.node,incident.command_center_id);if(next){next.title='Investigação complementar';next.definition=next.title;next.parent_incident_id=incident.id;next.needs={police:Math.max(1,next.needs.police||1)};mergeIncidentRequirements(g,next,{trainings:['investigation']},true);log(g,`Ocorrência subsequente criada: ${next.title}.`,'alert');}}if(!incident.false_alarm&&incident.service==='fire'&&incident.priority===1&&Math.random()<.35){const next=spawn(g,4,incident.node,incident.command_center_id);if(next){next.title='Vistoria e rescaldo preventivo';next.definition=next.title;next.parent_incident_id=incident.id;next.needs={fire:1,police:incident.district==='Porto'?1:0};next.reward=Math.round(next.reward*.75);log(g,`Ocorrência subsequente criada: ${next.title}.`,'alert');}}if(incident.evolution?.type==='subsequent'&&!incident.evolution_spawned){const next=spawn(g,incident.evolution.scenario,incident.node,incident.command_center_id);if(next){next.title=incident.evolution.title;next.definition=incident.evolution.title;next.parent_incident_id=incident.id;log(g,`Ocorrência subsequente criada: ${next.title}.`,'alert');}}}
+  if(success){g.money+=payout;g.earned+=payout;g.xp+=incident.false_alarm?20:incident.xp;g.completed++;g.trust=Math.min(100,g.trust+(incident.false_alarm?0:1));createAftercare(g,incident,careQuality);if(!incident.false_alarm&&incident.service==='police'&&(incident.detainees>0||/assalto|roubo|sequestro|tráfico|desaparecid/i.test(incident.title))&&gameRandom(g)<.45){const next=spawn(g,9,incident.node,incident.command_center_id);if(next){next.title='Investigação complementar';next.definition=next.title;next.parent_incident_id=incident.id;next.needs={police:Math.max(1,next.needs.police||1)};mergeIncidentRequirements(g,next,{trainings:['investigation']},true);log(g,`Ocorrência subsequente criada: ${next.title}.`,'alert');}}if(!incident.false_alarm&&incident.service==='fire'&&incident.priority===1&&gameRandom(g)<.35){const next=spawn(g,4,incident.node,incident.command_center_id);if(next){next.title='Vistoria e rescaldo preventivo';next.definition=next.title;next.parent_incident_id=incident.id;next.needs={fire:1,police:incident.district==='Porto'?1:0};next.reward=Math.round(next.reward*.75);log(g,`Ocorrência subsequente criada: ${next.title}.`,'alert');}}if(incident.evolution?.type==='subsequent'&&!incident.evolution_spawned){const next=spawn(g,incident.evolution.scenario,incident.node,incident.command_center_id);if(next){next.title=incident.evolution.title;next.definition=incident.evolution.title;next.parent_incident_id=incident.id;log(g,`Ocorrência subsequente criada: ${next.title}.`,'alert');}}}
   else{const penalty=Math.min(g.money,Math.round(incident.reward*.08));g.money-=penalty;g.expenses+=penalty;g.failed++;g.trust=Math.max(0,g.trust-6);}
   g.incidents=g.incidents.filter(i=>i.id!==incident.id);
 };
@@ -271,7 +274,7 @@ export function selectRecommendedUnitIds(g,incidentId,mode='safe'){
 }
 export function tickGame(input,seconds){
   const g=initializeAdvancedState(clone(input)), dt=seconds*g.speed;if(!dt)return g;g.elapsed+=dt;
-  if(g.elapsed>=(g.conditions?.next_change_at||((g.conditions?.updated_at||0)+1800))){g.conditions=freshConditions(g.elapsed,g.conditions);log(g,`Condições atualizadas: ${g.conditions.weather_label.toLowerCase()}, ${g.conditions.traffic_label.toLowerCase()}${g.conditions.roadworks?' e obras na rede viária':''}.`);}
+  if(g.elapsed>=(g.conditions?.next_change_at||((g.conditions?.updated_at||0)+1800))){g.conditions=freshConditions(g.elapsed,g.conditions,()=>gameRandom(g));log(g,`Condições atualizadas: ${g.conditions.weather_label.toLowerCase()}, ${g.conditions.traffic_label.toLowerCase()}${g.conditions.roadworks?' e obras na rede viária':''}.`);}
   g.bases.forEach(base=>{if(base.operational_at&&g.elapsed>=base.operational_at){delete base.operational_at;log(g,`${base.name} entrou ao serviço.`,'success');}});
   g.facilities.forEach(facility=>{if(facility.operational_at&&g.elapsed>=facility.operational_at){delete facility.operational_at;log(g,`${facility.name} entrou ao serviço.`,'success');}});
   g.bases.forEach(base=>(base.extensions||[]).forEach(extension=>{if(!extension.active&&extension.completes_at&&g.elapsed>=extension.completes_at){extension.active=true;delete extension.completes_at;const definition=EXTENSIONS[base.service]?.find(item=>item.id===extension.id);log(g,`${definition?.name||extension.id} concluída em ${base.name}.`,'success');}}));
@@ -280,10 +283,10 @@ export function tickGame(input,seconds){
   (g.cooperation?.large_scale_missions||[]).forEach(mission=>{if(mission.status==='active'&&!g.incidents.some(item=>item.id===mission.incident_id))mission.status='completed';});
   if((g.conditions?.weather==='storm'||g.conditions?.traffic==='heavy')&&g.level>=3&&g.elapsed>=(g.next_crisis_wave||900)&&g.incidents.length<g.progression.mission_cap){
     const center=commandCenterFor(g,g.active_command_center_id)||g.command_centers?.[0],waveType=g.conditions.weather==='storm'?'Tempestade regional':'Pressão viária metropolitana',scenarios=g.conditions.weather==='storm'?[4,3,10]:[3,6,2];
-    g.next_crisis_wave=g.elapsed+2400+Math.random()*1200;
+    g.next_crisis_wave=g.elapsed+2400+gameRandom(g)*1200;
     g.cooperation=g.cooperation||{};g.cooperation.events=g.cooperation.events||[];
     g.cooperation.events.unshift({id:uid(),type:g.conditions.weather==='storm'?'storm':'traffic',title:waveType,command_center_id:center?.id,starts_at:g.elapsed,ends_at:g.elapsed+1800,status:'active',spawned:2,created_at:g.elapsed,system_generated:true});
-    scenarios.slice(0,2).forEach((scenario,index)=>{const candidates=places.filter(point=>!center||point.land===center.land),site=candidates[Math.floor(Math.random()*candidates.length)]||POINTS[center?.center_node]||POINTS['porto-aliados'];g.planned_missions.push({id:uid(),title:`${waveType} · ocorrência ${index+1}`,scenario,node:site.id,command_center_id:center?.id,starts_at:g.elapsed+45+index*75,status:'scheduled',created_at:g.elapsed,system_generated:true,crisis_wave:true});});
+    scenarios.slice(0,2).forEach((scenario,index)=>{const candidates=places.filter(point=>!center||point.land===center.land),site=candidates[Math.floor(gameRandom(g)*candidates.length)]||POINTS[center?.center_node]||POINTS['porto-aliados'];g.planned_missions.push({id:uid(),title:`${waveType} · ocorrência ${index+1}`,scenario,node:site.id,command_center_id:center?.id,starts_at:g.elapsed+45+index*75,status:'scheduled',created_at:g.elapsed,system_generated:true,crisis_wave:true});});
     log(g,`${waveType}: cadeia de ocorrências prevista pela central.`,'alert');
   }
   g.units.forEach(u=>{
@@ -299,7 +302,7 @@ export function tickGame(input,seconds){
     if(['available','staged','patrol'].includes(u.status)){u.fatigue=Math.max(0,(u.fatigue||0)-dt/120);(u.personnel_ids||[]).forEach(personId=>{const person=g.personnel.find(item=>item.id===personId);if(person)person.fatigue=Math.max(0,(person.fatigue||0)-dt/160);});}
     if(!['enroute','returning','transporting','patrol','staging_enroute'].includes(u.status))return;
     u.travel=Math.min(u.travel_total,u.travel+dt);locate(u);
-    if(u.status==='enroute'&&(u.condition||100)<45&&Math.random()<dt/900){u.status='broken';u.repair_until=g.elapsed+120;u.incident_id=null;u.route=[];u.route_times=[];const cost=450;g.money=Math.max(0,g.money-cost);g.expenses+=cost;log(g,`Avaria na ${u.name}. Reparação iniciada (-${cost} €).`,'alert');return;}
+    if(u.status==='enroute'&&(u.condition||100)<45&&gameRandom(g)<dt/900){u.status='broken';u.repair_until=g.elapsed+120;u.incident_id=null;u.route=[];u.route_times=[];const cost=450;g.money=Math.max(0,g.money-cost);g.expenses+=cost;log(g,`Avaria na ${u.name}. Reparação iniciada (-${cost} €).`,'alert');return;}
     if(u.travel<u.travel_total)return;u.node=u.destination;
     if(u.status==='returning'){if((u.fatigue||0)>=70){u.status='resting';u.rest_until=g.elapsed+90;}else u.status='available';u.incident_id=null;u.route=[];u.route_times=[];}
     else if(u.status==='staging_enroute'){u.status='staged';u.staging_area_id=u.destination;u.route=[];u.route_times=[];const staging=(g.staging_areas||[]).find(item=>item.id===u.destination);if(staging){u.node=staging.node;u.lng=staging.lng;u.lat=staging.lat;}log(g,`${u.name} posicionada na zona de concentração.`,'success');}
@@ -323,7 +326,7 @@ export function tickGame(input,seconds){
   g.prisoners=g.prisoners.filter(prisoner=>!prisoner.closed_at||g.elapsed-prisoner.closed_at<600);
   [...g.incidents].forEach(inc=>{
     const responseDeadline=inc.response_deadline||inc.deadline;const resolutionDeadline=inc.resolution_deadline||responseDeadline+900;const escalationAt=inc.created+(responseDeadline-inc.created)*.55;
-    if(!inc.escalated&&g.elapsed>=escalationAt&&['waiting','enroute'].includes(inc.status)){inc.escalated=true;inc.priority=Math.max(1,inc.priority-1);inc.reward=Math.round(inc.reward*1.2);inc.casualties+=(inc.service==='medical'||inc.service==='fire')&&Math.random()<.55?1:0;inc.detainees+=inc.service==='police'&&Math.random()<.35?1:0;if(inc.service==='fire')inc.needs.fire=Math.min(5,(inc.needs.fire||0)+1);if(inc.evolution?.type==='expansion'){inc.previous_title=inc.title;inc.title=inc.evolution.title;inc.definition=inc.evolution.title;Object.entries(inc.evolution.add_needs||{}).forEach(([service,count])=>{inc.needs[service]=(inc.needs[service]||0)+count;});inc.required_personnel=Object.values(inc.needs).reduce((sum,count)=>sum+count*2,0);inc.reward=Math.round(inc.reward*(inc.evolution.reward_factor||1.4));inc.evolution_spawned=true;}log(g,`${inc.title} agravou-se: prioridade, vítimas ou meios necessários atualizados.`,'alert');}
+    if(!inc.escalated&&g.elapsed>=escalationAt&&['waiting','enroute'].includes(inc.status)){inc.escalated=true;inc.priority=Math.max(1,inc.priority-1);inc.reward=Math.round(inc.reward*1.2);inc.casualties+=(inc.service==='medical'||inc.service==='fire')&&gameRandom(g)<.55?1:0;inc.detainees+=inc.service==='police'&&gameRandom(g)<.35?1:0;if(inc.service==='fire')inc.needs.fire=Math.min(5,(inc.needs.fire||0)+1);if(inc.evolution?.type==='expansion'){inc.previous_title=inc.title;inc.title=inc.evolution.title;inc.definition=inc.evolution.title;Object.entries(inc.evolution.add_needs||{}).forEach(([service,count])=>{inc.needs[service]=(inc.needs[service]||0)+count;});inc.required_personnel=Object.values(inc.needs).reduce((sum,count)=>sum+count*2,0);inc.reward=Math.round(inc.reward*(inc.evolution.reward_factor||1.4));inc.evolution_spawned=true;}log(g,`${inc.title} agravou-se: prioridade, vítimas ou meios necessários atualizados.`,'alert');}
     const assigned=g.units.filter(u=>u.incident_id===inc.id);
     const onscene=assigned.filter(u=>u.status==='onscene');
     const readiness=readinessFor(g,inc,onscene);
@@ -374,8 +377,8 @@ export function tickGame(input,seconds){
   }
   if(g.money<500&&g.incidents.length&&g.units.every(unit=>!operationalUnit(unit))&&!g.recovery_grant_at){g.money+=1500;g.earned+=1500;g.recovery_grant_at=g.elapsed;log(g,'Fundo de continuidade atribuído para evitar bloqueio operacional.','success');}
   refreshProgression(g);
-  if(g.elapsed>=g.next_spawn){const cap=g.progression.mission_cap;if(g.incidents.length<cap)spawn(g);if(g.level>=3&&g.incidents.length<Math.max(1,cap-2)&&Math.random()<.28)spawn(g);g.next_spawn=g.elapsed+Math.max(100,210-g.level*8);}
-  tickAdvancedState(g,dt,log);
+  if(g.elapsed>=g.next_spawn){const cap=g.progression.mission_cap;if(g.incidents.length<cap)spawn(g);if(g.level>=3&&g.incidents.length<Math.max(1,cap-2)&&gameRandom(g)<.28)spawn(g);g.next_spawn=g.elapsed+Math.max(100,210-g.level*8);}
+  tickAdvancedState(g,dt,log,()=>gameRandom(g));
   return refreshProgression(g);
 }
 export function applyAction(input,kind,data={}){
@@ -572,7 +575,7 @@ export function loadLocalGame(){
     if(saved?.mode?.startsWith('portugal-offline')){
       const fresh=newGame();
       const migratedCenters=saved.command_centers?.length?saved.command_centers:[makeCommandCenter(`Comando Operacional de ${saved.city||'Porto'}`,POINTS['porto-aliados'],35)];
-      const merged={...fresh,...saved,mode:'portugal-offline-v5',expenses:saved.expenses||0,operating_debt:saved.operating_debt||0,next_crisis_wave:saved.next_crisis_wave||saved.elapsed+900,next_upkeep:saved.next_upkeep||saved.elapsed+300,conditions:saved.conditions||freshConditions(saved.elapsed||0),command_centers:migratedCenters,active_command_center_id:saved.active_command_center_id||migratedCenters[0].id,player_pois:saved.player_pois||[],personnel:saved.personnel||[],facilities:saved.facilities||[],planned_missions:saved.planned_missions||[],staging_areas:saved.staging_areas||[],complexes:saved.complexes||[],tasks:saved.tasks?.length?saved.tasks:makeCareerTasks(saved),achievements:saved.achievements||[],unit_groups:saved.unit_groups||[],patients:saved.patients||[],prisoners:saved.prisoners||[],trainings:saved.trainings||[],arrs:saved.arrs?.length?saved.arrs:clone(DEFAULT_ARRS)};
+      const merged={...fresh,...saved,mode:'portugal-offline-v5',rng_seed:saved.rng_seed||fresh.rng_seed,rng_state:saved.rng_state||saved.rng_seed||fresh.rng_state,rng_counter:saved.rng_counter||0,expenses:saved.expenses||0,operating_debt:saved.operating_debt||0,next_crisis_wave:saved.next_crisis_wave||saved.elapsed+900,next_upkeep:saved.next_upkeep||saved.elapsed+300,conditions:saved.conditions||freshConditions(saved.elapsed||0),command_centers:migratedCenters,active_command_center_id:saved.active_command_center_id||migratedCenters[0].id,player_pois:saved.player_pois||[],personnel:saved.personnel||[],facilities:saved.facilities||[],planned_missions:saved.planned_missions||[],staging_areas:saved.staging_areas||[],complexes:saved.complexes||[],tasks:saved.tasks?.length?saved.tasks:makeCareerTasks(saved),achievements:saved.achievements||[],unit_groups:saved.unit_groups||[],patients:saved.patients||[],prisoners:saved.prisoners||[],trainings:saved.trainings||[],arrs:saved.arrs?.length?saved.arrs:clone(DEFAULT_ARRS)};
       merged.bases=(saved.bases||fresh.bases).map(base=>{const count=(saved.units||fresh.units).filter(unit=>unit.base_id===base.id).length;return {level:1,capacity:Math.max(2,count),staff_capacity:14,personnel:base.service==='fire'?10:6,extensions:[],specialization:'general',qualifications:{},command_center_id:migratedCenters[0].id,...base};});
       merged.facilities=merged.facilities.map(facility=>({command_center_id:migratedCenters[0].id,specialty_capacity:facility.type==='hospital'?Object.fromEntries((facility.specialties||['urgency']).map(id=>[id,id==='urgency'?(facility.capacity||5):Math.max(2,Math.ceil((facility.capacity||5)*.45))])):undefined,...facility}));
       merged.units=(saved.units||fresh.units).map(unit=>{const definition=vehicleDefinition(unit.service,unit.vehicle_type||(unit.advanced?VEHICLE_CATALOG[unit.service]?.[1]?.id:null));return {condition:100,fatigue:0,repair_until:0,rest_until:0,enabled:true,exclude_from_arr:false,response_delay:0,max_crew:definition.crew,vehicle_type:definition.id,crew_required:definition.crew,crew_assigned:definition.crew,training:vehicleTraining(definition.id),...unit};});
