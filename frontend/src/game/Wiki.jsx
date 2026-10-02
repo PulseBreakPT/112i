@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import {
   Activity, BookOpen, Building2, CarFront, CheckCircle2, ChevronRight, CircleDollarSign,
-  Clock3, GraduationCap, HeartPulse, Layers3, LockKeyhole, MapPin, Radio, Search,
+  GraduationCap, HeartPulse, Layers3, LockKeyhole, MapPin, Radio, Search,
   ShieldCheck, Siren, Users, Wrench
 } from 'lucide-react';
 import { buildIncidentDoctrine, MISSION_CATEGORIES, RARITY_LEVELS } from './engines/missionDoctrine';
@@ -132,25 +132,11 @@ export default function Wiki({game,world}){
     ...(item.capabilities||[]),...(item.equipment||[]),...(item.equipment_installed||[])
   ].join(' ').toLowerCase().includes(text);
 
-  const filteredMissions=useMemo(()=>{
-    const text=query.trim().toLowerCase();
-    return missions.filter(item=>(service==='all'||item.service===service||Object.keys(item.scenarioData?.needs||{}).includes(service))&&(!text||missionMatches(item,text)));
-  },[missions,query,service,vehicleMap]);
-
-  const filteredVehicles=useMemo(()=>{
-    const text=query.trim().toLowerCase();
-    return vehicles.filter(item=>(service==='all'||item.service===service)&&(!text||genericMatches(item,text)));
-  },[vehicles,query,service]);
-
-  const filteredBuildings=useMemo(()=>{
-    const text=query.trim().toLowerCase();
-    return [...serviceBuildings,...facilities].filter(item=>(service==='all'||item.service===service||item.service==='all'||item.id===service)&&(!text||genericMatches(item,text)));
-  },[serviceBuildings,facilities,query,service]);
-
-  const filteredTrainings=useMemo(()=>{
-    const text=query.trim().toLowerCase();
-    return trainings.filter(item=>(service==='all'||item.service===service)&&(!text||genericMatches(item,text)));
-  },[trainings,query,service]);
+  const filterText=query.trim().toLowerCase();
+  const filteredMissions=missions.filter(item=>(service==='all'||item.service===service||Object.keys(item.scenarioData?.needs||{}).includes(service))&&(!filterText||missionMatches(item,filterText)));
+  const filteredVehicles=vehicles.filter(item=>(service==='all'||item.service===service)&&(!filterText||genericMatches(item,filterText)));
+  const filteredBuildings=[...serviceBuildings,...facilities].filter(item=>(service==='all'||item.service===service||item.service==='all'||item.id===service)&&(!filterText||genericMatches(item,filterText)));
+  const filteredTrainings=trainings.filter(item=>(service==='all'||item.service===service)&&(!filterText||genericMatches(item,filterText)));
 
   const choose=(type,id)=>setSelected({type,id});
   const selectedMission=selected?.type==='mission'?missions.find(item=>item.scenario===selected.id):null;
