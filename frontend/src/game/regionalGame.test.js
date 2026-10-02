@@ -1,5 +1,5 @@
 import { applyAction, newGame, tickGame, selectRecommendedUnitIds } from './localGame';
-import { eligibleMissions, progressionSnapshot } from './progression';
+import { eligibleMissions, progressionSnapshot, nextBuildingCost } from './progression';
 
 test('new careers start with one command center and all resources assigned to it', () => {
   const game = newGame();
@@ -280,4 +280,49 @@ test('critical transfer cancellation releases the reserved destination bed', () 
   expect(patient.status).toBe('admitted');
   expect(patient.reserved_hospital_id).toBeUndefined();
   expect(game.medical_transfers.find(item=>item.id===transfer.id).status).toBe('cancelled');
+});
+
+
+test('new careers start with a healthy operating budget', () => {
+  const game=newGame();
+  expect(game.money).toBe(40000);
+  expect(game.operating_debt).toBe(0);
+  expect(game.next_public_funding).toBeGreaterThan(0);
+});
+
+test('eligible investments are co-financed instead of exhausting the player', () => {
+  let game=newGame();
+  game.money=100;
+  const center=game.command_centers[0];
+  game=applyAction(game,'build_base',{service:'fire',site_id:'porto-campanha',command_center_id:center.id});
+  expect(game.money).toBeGreaterThanOrEqual(5000);
+  expect(game.public_funding).toBeGreaterThan(0);
+  expect(game.bases.some(base=>base.node==='porto-campanha'&&base.service==='fire')).toBe(true);
+});
+
+test('operating costs can never drain the protected reserve', () => {
+  let game=newGame();
+  game.money=5000;
+  game.next_upkeep=game.elapsed;
+  game=tickGame(game,1);
+  expect(game.money).toBeGreaterThanOrEqual(5000);
+  expect(game.operating_debt).toBe(0);
+});
+
+test('periodic public funding creates sustainable positive cash flow', () => {
+  let game=newGame();
+  game.money=5000;
+  game.next_public_funding=game.elapsed;
+  const beforeFunding=game.public_funding||0;
+  game=tickGame(game,1);
+  expect(game.money).toBeGreaterThan(5000);
+  expect(game.public_funding).toBeGreaterThan(beforeFunding);
+});
+
+test('base prices scale smoothly even for a nationwide network', () => {
+  const game=newGame();
+  game.bases=Array.from({length:30},(_,index)=>({id:String(index),service:index%3===0?'fire':index%3===1?'medical':'police'}));
+  const price=nextBuildingCost(game,'fire',10000);
+  expect(price).toBeLessThanOrEqual(25000);
+  expect(price).toBeGreaterThan(10000);
 });
