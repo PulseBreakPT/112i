@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import * as maplibregl from 'maplibre-gl';
-import { Plus, Minus, LocateFixed, Layers3, ArrowUpRight } from 'lucide-react';
+import { Plus, Minus, LocateFixed, Layers3, ArrowUpRight, Flame, TreePine, CarFront, HeartPulse, Lungs, Handcuffs, Search, ShieldAlert, Waves, FlaskConical, Bomb, CloudLightning, Building2, Baby, Brain, HardHat, BusFront, Bike, TrainFront, Plane, Users, CircleAlert } from 'lucide-react';
 import { getMapThemePalette } from './timeTheme';
 import { SERVICE } from './common';
 import { vehicleImage } from './vehicleMedia';
 import { IconButton } from './Shell';
+import { incidentMarkerKind, incidentMapState, incidentMapStatusLabel, incidentPrimaryService, isIncidentVisibleOnMap } from './incidentMapPresentation';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import './PortugalMap.css';
 
@@ -98,22 +100,105 @@ function positionAt(unit, travel) {
     bearing: Math.atan2((b[0] - a[0]) * Math.cos(a[1] * Math.PI / 180), b[1] - a[1]) * 180 / Math.PI };
 }
 
+const INCIDENT_ICONS = {
+  fire: Flame,
+  wildfire: TreePine,
+  road: CarFront,
+  medical: HeartPulse,
+  asphyxia: Lungs,
+  cardiac: HeartPulse,
+  neurology: Brain,
+  obstetric: Baby,
+  custody: Handcuffs,
+  search: Search,
+  police: ShieldAlert,
+  'public-order': Users,
+  water: Waves,
+  hazmat: FlaskConical,
+  explosives: Bomb,
+  weather: CloudLightning,
+  rescue: HardHat,
+  rail: TrainFront,
+  air: Plane,
+  bus: BusFront,
+  motorcycle: Bike,
+  disaster: CircleAlert,
+  multi: CircleAlert,
+  fireService: Flame,
+  medicalService: HeartPulse,
+  policeService: ShieldAlert,
+};
+
+function iconMarkup(kind, service) {
+  const fallback = service === 'medical' ? INCIDENT_ICONS.medicalService : service === 'police' ? INCIDENT_ICONS.policeService : INCIDENT_ICONS.fireService;
+  const Icon = INCIDENT_ICONS[kind] || fallback;
+  return renderToStaticMarkup(<Icon size={18} strokeWidth={2.2} aria-hidden="true" focusable="false" />);
+}
+
+function updateIncidentMarker(el, item) {
+  const service = incidentPrimaryService(item);
+  const kind = incidentMarkerKind(item);
+  const state = incidentMapState(item);
+  const statusLabel = incidentMapStatusLabel(item);
+  const serviceMeta = SERVICE[service] || SERVICE.fire;
+  el.style.setProperty('--marker-color', serviceMeta.ink);
+  el.dataset.service = service;
+  el.dataset.incidentKind = kind;
+  el.dataset.incidentState = state;
+  el.dataset.priority = String(item.priority || 3);
+  el.title = `${item.title} · ${statusLabel}`;
+  el.setAttribute('aria-label', `${item.title} · ${serviceMeta.name} · ${statusLabel} · ${item.address || item.district || 'Portugal'}`);
+
+  const icon = el.querySelector('.geo-incident-icon');
+  if (icon && icon.dataset.kind !== kind) {
+    icon.dataset.kind = kind;
+    icon.innerHTML = iconMarkup(kind, service);
+  }
+
+  const priority = el.querySelector('.geo-priority');
+  if (priority) priority.className = `geo-priority priority-${item.priority || 3}`;
+
+  const label = el.querySelector('.geo-incident-label');
+  if (label) {
+    const title = label.querySelector('strong');
+    const meta = label.querySelector('span');
+    if (title) title.textContent = item.title;
+    if (meta) meta.textContent = `${serviceMeta.name} · ${statusLabel}`;
+  }
+}
+
 function markerElement(kind, item) {
   const el = document.createElement(kind === 'incident' ? 'button' : 'div');
   el.className = `geo-marker geo-${kind}`;
-  el.style.setProperty('--marker-color', SERVICE[item.service].ink);
+  const service = kind === 'incident' ? incidentPrimaryService(item) : item.service;
+  el.style.setProperty('--marker-color', (SERVICE[service] || SERVICE.fire).ink);
   el.dataset.testid = kind === 'incident' ? `map-incident-${item.number}` : kind === 'base' ? `map-base-${item.service}-${item.id}` : `moving-unit-${item.name}`;
   el.title = item.title || item.callsign || item.name;
   if (kind === 'incident') {
     el.type = 'button';
-    el.setAttribute('aria-label', `${item.title} · ${item.address}`);
-    const number = document.createElement('span');
-    number.className = 'geo-incident-number';
-    number.textContent = item.number;
-    el.append(number);
-    const dot = document.createElement('i');
-    dot.className = `geo-priority priority-${item.priority}`;
-    el.append(dot);
+
+    const core = document.createElement('span');
+    core.className = 'geo-incident-core';
+
+    const icon = document.createElement('span');
+    icon.className = 'geo-incident-icon';
+    core.append(icon);
+
+    const state = document.createElement('span');
+    state.className = 'geo-incident-state';
+    state.setAttribute('aria-hidden', 'true');
+
+    const priority = document.createElement('i');
+    priority.className = `geo-priority priority-${item.priority || 3}`;
+
+    const label = document.createElement('span');
+    label.className = 'geo-incident-label';
+    const title = document.createElement('strong');
+    const meta = document.createElement('span');
+    label.append(title, meta);
+
+    el.append(core, state, priority, label);
+    updateIncidentMarker(el, item);
   } else if (kind === 'base') {
     el.textContent = { fire: 'B', medical: '+', police: 'P' }[item.service];
     el.setAttribute('aria-label', item.name);
@@ -226,7 +311,7 @@ export const PortugalMap = ({ world, game, selected, onSelect, focusKey, theme, 
     if (!loaded || !map) return;
     const entries = [
       ...game.bases.map(item => ({ kind: 'base', item })),
-      ...game.incidents.map(item => ({ kind: 'incident', item })),
+      ...game.incidents.filter(isIncidentVisibleOnMap).map(item => ({ kind: 'incident', item })),
       ...(unitsVisible ? game.units.filter(u => u.status !== 'available').map(item => ({ kind: 'vehicle', item })) : []),
     ];
     const keep = new Set();
@@ -244,7 +329,10 @@ export const PortugalMap = ({ world, game, selected, onSelect, focusKey, theme, 
       const element = marker.getElement();
       element.classList.toggle('is-selected', kind === 'incident' && item.id === selected);
       element.dataset.lng = item.lng; element.dataset.lat = item.lat;
-      if (kind === 'incident') element.setAttribute('aria-pressed', String(item.id === selected));
+      if (kind === 'incident') {
+        element.setAttribute('aria-pressed', String(item.id === selected));
+        updateIncidentMarker(element, item);
+      }
       if (kind === 'vehicle') {
         element.dataset.status = item.status;
         element.dataset.service = item.service;
