@@ -38,7 +38,7 @@ export default function EventEffects({ event, onDone }) {
   return <div className="event-fx" data-tone={event.tone} data-variant={event.variant} aria-live={assertive ? 'assertive' : 'polite'} aria-atomic="true">
     <section className="event-fx-card" role="status" data-testid={`event-effect-${event.variant}`}>
       <div className="event-fx-icon" aria-hidden="true"><Icon size={20} strokeWidth={1.8} /></div>
-      <div className="event-fx-copy"><div className="event-fx-kicker">{event.tone === 'positive' ? 'RESULTADO' : event.tone === 'warning' ? 'ATUALIZAÇÃO' : 'ALERTA'}</div><h2>{event.title}</h2><p>{event.detail}</p></div>
+      <div className="event-fx-copy"><div className="event-fx-title"><span className="event-fx-dot" aria-hidden="true" /><h2>{event.title}</h2></div><p>{event.detail}</p></div>
       <button className="event-fx-close" type="button" aria-label="Fechar notificação" onClick={() => onDone?.(event.id)}><X size={17} /></button>
       <div className="event-fx-timer"><i /></div>
     </section>
