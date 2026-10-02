@@ -14,6 +14,8 @@ const RESOURCE_PROFILE = {
   medical:{oxygen:{capacity:100,label:'Oxigénio',unit:'%'},medical:{capacity:100,label:'Material clínico',unit:'%'},fuel:{capacity:100,label:'Combustível',unit:'%'}},
   police:{equipment:{capacity:100,label:'Equipamento',unit:'%'},fuel:{capacity:100,label:'Combustível',unit:'%'}},
 };
+const SUPPLY_CAPACITY={fuel:1200,medical:700,water:24000,foam:2600,equipment:700,oxygen:700};
+const SUPPLY_COST={fuel:.55,medical:1.2,water:.018,foam:.28,equipment:.6,oxygen:.8};
 const DAILY_TASKS = [
   {metric:'completed',title:'Resolver 4 ocorrências',target:4,reward:1100},
   {metric:'transported',title:'Concluir 2 transportes',target:2,reward:800},
@@ -33,6 +35,7 @@ export function initializeAdvancedState(game) {
   game.recruitment_queue=game.recruitment_queue||[];
   game.medical_transfers=game.medical_transfers||[];
   game.next_auto_planned=game.next_auto_planned||900;
+  game.next_supply_order=game.next_supply_order||300;
   game.operations_metrics={transported:0,trained:0,...(game.operations_metrics||{})};
   game.rotating_tasks=game.rotating_tasks||{
     cycle:Math.floor((game.elapsed||0)/86400),
@@ -59,7 +62,7 @@ export function initializeAdvancedState(game) {
   game.cooperation.events=game.cooperation.events||[];
   game.cooperation.large_scale_missions=game.cooperation.large_scale_missions||[];
   (game.command_centers||[]).forEach(center=>{center.mission_ranges={default:center.radius_km||35,...(center.mission_ranges||{})};center.spawn_zones=center.spawn_zones||[];});
-  (game.bases||[]).forEach(base=>{base.mission_generation_enabled=base.mission_generation_enabled!==false;base.supply_reserve={fuel:1000,medical:500,water:20000,foam:2000,equipment:500,...(base.supply_reserve||{})};});
+  (game.bases||[]).forEach(base=>{base.mission_generation_enabled=base.mission_generation_enabled!==false;base.supply_capacity={...SUPPLY_CAPACITY,...(base.supply_capacity||{})};base.supply_reserve={fuel:1000,medical:500,water:20000,foam:2000,equipment:500,oxygen:500,...(base.supply_reserve||{})};});
   (game.facilities||[]).forEach(facility=>{facility.enabled=facility.enabled!==false;facility.queue_limit=facility.queue_limit||facility.capacity||5;});
   (game.units||[]).forEach(unit=>{
     unit.shift=unit.shift||{start:0,end:24,days:[0,1,2,3,4,5,6]};
@@ -110,12 +113,44 @@ export function tickAdvancedState(game,dt,log=()=>{}) {
     unit.on_shift=onShift;
     if(!onShift&&unit.status==='available')unit.status='offshift';
     if(onShift&&unit.status==='offshift')unit.status=(unit.crew_assigned||0)>=(unit.crew_required||1)?'available':'uncrewed';
-    if(['available','offshift','uncrewed'].includes(unit.status))Object.entries(RESOURCE_PROFILE[unit.service]||{}).forEach(([key,profile])=>{unit.resources[key]=Math.min(profile.capacity,(unit.resources[key]||0)+dt*profile.capacity/180);});
+    if(['available','offshift','uncrewed'].includes(unit.status)){
+      const base=(game.bases||[]).find(item=>item.id===unit.base_id);
+      Object.entries(RESOURCE_PROFILE[unit.service]||{}).forEach(([key,profile])=>{
+        const current=unit.resources[key]||0,missing=Math.max(0,profile.capacity-current),rate=dt*profile.capacity/180;
+        const available=Math.max(0,base?.supply_reserve?.[key]||0),transfer=Math.min(missing,rate,available);
+        unit.resources[key]=current+transfer;
+        if(base)base.supply_reserve[key]=Math.max(0,available-transfer);
+      });
+    }
   });
+  if(game.elapsed>=game.next_supply_order){
+    let spent=0;
+    (game.bases||[]).forEach(base=>{
+      Object.entries(base.supply_capacity||SUPPLY_CAPACITY).forEach(([key,capacity])=>{
+        const target=capacity*.75,current=Math.max(0,base.supply_reserve?.[key]||0),wanted=Math.max(0,target-current),unitCost=SUPPLY_COST[key]||1;
+        const affordable=Math.min(wanted,Math.floor(Math.max(0,game.money-spent)/unitCost));
+        if(affordable>0){base.supply_reserve[key]=current+affordable;spent+=Math.ceil(affordable*unitCost);}
+      });
+    });
+    if(spent>0){game.money=Math.max(0,game.money-spent);game.expenses=(game.expenses||0)+spent;log(game,`Reposição logística automática: -${spent} €.`);}
+    game.next_supply_order=game.elapsed+300;
+  }
   (game.patients||[]).forEach(patient=>{
     if(patient.status!=='waiting')return;
-    patient.treatment_progress=Math.min(100,(patient.treatment_progress||0)+dt*(patient.severity===3?.18:.32));
-    if(patient.treatment_progress>=100&&!patient.treatment_complete){patient.treatment_complete=true;patient.transport_required=patient.transport_required??(patient.severity>1||Math.random()<.58);if(!patient.transport_required){patient.status='treated';patient.closed_at=game.elapsed;game.trust=Math.min(100,(game.trust||0)+1);log(game,'Vítima tratada no local sem necessidade de transporte.','success');}else log(game,'Vítima estabilizada e pronta para transporte.');}
+    const care=Math.max(.25,Math.min(1.5,Number(patient.care_quality)||.5));
+    patient.stability=patient.stability??Math.max(35,100-(patient.severity||1)*14);
+    if(!patient.treatment_complete){
+      const treatmentRate=(patient.severity===3?.12:.25)*care;
+      patient.treatment_progress=Math.min(100,(patient.treatment_progress||0)+dt*treatmentRate);
+      patient.stability=Math.max(0,patient.stability-dt*(patient.severity||1)*.012/Math.max(.4,care));
+      if(patient.stability<40&&!patient.deteriorated){patient.deteriorated=true;patient.severity=Math.min(3,(patient.severity||1)+1);game.trust=Math.max(0,(game.trust||0)-2);log(game,'Uma vítima deteriorou enquanto aguardava estabilização/evacuação.','alert');}
+    }
+    if(patient.treatment_progress>=100&&!patient.treatment_complete){
+      patient.treatment_complete=true;
+      patient.transport_required=patient.transport_required??(patient.severity>1||Math.random()<.58);
+      if(!patient.transport_required){patient.status='treated';patient.closed_at=game.elapsed;game.trust=Math.min(100,(game.trust||0)+1);log(game,'Vítima tratada no local sem necessidade de transporte.','success');}
+      else log(game,'Vítima estabilizada e pronta para transporte.');
+    }
   });
   (game.medical_transfers||[]).forEach(transfer=>{if(transfer.status==='scheduled'&&game.elapsed>=transfer.ready_at)transfer.status='waiting';});
   (game.seasonal_events||[]).forEach(event=>{event.status=game.elapsed<event.starts_at?'scheduled':game.elapsed<=event.ends_at?'active':'completed';});
