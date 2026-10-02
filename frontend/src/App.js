@@ -105,7 +105,7 @@ function GameApp() {
 
   return <div data-time-theme={theme.phase} data-time-theme-mode={themeMode} className={`app-shell immersive-shell minimal-shell distrito-interface ${theme.dark ? 'dark' : ''} ${isCentral ? 'central-open' : 'workspace-open'} ${panel && isCentral ? `panel-open panel-${panel}` : ''} ${menuOpen ? 'menu-open' : ''}`}>
     <main className="world-stage" aria-label="Mapa operacional" inert={!isCentral || menuOpen}>
-      <CityMap world={world} game={game} selected={selected} onSelect={selectIncident} focusKey={focusKey} active={isCentral && !menuOpen} />
+      <CityMap theme={theme} world={world} game={game} selected={selected} onSelect={selectIncident} focusKey={focusKey} active={isCentral && !menuOpen} />
     </main>
     <GameHUD game={game} act={act} sound={sound} setSound={setSound} onSave={save} error={error} themeMode={themeMode} setThemeMode={setThemeMode} theme={theme} />
     <div className="menu-launcher">

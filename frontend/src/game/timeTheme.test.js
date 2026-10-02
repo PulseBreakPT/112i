@@ -23,3 +23,42 @@ test('manual preview ignores current solar phase', () => {
   expect(theme.phase).toBe('morning');
   expect(theme.label).toBe('Manhã');
 });
+
+const luminance = color => {
+  const rgb = color.startsWith('#') ? [1, 3, 5].map(i => parseInt(color.slice(i, i + 2), 16)) : color.match(/[\d.]+/g).slice(0, 3).map(Number);
+  const channels = rgb.map(v => {
+    const c = v / 255;
+    return c <= .04045 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4;
+  });
+  return channels[0] * .2126 + channels[1] * .7152 + channels[2] * .0722;
+};
+const contrast = (a, b) => (Math.max(luminance(a), luminance(b)) + .05) / (Math.min(luminance(a), luminance(b)) + .05);
+
+test.each(['morning', 'afternoon', 'night'])('%s text remains readable on its surfaces', mode => {
+  const { cssVars, dark } = getTimeThemeSnapshot(new Date(), {}, mode);
+  expect(dark).toBe(mode === 'night');
+  for (const ink of ['--distrito-text', '--distrito-secondary', '--distrito-muted']) {
+    for (const surface of ['--theme-surface', '--theme-inset', '--theme-raised']) {
+      expect(contrast(cssVars[ink], cssVars[surface])).toBeGreaterThanOrEqual(4.5);
+    }
+  }
+});
+
+test('manual themes have distinct daylight levels and warm afternoon ink', () => {
+  const morning = getTimeThemeSnapshot(new Date(), {}, 'morning').cssVars;
+  const afternoon = getTimeThemeSnapshot(new Date(), {}, 'afternoon').cssVars;
+  const night = getTimeThemeSnapshot(new Date(), {}, 'night').cssVars;
+  expect(luminance(morning['--theme-surface'])).toBeGreaterThan(luminance(afternoon['--theme-surface']));
+  expect(luminance(afternoon['--theme-surface'])).toBeGreaterThan(luminance(night['--theme-surface']) * 10);
+});
+
+test('dawn and dusk preserve text contrast while surfaces change', () => {
+  const location = { lat: 37.0194, lng: -7.9304, city: 'Faro', land: 'mainland' };
+  const solar = solarTimesFor(new Date('2026-12-21T12:00:00Z'), location.lat, location.lng, 'Europe/Lisbon');
+  for (const [start, end] of [[solar.dawn, solar.sunrise], [new Date(solar.sunset.valueOf() - 3600000), solar.dusk]]) {
+    for (let step = 1; step < 10; step++) {
+      const { cssVars } = getTimeThemeSnapshot(new Date(start.valueOf() + (end - start) * step / 10), location);
+      expect(contrast(cssVars['--distrito-text'], cssVars['--theme-surface'])).toBeGreaterThanOrEqual(4.5);
+    }
+  }
+});
