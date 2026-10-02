@@ -107,8 +107,9 @@ def tick(g, seconds):
         g['next_spawn'] = g['elapsed'] + max(65, 110 - g['level'] * 5)
 
 def resolve(g, inc, success):
-    log(g, f'{inc["title"]} — ' + (f'resolvida. +{inc["reward"]} €' if success else 'prazo de resposta excedido.'), 'success' if success else 'alert')
-    g['history'].insert(0, {'id': inc['id'], 'title': inc['title'], 'service': inc['service'], 'success': success, 'reward': inc['reward'] if success else 0, 'time': g['elapsed']})
+    reward = inc.get('final_reward', inc['reward']) if success else 0
+    log(g, f'{inc["title"]} — ' + (f'resolvida. +{reward} €' if success else 'prazo de resposta excedido.'), 'success' if success else 'alert')
+    g['history'].insert(0, {'id': inc['id'], 'title': inc['title'], 'service': inc['service'], 'success': success, 'reward': reward, 'time': g['elapsed']})
     g['history'] = g['history'][:100]
     for u in g['units']:
         if u['incident_id'] == inc['id']:
@@ -180,4 +181,5 @@ def action(g, kind, data):
         spawn(g)
     elif kind != 'save':
         raise HTTPException(400, 'Ação desconhecida.')
+    ensure_reserve(g, log, 'reserva operacional protegida')
     return g
