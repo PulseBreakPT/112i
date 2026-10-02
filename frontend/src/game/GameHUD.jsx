@@ -5,7 +5,9 @@ import { IconButton } from './Shell';
 import { money } from './common';
 import { APP_NAME, BRAND_WORD, BRAND_NUMBER } from './branding';
 
-const THEME_OPTIONS = [[Clock3, 'auto', 'Auto'], [Sun, 'morning', 'Manhã'], [Sunset, 'afternoon', 'Tarde'], [Moon, 'night', 'Noite']];\n\nexport function GameHUD({ game, act, sound, setSound, onSave, error, themeMode = 'auto', setThemeMode = () => {}, theme }) {
+const THEME_OPTIONS = [[Clock3, 'auto', 'Auto'], [Sun, 'morning', 'Manhã'], [Sunset, 'afternoon', 'Tarde'], [Moon, 'night', 'Noite']];
+
+export function GameHUD({ game, act, sound, setSound, onSave, error, themeMode = 'auto', setThemeMode = () => {}, theme }) {
   const [optionsOpen, setOptionsOpen] = useState(false);
   const options = useRef(null);
   useEffect(() => {
@@ -30,6 +32,11 @@ const THEME_OPTIONS = [[Clock3, 'auto', 'Auto'], [Sun, 'morning', 'Manhã'], [Su
           <div className="xp-track"><i style={{ width: `${game.xp % 200 / 2}%` }} /></div>
           <div className="option-line"><span>Condições</span><strong data-testid="current-conditions">{game.conditions?.weather_label || 'Céu limpo'} · {game.conditions?.traffic_label || 'Trânsito fluido'}{game.conditions?.night ? ' · Noite' : ''}{game.conditions?.roadworks ? ' · Obras' : ''}</strong></div>
           <div className="option-line"><span>Confiança pública</span><strong data-testid="city-trust" data-tone={game.trust >= 80 ? 'positive' : game.trust >= 50 ? 'warning' : 'negative'}>{game.trust}%</strong></div>
+          <div className="time-theme-control" aria-label="Ambiente visual">
+            <div className="time-theme-heading"><span>Ambiente visual</span><strong>{theme?.label || 'Auto'}</strong></div>
+            <div className="time-theme-buttons">{THEME_OPTIONS.map(([Icon, value, label]) => <button key={value} type="button" aria-label={`Tema ${label}`} aria-pressed={themeMode === value} data-testid={`theme-${value}`} onClick={() => setThemeMode(value)}><Icon /><span>{label}</span></button>)}</div>
+            <small className="time-theme-detail">{theme?.detail || 'Segue automaticamente a luz do dia.'}</small>
+          </div>
           <div className="option-actions"><button data-testid="sound-toggle" onClick={() => setSound(!sound)}>{sound ? <Volume2 size={15} /> : <VolumeX size={15} />}{sound ? 'Som ligado' : 'Som desligado'}</button><button data-testid="save-game-button" onClick={onSave}><Save size={15} /> Guardar</button></div>
         </div>}
       </div>
