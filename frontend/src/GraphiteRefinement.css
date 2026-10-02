@@ -1,0 +1,449 @@
+/* Distrito 112 — graphite refinement layer.
+   Adds material texture, micro-depth and quieter tactical detail without
+   changing the neutral dark direction or boxing the permanent HUD. */
+
+:root {
+  --graphite-hairline: rgba(255,255,255,.065);
+  --graphite-hairline-soft: rgba(255,255,255,.032);
+  --graphite-highlight: rgba(255,255,255,.045);
+  --graphite-shadow: rgba(0,0,0,.48);
+  --graphite-shadow-soft: rgba(0,0,0,.22);
+  --graphite-panel:
+    linear-gradient(180deg, rgba(255,255,255,.028), transparent 22%),
+    radial-gradient(circle at 12% 0%, rgba(255,255,255,.028), transparent 34%),
+    linear-gradient(145deg, rgba(22,23,25,.985), rgba(12,13,15,.988));
+  --graphite-card:
+    linear-gradient(180deg, rgba(255,255,255,.026), transparent 28%),
+    linear-gradient(145deg, rgba(255,255,255,.028), rgba(255,255,255,.012));
+  --graphite-inset:
+    linear-gradient(180deg, rgba(0,0,0,.18), rgba(255,255,255,.012)),
+    #0f1012;
+  --graphite-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.18'/%3E%3C/svg%3E");
+}
+
+/* ---------- Major surfaces ---------- */
+
+.minimal-shell.distrito-interface :is(
+  .game-menu,
+  .hud-options,
+  .layer-menu,
+  .game-workspace,
+  .central-widget,
+  .tactical-drawer > .incident-panel,
+  .tactical-drawer > .dispatch-panel
+),
+.game-modal {
+  background-image:
+    var(--graphite-noise),
+    linear-gradient(180deg, rgba(255,255,255,.025), transparent 22%),
+    radial-gradient(circle at 10% 0%, rgba(255,255,255,.025), transparent 32%),
+    linear-gradient(145deg, rgba(22,23,25,.975), rgba(12,13,15,.985)) !important;
+  background-blend-mode: soft-light, normal, normal, normal !important;
+  border: 1px solid var(--graphite-hairline) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.035),
+    inset 0 -1px 0 rgba(0,0,0,.34),
+    0 22px 64px var(--graphite-shadow),
+    0 4px 14px rgba(0,0,0,.28) !important;
+}
+
+/* Workspace gets a very faint technical field, visible only in empty areas. */
+.minimal-shell.distrito-interface .game-workspace {
+  background-image:
+    var(--graphite-noise),
+    linear-gradient(rgba(255,255,255,.011) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.011) 1px, transparent 1px),
+    radial-gradient(circle at 18% 0%, rgba(255,255,255,.025), transparent 30%),
+    linear-gradient(145deg, #121315, #0d0e10) !important;
+  background-size: auto, 32px 32px, 32px 32px, auto, auto !important;
+  background-blend-mode: soft-light, normal, normal, normal, normal !important;
+}
+
+/* ---------- Headers and section hierarchy ---------- */
+
+.minimal-shell.distrito-interface :is(
+  .workspace-bar,
+  .tactical-drawer .panel-heading,
+  .command-card > header,
+  .strategy-panel > header
+) {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.032), rgba(255,255,255,.012)) !important;
+  border-bottom: 1px solid var(--graphite-hairline) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.025),
+    inset 0 -1px 0 rgba(0,0,0,.28) !important;
+}
+
+.minimal-shell.distrito-interface :is(
+  .game-menu-heading,
+  .hud-options-heading,
+  .page-eyebrow,
+  .menu-context-heading,
+  .vehicle-tech-title > span
+) {
+  letter-spacing: .13em !important;
+  text-transform: uppercase;
+}
+
+.minimal-shell.distrito-interface .game-workspace .page-heading {
+  position: relative;
+  border-bottom-color: var(--graphite-hairline) !important;
+}
+
+.minimal-shell.distrito-interface .game-workspace .page-heading::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  width: min(88px, 18%);
+  height: 1px;
+  background: rgba(255,255,255,.28);
+  box-shadow: 18px 0 36px rgba(255,255,255,.05);
+}
+
+.minimal-shell.distrito-interface .game-workspace .page-heading h1,
+.minimal-shell.distrito-interface .tactical-drawer .panel-heading h2,
+.game-modal [data-slot="dialog-title"] {
+  letter-spacing: -.025em;
+}
+
+/* ---------- Cards ---------- */
+
+.minimal-shell.distrito-interface .game-workspace :is(
+  .base-card,
+  .vehicle-card,
+  .fleet-card,
+  .facility-card,
+  .report-metric,
+  .career-rank,
+  .settings-section,
+  .expansion-strip,
+  .specialist-strip,
+  .command-card,
+  .command-overview,
+  .strategy-hero,
+  .strategy-panel,
+  .training-console,
+  .arr-builder,
+  .training-list article,
+  .qualification-grid article,
+  .patrol-list article,
+  .arr-list article,
+  .case-list article,
+  .personnel-grid article,
+  .poi-board article,
+  .unit-control-grid article,
+  .cooperation-card,
+  .task-list article,
+  .complex-grid article
+) {
+  background-image:
+    var(--graphite-noise),
+    var(--graphite-card) !important;
+  background-blend-mode: soft-light, normal !important;
+  border-color: var(--graphite-hairline) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.025),
+    0 8px 22px rgba(0,0,0,.14) !important;
+}
+
+/* Fine material separation on nested information blocks. */
+.minimal-shell.distrito-interface :is(
+  .personnel-toolbar,
+  .employee-location,
+  .employee-key-stats > div,
+  .employee-assignment,
+  .strategy-list article,
+  .recruitment-grid article,
+  .policy-grid label,
+  .hospital-specialties,
+  .arr-vehicle-builder,
+  .fleet-card-base,
+  .requirements,
+  .dispatch-bottom,
+  .shift-overview,
+  .coverage-band,
+  .vehicle-tech-panel,
+  .vehicle-health-panel,
+  .vehicle-resource-panel,
+  .vehicle-tech-meta > section,
+  .vehicle-history-panel
+) {
+  background-image:
+    linear-gradient(180deg, rgba(255,255,255,.016), transparent),
+    var(--graphite-inset) !important;
+  border-color: var(--graphite-hairline-soft) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.018) !important;
+}
+
+@media (hover:hover) {
+  .minimal-shell.distrito-interface .game-workspace :is(
+    .base-card,
+    .vehicle-card,
+    .facility-card,
+    .command-card,
+    .case-list article,
+    .personnel-grid article
+  ):hover {
+    border-color: rgba(255,255,255,.105) !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.035),
+      0 11px 28px rgba(0,0,0,.20) !important;
+  }
+}
+
+/* ---------- Controls ---------- */
+
+.minimal-shell.distrito-interface :is(
+  .outline-button,
+  .game-menu .rail-link,
+  .menu-operations > button,
+  .operations-tabs button,
+  .incident-tabs > button,
+  .hud-options .speed-group > button,
+  .geo-style-control button
+):not(:disabled):not([data-action-tone]),
+.game-modal .outline-button:not(:disabled):not([data-action-tone]) {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.028),
+    0 1px 2px rgba(0,0,0,.18) !important;
+}
+
+@media (hover:hover) {
+  .minimal-shell.distrito-interface :is(
+    .outline-button,
+    .game-menu .rail-link,
+    .menu-operations > button,
+    .operations-tabs button,
+    .incident-tabs > button,
+    .hud-options .speed-group > button,
+    .geo-style-control button
+  ):not(:disabled):not([data-action-tone]):hover,
+  .game-modal .outline-button:not(:disabled):not([data-action-tone]):hover {
+    background-color: rgba(255,255,255,.035) !important;
+    border-color: rgba(255,255,255,.11) !important;
+  }
+}
+
+.minimal-shell.distrito-interface :is(
+  .operations-tabs,
+  .tactical-drawer .incident-tabs,
+  .hud-options .speed-group,
+  .geo-style-control > div
+) {
+  box-shadow:
+    inset 0 1px 4px rgba(0,0,0,.34),
+    inset 0 1px 0 rgba(255,255,255,.018) !important;
+}
+
+.minimal-shell.distrito-interface :is(
+  .operations-tabs button.active,
+  .tactical-drawer .incident-tabs > button.selected,
+  .geo-style-control button.active,
+  .hud-options .speed-group > button.chosen
+) {
+  background-image:
+    linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.018)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.05),
+    0 2px 6px rgba(0,0,0,.24) !important;
+}
+
+/* Form fields get a slightly recessed, matte finish. */
+.minimal-shell.distrito-interface :is(
+  .game-workspace,
+  .hud-options
+) :is(input:not([type="checkbox"]):not([type="range"]), select, textarea),
+.game-modal :is(input:not([type="checkbox"]):not([type="range"]), select, textarea) {
+  box-shadow:
+    inset 0 1px 3px rgba(0,0,0,.32),
+    inset 0 1px 0 rgba(255,255,255,.015) !important;
+}
+
+/* ---------- Tactical drawer ---------- */
+
+.minimal-shell.distrito-interface .tactical-drawer :is(.incident-card, .unit-choice) {
+  background-image:
+    var(--graphite-noise),
+    linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,.010)) !important;
+  background-blend-mode: soft-light, normal !important;
+  border-color: rgba(255,255,255,.07) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.025),
+    0 4px 12px rgba(0,0,0,.10) !important;
+}
+
+.minimal-shell.distrito-interface .tactical-drawer :is(.incident-card.selected, .unit-choice.selected) {
+  background-image:
+    linear-gradient(90deg, rgba(255,255,255,.035), transparent 62%),
+    linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,.015)) !important;
+  border-color: rgba(255,255,255,.16) !important;
+  box-shadow:
+    inset 2px 0 0 rgba(255,255,255,.44),
+    inset 0 1px 0 rgba(255,255,255,.035),
+    0 7px 18px rgba(0,0,0,.16) !important;
+}
+
+/* ---------- Vehicle technical sheet ---------- */
+
+.vehicle-technical-section {
+  background-image:
+    var(--graphite-noise),
+    radial-gradient(circle at 100% 0%, rgba(255,255,255,.035), transparent 28%),
+    linear-gradient(180deg, #17181a, #101113) !important;
+  background-blend-mode: soft-light, normal, normal !important;
+  border-color: rgba(255,255,255,.09) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.035),
+    0 20px 48px rgba(0,0,0,.34) !important;
+}
+
+.vehicle-tech-primary-kpis > div,
+.vehicle-rating-card,
+.vehicle-logistics-cards > div,
+.vehicle-history-kpis > div,
+.vehicle-tech-primary-health,
+.vehicle-summary-foot,
+.vehicle-lifecycle-actions {
+  border-color: rgba(255,255,255,.065) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.022),
+    0 4px 12px rgba(0,0,0,.10) !important;
+}
+
+/* ---------- Map material ---------- */
+
+.minimal-shell.distrito-interface .portugal-map .maplibregl-canvas {
+  filter: grayscale(.32) saturate(.06) brightness(.89) contrast(1.11) !important;
+}
+
+/* Keep the map graphic crisp, then lay a microscopic paper/grain texture over it. */
+.minimal-shell.distrito-interface .portugal-map::after {
+  content: "" !important;
+  display: block !important;
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background-image:
+    var(--graphite-noise),
+    radial-gradient(circle at 50% 42%, transparent 40%, rgba(0,0,0,.16) 100%),
+    linear-gradient(180deg, rgba(255,255,255,.008), transparent 20%, transparent 82%, rgba(0,0,0,.08));
+  background-blend-mode: soft-light, normal, normal;
+  opacity: .46;
+}
+
+.minimal-shell.distrito-interface .portugal-map.map-clean::before {
+  background:
+    radial-gradient(circle at 50% 42%, transparent 34%, rgba(0,0,0,.18) 100%) !important;
+}
+
+/* Markers become small physical instruments sitting above the map. */
+.minimal-shell.distrito-interface :is(.geo-base, .geo-incident, .geo-vehicle-label) {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.04),
+    0 5px 14px rgba(0,0,0,.42) !important;
+}
+
+.minimal-shell.distrito-interface .geo-incident {
+  background-image:
+    linear-gradient(180deg, rgba(255,255,255,.04), rgba(0,0,0,.08)) !important;
+}
+
+/* ---------- Tiny finishing details ---------- */
+
+.minimal-shell.distrito-interface :is(
+  .minimal-budget,
+  .fleet-row,
+  .vehicle-tech-rows b,
+  .vehicle-tech-primary-kpis strong,
+  .vehicle-rating-card strong,
+  .command-overview-metrics b,
+  .strategy-score b
+) {
+  font-variant-numeric: tabular-nums;
+}
+
+.minimal-shell.distrito-interface :is(
+  .workspace-breadcrumb,
+  .page-eyebrow,
+  .game-menu-heading,
+  .hud-options-heading,
+  .vehicle-tech-panel-title > span
+) {
+  text-rendering: geometricPrecision;
+}
+
+.minimal-shell.distrito-interface :is(
+  .fleet-row,
+  .history-row,
+  .setting-row,
+  .vehicle-tech-rows > div,
+  .vehicle-history-list > div
+) {
+  border-color: var(--graphite-hairline-soft) !important;
+}
+
+/* Scrollbars should feel built into the material instead of floating above it. */
+.minimal-shell.distrito-interface :is(
+  .management-page,
+  .incidents-scroll,
+  .dispatch-content,
+  .game-menu,
+  .hud-options
+),
+.game-modal {
+  scrollbar-color: rgba(255,255,255,.22) transparent;
+}
+
+/* Preserve the no-background HUD rule even after every refinement above. */
+.minimal-shell.distrito-interface :is(
+  .minimal-brand,
+  .minimal-readout,
+  .minimal-readout > .icon-btn,
+  .hud-options-wrap > .minimal-options-toggle,
+  .menu-launcher > button,
+  .map-layer-button,
+  .map-zoom,
+  .map-zoom > .icon-btn,
+  .central-management-rail > button,
+  .central-quick-rail > button,
+  .central-incidents-launcher
+) {
+  background-image: none !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+
+@media (max-width: 600px) {
+  .minimal-shell.distrito-interface :is(
+    .game-menu,
+    .hud-options,
+    .game-workspace,
+    .tactical-drawer > .incident-panel,
+    .tactical-drawer > .dispatch-panel
+  ),
+  .game-modal {
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.03),
+      0 15px 40px rgba(0,0,0,.42) !important;
+  }
+
+  .minimal-shell.distrito-interface .game-workspace {
+    background-size: auto, 28px 28px, 28px 28px, auto, auto !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .minimal-shell.distrito-interface .game-workspace :is(
+    .base-card,
+    .vehicle-card,
+    .facility-card,
+    .command-card,
+    .case-list article,
+    .personnel-grid article
+  ) {
+    transition: none !important;
+  }
+}
