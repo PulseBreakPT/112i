@@ -444,3 +444,43 @@ test('base prices scale smoothly even for a nationwide network', () => {
   expect(price).toBeLessThanOrEqual(25000);
   expect(price).toBeGreaterThan(10000);
 });
+
+
+test('medical transport uses the configured patient capacity', () => {
+  let game=newGame();
+  const unit=game.units.find(item=>item.service==='medical');
+  unit.patient_capacity=2;
+  const base=game.bases.find(item=>item.id===unit.base_id);
+  const hospital={id:'hospital-test',type:'hospital',node:'porto-trindade',name:'Hospital teste',city:'Porto',land:'mainland',lng:-8.6089,lat:41.1537,capacity:5,queue_limit:5,specialties:['urgency'],specialty_capacity:{urgency:5},enabled:true};
+  game.facilities=[hospital];
+  game.patients=[
+    {id:'p1',source_node:'porto-aliados',city:'Porto',severity:1,specialty:'urgency',status:'waiting',treatment_complete:true},
+    {id:'p2',source_node:'porto-aliados',city:'Porto',severity:1,specialty:'urgency',status:'waiting',treatment_complete:true},
+  ];
+  const route=(from,to)=>({coordinates:[[from.lng,from.lat],[to.lng,to.lat]],times:[0,10],duration:10,distance:500});
+  const source={lng:-8.6110,lat:41.1496},target={lng:hospital.lng,lat:hospital.lat},home={lng:base.lng,lat:base.lat};
+  game=applyAction(game,'transport_patient',{patient_id:'p1',facility_id:hospital.id,unit_id:unit.id,routes:{pickup:route(unit,source),delivery:route(source,target),back:route(target,home)}});
+  const transporting=game.units.find(item=>item.id===unit.id);
+  expect(transporting.task_ids).toHaveLength(2);
+  expect(game.patients.filter(item=>item.status==='transporting')).toHaveLength(2);
+});
+
+test('prisoner transport uses the configured detainee capacity', () => {
+  let game=newGame();
+  const unit=game.units.find(item=>item.service==='police');
+  unit.detainee_capacity=4;
+  const base=game.bases.find(item=>item.id===unit.base_id);
+  const prison={id:'prison-test',type:'prison',node:'porto-trindade',name:'Prisão teste',city:'Porto',land:'mainland',lng:-8.6089,lat:41.1537,capacity:10,queue_limit:10,enabled:true};
+  game.facilities=[prison];
+  game.prisoners=[
+    {id:'d1',source_node:'porto-aliados',city:'Porto',status:'waiting'},
+    {id:'d2',source_node:'porto-aliados',city:'Porto',status:'waiting'},
+    {id:'d3',source_node:'porto-aliados',city:'Porto',status:'waiting'},
+  ];
+  const route=(from,to)=>({coordinates:[[from.lng,from.lat],[to.lng,to.lat]],times:[0,10],duration:10,distance:500});
+  const source={lng:-8.6110,lat:41.1496},target={lng:prison.lng,lat:prison.lat},home={lng:base.lng,lat:base.lat};
+  game=applyAction(game,'transport_prisoner',{prisoner_id:'d1',facility_id:prison.id,unit_id:unit.id,routes:{pickup:route(unit,source),delivery:route(source,target),back:route(target,home)}});
+  const transporting=game.units.find(item=>item.id===unit.id);
+  expect(transporting.task_ids).toHaveLength(3);
+  expect(game.prisoners.filter(item=>item.status==='transporting')).toHaveLength(3);
+});
