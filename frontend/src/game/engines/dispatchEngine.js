@@ -61,7 +61,7 @@ export function selectRecommendedUnitIds(g,incidentId,mode='safe',{requireValue,
   const available=g.units.filter(unit=>dispatchable(g,unit,inc,distanceMeters));
   const modeKey=['minimum','safe','full'].includes(mode)?mode:'safe';
   const serviceNeedMultiplier=modeKey==='minimum'?1:modeKey==='full'?1.6:inc.priority===1?1.35:1.15;
-  const reserveWeight=modeKey==='full'?0:1;
+  const reserveWeight=1;
   const preferFastest=g.dispatch_policy?.prefer_fastest!==false;
   const score=unit=>{
     const definition=vehicleDefinition(unit.service,unit.vehicle_type);
@@ -72,6 +72,10 @@ export function selectRecommendedUnitIds(g,incidentId,mode='safe',{requireValue,
     const trained=(unit.personnel_ids||[]).some(id=>{
       const person=(g.personnel||[]).find(item=>item.id===id);
       return (inc.required_trainings||[]).some(training=>(person?.qualifications||[]).includes(training));
+    });
+    const recommendedTrained=(unit.personnel_ids||[]).some(id=>{
+      const person=(g.personnel||[]).find(item=>item.id===id);
+      return (inc.recommended_trainings||[]).some(training=>(person?.qualifications||[]).includes(training));
     });
     const distancePenalty=responseDistanceKm(unit,inc,distanceMeters)*1000*(preferFastest?1:.28);
     const preparationPenalty=(Number(unit.response_delay)||0)*(preferFastest?15:5);
@@ -85,7 +89,7 @@ export function selectRecommendedUnitIds(g,incidentId,mode='safe',{requireValue,
     const accessPenalty=vehicleAccessPenalty(unit,inc,g.conditions);
     return distancePenalty+preparationPenalty+beyondRecommended+reservePenalty+maintenancePenalty+accessPenalty-priorityBonus+
       (unit.status==='staged'?-2500:0)+(unit.status==='patrol'?-1200:0)+(unit.status==='returning'?600:0)+
-      (specialist?-3200:0)+(trained?-1400:0)+(definition?.training?-400:0)+
+      (specialist?-3200:0)+(trained?-1400:0)+(recommendedTrained?-650:0)+(definition?.training?-400:0)+
       fatigue*90+(100-(unit.condition||100))*60+(unit.wear||0)*28;
   };
   const reserveOk=unit=>{
@@ -94,8 +98,7 @@ export function selectRecommendedUnitIds(g,incidentId,mode='safe',{requireValue,
     return available.filter(candidate=>candidate.service===unit.service&&!chosen.includes(candidate)).length>reserve*reserveWeight;
   };
   const pickUnit=(predicate,required=true)=>{
-    const unit=available.filter(unit=>!chosen.includes(unit)&&predicate(unit)&&reserveOk(unit)).sort((a,b)=>score(a)-score(b))[0]
-      || available.filter(unit=>!chosen.includes(unit)&&predicate(unit)).sort((a,b)=>score(a)-score(b))[0];
+    const unit=available.filter(unit=>!chosen.includes(unit)&&predicate(unit)&&reserveOk(unit)).sort((a,b)=>score(a)-score(b))[0];
     if(unit)chosen.push(unit);
     else if(required)throw new Error('Não há meios compatíveis suficientes dentro do raio operacional.');
   };
