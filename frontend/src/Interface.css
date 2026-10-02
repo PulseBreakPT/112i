@@ -1265,3 +1265,13 @@
 @media (prefers-reduced-motion: reduce) {
   .minimal-shell.distrito-interface .geographic-canvas { transition: none; }
 }
+
+
+/* Persistent HUD is interactive even while the main modal menu is open. */
+.minimal-shell.distrito-interface.menu-open :is(
+  .central-management-rail,
+  .central-incidents-launcher
+) {
+  pointer-events: auto !important;
+}
+.minimal-shell.distrito-interface .menu-dismiss { z-index: 18 !important; }
