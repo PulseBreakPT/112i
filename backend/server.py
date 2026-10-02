@@ -130,6 +130,8 @@ async def authenticated_player(authorization: str | None) -> dict[str, Any]:
 
 def server_score(game: dict[str, Any]) -> int:
     completed = int(game.get('completed', 0))
+    if completed <= 0:
+        return 0
     failed = int(game.get('failed', 0))
     earned = int(game.get('earned', 0))
     trust = int(game.get('trust', 0))
@@ -139,8 +141,8 @@ def server_score(game: dict[str, Any]) -> int:
     triage_bonus = sum(150 for item in successful if item.get('triage_correct'))
     waste_penalty = sum(max(0, int(item.get('units_used', 0)) - int(item.get('required_units', 0))) * 90 for item in successful)
     failure_penalty = failed * 900
-    # Score is calculated exclusively from authoritative server state.
-    value = completed * 900 + earned / 12 + trust * 18 + response_bonus + triage_bonus - waste_penalty - failure_penalty
+    trust_bonus = max(0, trust - 90) * 18
+    value = completed * 900 + earned / 12 + trust_bonus + response_bonus + triage_bonus - waste_penalty - failure_penalty
     return max(0, int(round(value)))
 
 
@@ -161,6 +163,10 @@ async def read_room(room_id: str) -> dict[str, Any]:
     room = await db.online_rooms.find_one({'id': room_id}, {'_id': 0})
     if not room:
         raise HTTPException(404, 'Sala não encontrada.')
+    if room.get('status') == 'active' and room.get('expires_at') and room['expires_at'] <= utcnow():
+        room['status'] = 'expired'
+        room['updated_at'] = utcnow()
+        await db.online_rooms.update_one({'id': room_id, 'status': 'active'}, {'$set': {'status': 'expired', 'updated_at': room['updated_at']}})
     return room
 
 
