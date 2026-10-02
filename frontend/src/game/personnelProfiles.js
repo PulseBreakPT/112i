@@ -1,403 +1,303 @@
-// 100 identidades portuguesas, alinhadas por índice com o atlas de retratos.
+// 100 identidades portuguesas únicas para o sistema de recrutamento.
 export const PERSONNEL_PROFILES = [
   {
-    "name": "Miguel Santos",
-    "avatar_index": 0
+    "name": "Miguel Santos"
   },
   {
-    "name": "Inês Costa",
-    "avatar_index": 1
+    "name": "Inês Costa"
   },
   {
-    "name": "Carlos Almeida",
-    "avatar_index": 2
+    "name": "Carlos Almeida"
   },
   {
-    "name": "Mariana Oliveira",
-    "avatar_index": 3
+    "name": "Mariana Oliveira"
   },
   {
-    "name": "João Ferreira",
-    "avatar_index": 4
+    "name": "João Ferreira"
   },
   {
-    "name": "Sofia Martins",
-    "avatar_index": 5
+    "name": "Sofia Martins"
   },
   {
-    "name": "André Gomes",
-    "avatar_index": 6
+    "name": "André Gomes"
   },
   {
-    "name": "Beatriz Rocha",
-    "avatar_index": 7
+    "name": "Beatriz Rocha"
   },
   {
-    "name": "Ricardo Pinto",
-    "avatar_index": 8
+    "name": "Ricardo Pinto"
   },
   {
-    "name": "Catarina Fernandes",
-    "avatar_index": 9
+    "name": "Catarina Fernandes"
   },
   {
-    "name": "Diogo Rodrigues",
-    "avatar_index": 10
+    "name": "Diogo Rodrigues"
   },
   {
-    "name": "Leonor Lopes",
-    "avatar_index": 11
+    "name": "Leonor Lopes"
   },
   {
-    "name": "José Carvalho",
-    "avatar_index": 12
+    "name": "José Carvalho"
   },
   {
-    "name": "Marta Ribeiro",
-    "avatar_index": 13
+    "name": "Marta Ribeiro"
   },
   {
-    "name": "Tiago Sousa",
-    "avatar_index": 14
+    "name": "Tiago Sousa"
   },
   {
-    "name": "Carolina Teixeira",
-    "avatar_index": 15
+    "name": "Carolina Teixeira"
   },
   {
-    "name": "Rui Pereira",
-    "avatar_index": 16
+    "name": "Rui Pereira"
   },
   {
-    "name": "Matilde Neves",
-    "avatar_index": 17
+    "name": "Matilde Neves"
   },
   {
-    "name": "Bruno Correia",
-    "avatar_index": 18
+    "name": "Bruno Correia"
   },
   {
-    "name": "Ana Cardoso",
-    "avatar_index": 19
+    "name": "Ana Cardoso"
   },
   {
-    "name": "Filipa Mendes",
-    "avatar_index": 20
+    "name": "Filipa Mendes"
   },
   {
-    "name": "Gonçalo Marques",
-    "avatar_index": 21
+    "name": "Gonçalo Marques"
   },
   {
-    "name": "Daniela Tavares",
-    "avatar_index": 22
+    "name": "Daniela Tavares"
   },
   {
-    "name": "Pedro Coelho",
-    "avatar_index": 23
+    "name": "Pedro Coelho"
   },
   {
-    "name": "Joana Matos",
-    "avatar_index": 24
+    "name": "Joana Matos"
   },
   {
-    "name": "Luís Figueiredo",
-    "avatar_index": 25
+    "name": "Luís Figueiredo"
   },
   {
-    "name": "Sara Azevedo",
-    "avatar_index": 26
+    "name": "Sara Azevedo"
   },
   {
-    "name": "Duarte Cunha",
-    "avatar_index": 27
+    "name": "Duarte Cunha"
   },
   {
-    "name": "Diana Pires",
-    "avatar_index": 28
+    "name": "Diana Pires"
   },
   {
-    "name": "Tomás Morais",
-    "avatar_index": 29
+    "name": "Tomás Morais"
   },
   {
-    "name": "António Baptista",
-    "avatar_index": 30
+    "name": "António Baptista"
   },
   {
-    "name": "Rita Barros",
-    "avatar_index": 31
+    "name": "Rita Barros"
   },
   {
-    "name": "Vasco Reis",
-    "avatar_index": 32
+    "name": "Vasco Reis"
   },
   {
-    "name": "Mafalda Simões",
-    "avatar_index": 33
+    "name": "Mafalda Simões"
   },
   {
-    "name": "Nuno Fonseca",
-    "avatar_index": 34
+    "name": "Nuno Fonseca"
   },
   {
-    "name": "Cláudia Viegas",
-    "avatar_index": 35
+    "name": "Cláudia Viegas"
   },
   {
-    "name": "Fábio Guerreiro",
-    "avatar_index": 36
+    "name": "Fábio Guerreiro"
   },
   {
-    "name": "Teresa Cabrita",
-    "avatar_index": 37
+    "name": "Teresa Cabrita"
   },
   {
-    "name": "Marco Esteves",
-    "avatar_index": 38
+    "name": "Marco Esteves"
   },
   {
-    "name": "Patrícia Ramos",
-    "avatar_index": 39
+    "name": "Patrícia Ramos"
   },
   {
-    "name": "Hugo Duarte",
-    "avatar_index": 40
+    "name": "Hugo Duarte"
   },
   {
-    "name": "Andreia Monteiro",
-    "avatar_index": 41
+    "name": "Andreia Monteiro"
   },
   {
-    "name": "Rodrigo Martins",
-    "avatar_index": 42
+    "name": "Rodrigo Martins"
   },
   {
-    "name": "Sílvia Almeida",
-    "avatar_index": 43
+    "name": "Sílvia Almeida"
   },
   {
-    "name": "David Costa",
-    "avatar_index": 44
+    "name": "David Costa"
   },
   {
-    "name": "Liliana Santos",
-    "avatar_index": 45
+    "name": "Liliana Santos"
   },
   {
-    "name": "Alexandre Neves",
-    "avatar_index": 46
+    "name": "Alexandre Neves"
   },
   {
-    "name": "Helena Rocha",
-    "avatar_index": 47
+    "name": "Helena Rocha"
   },
   {
-    "name": "Mário Teixeira",
-    "avatar_index": 48
+    "name": "Mário Teixeira"
   },
   {
-    "name": "Raquel Oliveira",
-    "avatar_index": 49
+    "name": "Raquel Oliveira"
   },
   {
-    "name": "Afonso Pereira",
-    "avatar_index": 50
+    "name": "Afonso Pereira"
   },
   {
-    "name": "Margarida Correia",
-    "avatar_index": 51
+    "name": "Margarida Correia"
   },
   {
-    "name": "Manuel Cardoso",
-    "avatar_index": 52
+    "name": "Manuel Cardoso"
   },
   {
-    "name": "Carolina Marques",
-    "avatar_index": 53
+    "name": "Carolina Marques"
   },
   {
-    "name": "Bernardo Lopes",
-    "avatar_index": 54
+    "name": "Bernardo Lopes"
   },
   {
-    "name": "Joana Fernandes",
-    "avatar_index": 55
+    "name": "Joana Fernandes"
   },
   {
-    "name": "Guilherme Gomes",
-    "avatar_index": 56
+    "name": "Guilherme Gomes"
   },
   {
-    "name": "Inês Ribeiro",
-    "avatar_index": 57
+    "name": "Inês Ribeiro"
   },
   {
-    "name": "Sérgio Matos",
-    "avatar_index": 58
+    "name": "Sérgio Matos"
   },
   {
-    "name": "Beatriz Tavares",
-    "avatar_index": 59
+    "name": "Beatriz Tavares"
   },
   {
-    "name": "Leonor Coelho",
-    "avatar_index": 60
+    "name": "Leonor Coelho"
   },
   {
-    "name": "Francisco Pinto",
-    "avatar_index": 61
+    "name": "Francisco Pinto"
   },
   {
-    "name": "Marta Azevedo",
-    "avatar_index": 62
+    "name": "Marta Azevedo"
   },
   {
-    "name": "Paulo Cunha",
-    "avatar_index": 63
+    "name": "Paulo Cunha"
   },
   {
-    "name": "Sofia Pires",
-    "avatar_index": 64
+    "name": "Sofia Pires"
   },
   {
-    "name": "Rafael Morais",
-    "avatar_index": 65
+    "name": "Rafael Morais"
   },
   {
-    "name": "Catarina Baptista",
-    "avatar_index": 66
+    "name": "Catarina Baptista"
   },
   {
-    "name": "Eduardo Barros",
-    "avatar_index": 67
+    "name": "Eduardo Barros"
   },
   {
-    "name": "Ana Reis",
-    "avatar_index": 68
+    "name": "Ana Reis"
   },
   {
-    "name": "Daniel Simões",
-    "avatar_index": 69
+    "name": "Daniel Simões"
   },
   {
-    "name": "Bruno Fonseca",
-    "avatar_index": 70
+    "name": "Bruno Fonseca"
   },
   {
-    "name": "Matilde Viegas",
-    "avatar_index": 71
+    "name": "Matilde Viegas"
   },
   {
-    "name": "Tomás Guerreiro",
-    "avatar_index": 72
+    "name": "Tomás Guerreiro"
   },
   {
-    "name": "Rita Cabrita",
-    "avatar_index": 73
+    "name": "Rita Cabrita"
   },
   {
-    "name": "Miguel Esteves",
-    "avatar_index": 74
+    "name": "Miguel Esteves"
   },
   {
-    "name": "Daniela Monteiro",
-    "avatar_index": 75
+    "name": "Daniela Monteiro"
   },
   {
-    "name": "Vasco Rodrigues",
-    "avatar_index": 76
+    "name": "Vasco Rodrigues"
   },
   {
-    "name": "Cláudia Carvalho",
-    "avatar_index": 77
+    "name": "Cláudia Carvalho"
   },
   {
-    "name": "Nuno Mendes",
-    "avatar_index": 78
+    "name": "Nuno Mendes"
   },
   {
-    "name": "Filipa Sousa",
-    "avatar_index": 79
+    "name": "Filipa Sousa"
   },
   {
-    "name": "Teresa Pereira",
-    "avatar_index": 80
+    "name": "Teresa Pereira"
   },
   {
-    "name": "Gonçalo Figueiredo",
-    "avatar_index": 81
+    "name": "Gonçalo Figueiredo"
   },
   {
-    "name": "Diana Correia",
-    "avatar_index": 82
+    "name": "Diana Correia"
   },
   {
-    "name": "Jorge Rocha",
-    "avatar_index": 83
+    "name": "Jorge Rocha"
   },
   {
-    "name": "Sara Marques",
-    "avatar_index": 84
+    "name": "Sara Marques"
   },
   {
-    "name": "Luís Neves",
-    "avatar_index": 85
+    "name": "Luís Neves"
   },
   {
-    "name": "Mafalda Oliveira",
-    "avatar_index": 86
+    "name": "Mafalda Oliveira"
   },
   {
-    "name": "Filipe Cardoso",
-    "avatar_index": 87
+    "name": "Filipe Cardoso"
   },
   {
-    "name": "Andreia Barros",
-    "avatar_index": 88
+    "name": "Andreia Barros"
   },
   {
-    "name": "Henrique Almeida",
-    "avatar_index": 89
+    "name": "Henrique Almeida"
   },
   {
-    "name": "Helena Cunha",
-    "avatar_index": 90
+    "name": "Helena Cunha"
   },
   {
-    "name": "Rui Baptista",
-    "avatar_index": 91
+    "name": "Rui Baptista"
   },
   {
-    "name": "Patrícia Costa",
-    "avatar_index": 92
+    "name": "Patrícia Costa"
   },
   {
-    "name": "António Pires",
-    "avatar_index": 93
+    "name": "António Pires"
   },
   {
-    "name": "Sílvia Ribeiro",
-    "avatar_index": 94
+    "name": "Sílvia Ribeiro"
   },
   {
-    "name": "Pedro Reis",
-    "avatar_index": 95
+    "name": "Pedro Reis"
   },
   {
-    "name": "Raquel Tavares",
-    "avatar_index": 96
+    "name": "Raquel Tavares"
   },
   {
-    "name": "José Coelho",
-    "avatar_index": 97
+    "name": "José Coelho"
   },
   {
-    "name": "Margarida Fonseca",
-    "avatar_index": 98
+    "name": "Margarida Fonseca"
   },
   {
-    "name": "Duarte Santos",
-    "avatar_index": 99
+    "name": "Duarte Santos"
   }
 ];
