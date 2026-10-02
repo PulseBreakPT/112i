@@ -430,7 +430,7 @@ export function tickGame(input,seconds){
   g.prisoners=g.prisoners.filter(prisoner=>!prisoner.closed_at||g.elapsed-prisoner.closed_at<600);
   [...g.incidents].forEach(inc=>{
     const responseDeadline=inc.response_deadline||inc.deadline;const resolutionDeadline=inc.resolution_deadline||responseDeadline+900;const escalationAt=inc.created+(responseDeadline-inc.created)*(inc.doctrine?.first_escalation_ratio??.55);const secondaryEscalationAt=inc.created+(responseDeadline-inc.created)*(inc.doctrine?.second_escalation_ratio??.82);
-    if(!inc.false_alarm&&(inc.casualties||0)>0&&!inc.response_arrived_at&&g.elapsed>=(inc.next_clinical_update||Infinity)){const deteriorationChance=Math.min(.82,.10+(inc.rarity_level||3)*.09);if(gameRandom(g)<deteriorationChance){inc.victim_states=deteriorateVictimStates(inc.victim_states,()=>gameRandom(g));inc.clinical_deteriorations=(inc.clinical_deteriorations||0)+1;log(g,`${inc.title}: estado clínico de uma vítima agravou-se enquanto aguardava meios.`,'alert');}inc.next_clinical_update=g.elapsed+(inc.doctrine?.clinical_interval||240);}
+    if(!inc.false_alarm&&(inc.casualties||0)>0&&!inc.response_arrived_at&&g.elapsed>=(inc.next_clinical_update||Infinity)){const deteriorationChance=Math.min(.86,.08+(inc.rarity_level||3)*.065+Math.max(0,Math.min(100,inc.risk_score||0))*.0018);if(gameRandom(g)<deteriorationChance){inc.victim_states=deteriorateVictimStates(inc.victim_states,()=>gameRandom(g));inc.clinical_deteriorations=(inc.clinical_deteriorations||0)+1;log(g,`${inc.title}: estado clínico de uma vítima agravou-se enquanto aguardava meios.`,'alert');}inc.next_clinical_update=g.elapsed+(inc.doctrine?.clinical_interval||240);}
     if((inc.escalation_stage||0)<1&&g.elapsed>=escalationAt&&['waiting','enroute'].includes(inc.status)){inc.escalated=true;inc.escalation_stage=1;inc.priority=Math.max(1,inc.priority-1);inc.reward=Math.round(inc.reward*1.2);const addedCasualties=(inc.service==='medical'||inc.service==='fire')&&gameRandom(g)<.55?1:0;inc.casualties+=addedCasualties;if(addedCasualties)inc.victim_states=mergeVictimStates(inc.victim_states,initialiseVictimStates(addedCasualties,Math.min(6,(inc.rarity_level||1)+1),()=>gameRandom(g)));inc.detainees+=inc.service==='police'&&gameRandom(g)<.35?1:0;if(inc.service==='fire')inc.needs.fire=Math.min(5,(inc.needs.fire||0)+1);inc.required_personnel=Object.values(inc.needs||{}).reduce((sum,count)=>sum+count*2,0);promoteIncidentRarity(inc,1);if(inc.evolution?.type==='expansion'){inc.previous_title=inc.title;inc.title=inc.evolution.title;inc.definition=inc.evolution.title;Object.entries(inc.evolution.add_needs||{}).forEach(([service,count])=>{inc.needs[service]=(inc.needs[service]||0)+count;});inc.required_personnel=Object.values(inc.needs).reduce((sum,count)=>sum+count*2,0);inc.reward=Math.round(inc.reward*(inc.evolution.reward_factor||1.4));inc.evolution_spawned=true;}log(g,`${inc.title} agravou-se: prioridade, vítimas ou meios necessários atualizados.`,'alert');}
     if((inc.escalation_stage||0)<2&&(inc.rarity_level||0)>=4&&!inc.response_arrived_at&&g.elapsed>=secondaryEscalationAt&&['waiting','enroute'].includes(inc.status)){inc.escalation_stage=2;inc.escalated=true;inc.reward=Math.round(inc.reward*1.12);promoteIncidentRarity(inc,1);const extra=escalationRequirementsFor(inc);if(extra)mergeIncidentRequirements(g,inc,extra,inc.large_scale===true);log(g,`${inc.title}: segundo agravamento operacional. A central atualizou os meios necessários.`,'alert');}
     const assigned=g.units.filter(u=>u.incident_id===inc.id);
@@ -494,6 +494,7 @@ export function tickGame(input,seconds){
   refreshProgression(g);
   if(g.elapsed>=g.next_spawn){const cap=g.progression.mission_cap;if(g.incidents.length<cap)spawn(g);if(g.level>=3&&g.incidents.length<Math.max(1,cap-2)&&gameRandom(g)<.28)spawn(g);g.next_spawn=g.elapsed+Math.max(100,210-g.level*8);}
   tickAdvancedState(g,dt,log,()=>gameRandom(g));
+  syncBaseQualifications(g);
   return refreshProgression(g);
 }
 export function applyAction(input,kind,data={}){
@@ -727,7 +728,7 @@ export function applyAction(input,kind,data={}){
   }
   else if(kind==='new_incident'){refreshProgression(g);requireValue(g.incidents.length<g.progression.mission_cap,`Limite de ${g.progression.mission_cap} ocorrências ativas atingido.`);spawn(g);}
   else if(kind!=='save'&&!applyAdvancedAction(g,kind,data,log))throw new Error('Ação desconhecida.');
-  ensureReserve(g,log,'reserva operacional protegida');refreshProgression(g);g.saved_at=new Date().toISOString();return g;
+  syncBaseQualifications(g);ensureReserve(g,log,'reserva operacional protegida');refreshProgression(g);g.saved_at=new Date().toISOString();return g;
 }
 export function loadLocalGame(){
   try{
@@ -748,10 +749,24 @@ export function loadLocalGame(){
       merged.logs=(merged.logs||[]).map(stampRecord);
       if(merged.cooperation){merged.cooperation.log=(merged.cooperation.log||[]).map(stampRecord);merged.cooperation.chat=(merged.cooperation.chat||[]).map(stampRecord);}
       initializeAdvancedState(merged);
+      syncBaseQualifications(merged);
       ensureReserve(merged,null,'migração para a nova economia');
       return refreshProgression(merged);
     }
-  }catch{}
+  }catch(error){
+    try{const raw=localStorage.getItem(SAVE_KEY);if(raw)localStorage.setItem(`${SAVE_KEY}-recovery-backup`,raw);}catch{}
+    const recovered=newGame();recovered.save_warning='O save anterior não pôde ser migrado. Foi preservada uma cópia de recuperação no armazenamento local.';log(recovered,recovered.save_warning,'alert');return recovered;
+  }
   return newGame();
 }
-export function saveLocalGame(game){const saved={...game,saved_at:new Date().toISOString()};localStorage.setItem(SAVE_KEY,JSON.stringify(saved));return saved;}
+export function saveLocalGame(game){
+  const compact=list=>Array.isArray(list)?list:list||[];
+  const saved={...game,saved_at:new Date().toISOString(),save_warning:null};
+  try{localStorage.setItem(SAVE_KEY,JSON.stringify(saved));return saved;}
+  catch(error){
+    const reduced={...saved,history:compact(saved.history).slice(0,60),logs:compact(saved.logs).slice(0,30),planned_missions:compact(saved.planned_missions).filter(item=>['scheduled','active'].includes(item.status)).concat(compact(saved.planned_missions).filter(item=>!['scheduled','active'].includes(item.status)).slice(-80)),trainings:compact(saved.trainings).filter(item=>item.status==='active').concat(compact(saved.trainings).filter(item=>item.status!=='active').slice(-60)),recruitment_queue:compact(saved.recruitment_queue).filter(item=>item.status==='pending').concat(compact(saved.recruitment_queue).filter(item=>item.status!=='pending').slice(-50)),medical_transfers:compact(saved.medical_transfers).filter(item=>['scheduled','waiting','transporting'].includes(item.status)).concat(compact(saved.medical_transfers).filter(item=>!['scheduled','waiting','transporting'].includes(item.status)).slice(-60))};
+    if(reduced.cooperation)reduced.cooperation={...reduced.cooperation,log:compact(reduced.cooperation.log).slice(0,60),chat:compact(reduced.cooperation.chat).slice(0,40),events:compact(reduced.cooperation.events).slice(-60),large_scale_missions:compact(reduced.cooperation.large_scale_missions).slice(-60)};
+    try{localStorage.setItem(SAVE_KEY,JSON.stringify(reduced));return {...reduced,save_warning:'O save foi compactado automaticamente porque o armazenamento do browser estava quase cheio.'};}
+    catch{return {...game,saved_at:new Date().toISOString(),save_warning:'Não foi possível guardar a carreira: armazenamento local sem espaço disponível.'};}
+  }
+}
