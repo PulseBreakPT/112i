@@ -37,7 +37,7 @@ export function selectArrUnitIds(g,incidentId,arrId,{requireValue,distanceMeters
   const inc=g.incidents.find(i=>i.id===incidentId),arr=g.arrs.find(item=>item.id===arrId);
   requireValue(inc&&arr,'Ocorrência ou regulamento inválido.');
   const pool=g.units.filter(unit=>dispatchable(g,unit,inc,distanceMeters)),chosen=[];
-  const arrivalCost = unit => responseDistanceKm(unit,inc,distanceMeters)*1000+(Number(unit.response_delay)||0)*15;
+  const arrivalCost = unit => responseDistanceKm(unit,inc,distanceMeters)*1000+(Number(unit.response_delay)||0)*15+(unit.operational_reserve===true?250000:0)+(unit.maintenance_due===true?45000:0)-(Math.max(0,Math.min(100,Number(unit.dispatch_priority)||50))-50)*80;
   const byDistance = items => [...items].sort((a,b)=>arrivalCost(a)-arrivalCost(b));
   for(const [type,count] of Object.entries(arr.vehicles||{}))
     byDistance(pool.filter(unit=>unit.vehicle_type===type&&!chosen.includes(unit))).slice(0,count).forEach(unit=>chosen.push(unit));
