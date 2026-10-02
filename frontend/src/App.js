@@ -106,7 +106,7 @@ function GameApp() {
     <div className="menu-launcher">
       <button className={menuOpen ? 'active' : ''} data-testid="game-menu-toggle" aria-label={menuOpen ? 'Fechar menu do jogo' : 'Abrir menu do jogo'} aria-expanded={menuOpen} aria-controls="game-menu" onClick={() => { setMenuOpen(value => !value); setPanel(null); setCentralWidget(null); }}>{menuOpen ? <X size={17} /> : <Menu size={17} />}<span>Menu</span></button>
     </div>
-    {isCentral && <button
+    <button
       className={`central-incidents-launcher ${panel === 'incidents' ? 'active' : ''}`}
       data-tone={queueTone}
       data-testid="central-incidents-button"
@@ -114,15 +114,15 @@ function GameApp() {
       aria-expanded={panel === 'incidents'}
       aria-controls="incident-drawer"
       onClick={() => openPanel(panel === 'incidents' ? null : 'incidents')}
-    ><Radio size={18}/><span>Ocorrências</span><b>{game.incidents.length}</b></button>}
-    {isCentral && <>
+    ><Radio size={18}/><span>Ocorrências</span><b>{game.incidents.length}</b></button>
+    <>
       <nav className="central-quick-rail central-management-rail" aria-label="Gestão rápida">
         <button title="Gestão" aria-label="Abrir gestão" onClick={() => navigate('/gestao')}><PanelsTopLeft size={17}/><span>Gestão</span></button>
         <button title="Bases" aria-label="Abrir bases" onClick={() => navigate('/bases')}><Building2 size={17}/><span>Bases</span></button>
         <button title="Frota" aria-label="Abrir frota" onClick={() => navigate('/frota')}><CarFront size={17}/><span>Frota</span></button>
         <button title="Funcionários" aria-label="Abrir funcionários" onClick={() => navigate('/funcionarios')}><Users size={17}/><span>Funcionários</span></button>
       </nav>
-    </>}
+    </>
     {menuOpen && <>
       <div className="menu-dismiss" data-testid="menu-dismiss" onClick={() => setMenuOpen(false)} />
       <div className="game-menu" id="game-menu" data-testid="game-menu">
@@ -148,6 +148,7 @@ function GameApp() {
       </div>
     </>}
     {isCentral ? <>
+      {panel && <div className="panel-shade" aria-hidden="true" onClick={() => setPanel(null)} />}
       {panel === 'incidents' && <div className="tactical-drawer incidents-drawer" id="incident-drawer" data-testid="incident-drawer">
         <IncidentPanel game={game} selected={selected} onSelect={selectIncident} onCall={call} act={act} busy={busy} onClose={() => setPanel(null)} />
       </div>}
@@ -155,7 +156,7 @@ function GameApp() {
         <DispatchPanel game={game} world={world} incident={incident} act={act} busy={busy} onCall={call} onFocus={focusIncident} onClose={() => setPanel(null)} />
       </div>}
     </> : <>
-      <div className="workspace-shade" aria-hidden="true" />
+      <div className="workspace-shade" aria-hidden="true" onClick={() => navigate('/')} />
       <section className="game-workspace" aria-label={workspaceName} data-testid="game-workspace">
         <div className="workspace-bar"><div className="workspace-breadcrumb"><PanelsTopLeft size={14} /><span>{workspaceSection}</span><span>/</span><strong>{workspaceName.toUpperCase()}</strong></div><button className="workspace-close" aria-label="Voltar ao mapa" data-testid="workspace-close" onClick={() => navigate('/')}><span>Voltar ao mapa</span><kbd>ESC</kbd><X size={17} /></button></div>
         <Routes>
