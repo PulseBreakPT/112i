@@ -11,8 +11,9 @@ const FACILITY_LABELS = {
   academy: { icon: Users, eyebrow: 'FORMAÇÃO' },
 };
 
-export default function Operations({ game, world, act, busy }) {
-  const [tab, setTab] = useState('facilities');
+export default function Operations({ game, world, act, busy, mode = 'operations' }) {
+  const infrastructure = mode === 'infrastructure';
+  const [tab, setTab] = useState(infrastructure ? 'facilities' : 'aftercare');
   const [buildOpen, setBuildOpen] = useState(false);
   const [facilityType, setFacilityType] = useState('hospital');
   const [site, setSite] = useState(world.sites[0]?.id || '');
@@ -63,16 +64,16 @@ export default function Operations({ game, world, act, busy }) {
 
   return <main className="management-page operations-page">
     <div className="page-heading">
-      <div><span className="page-eyebrow">APOIO OPERACIONAL</span><h1>Operações e apoio</h1><p>Coordena o transporte de vítimas e detidos, a formação, o patrulhamento e a mobilização de meios.</p></div>
-      <Button className="primary-button" onClick={() => setBuildOpen(true)}><Plus size={16} /> Construir instalação</Button>
+      <div><span className="page-eyebrow">{infrastructure ? 'GESTÃO DE INFRAESTRUTURAS' : 'COORDENAÇÃO OPERACIONAL'}</span><h1>{infrastructure ? 'Infraestruturas de apoio' : 'Operações'}</h1><p>{infrastructure ? 'Gere hospitais, prisões, escolas e a capacidade de suporte da rede.' : 'Coordena vítimas, detidos, patrulhas e regulamentos de resposta.'}</p></div>
+      {infrastructure && <Button className="primary-button" onClick={() => setBuildOpen(true)}><Plus size={16} /> Construir instalação</Button>}
     </div>
 
-    <div className="operations-tabs" role="tablist">{[
+    <div className="operations-tabs" role="tablist">{(infrastructure ? [
       ['facilities','Instalações',Building2],
+    ] : [
       ['aftercare','Vítimas e detidos',HeartPulse],
-      ['training','Formação',Users],
       ['automation','Patrulhas e RAR',Target],
-    ].map(([id,label,Icon]) => <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? 'active' : ''} onClick={() => setTab(id)}><Icon size={15} />{label}</button>)}</div>
+    ]).map(([id,label,Icon]) => <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? 'active' : ''} onClick={() => setTab(id)}><Icon size={15} />{label}</button>)}</div>
 
     {tab === 'facilities' && <>
       <div className="operations-summary">
@@ -143,6 +144,6 @@ export default function Operations({ game, world, act, busy }) {
       </section>
     </div>}
 
-    <Dialog open={buildOpen} onOpenChange={setBuildOpen}><DialogContent className="game-modal"><div className="modal-eyebrow"><Building2 size={15} /> INFRAESTRUTURA DE APOIO</div><DialogTitle>Construir instalação</DialogTitle><DialogDescription>Estas instalações desbloqueiam transporte, internamento, custódia e formação. Investimentos elegíveis preservam sempre a reserva operacional.</DialogDescription><label className="field-label">Centro de Comando<select value={commandCenterId} onChange={event=>setCommandCenterId(event.target.value)}>{(game.command_centers||[]).filter(center=>center.active!==false).map(center=><option value={center.id} key={center.id}>{center.name}</option>)}</select></label><label className="field-label">Tipo<select value={facilityType} onChange={event => setFacilityType(event.target.value)}>{Object.entries(world.facility_catalog).map(([id,item]) => <option value={id} key={id}>{item.name}</option>)}</select></label><label className="field-label">Localização<select value={site} onChange={event => setSite(event.target.value)}>{world.sites.map(option => <option value={option.id} key={option.id} disabled={facilities.some(facility => facility.type === facilityType && facility.node === option.node)}>{option.name}</option>)}</select></label><div className="purchase-total"><span>Capacidade inicial</span><b>{definition.capacity}</b><strong>{money(buildPrice)}</strong></div><Button className="primary-button" disabled={busy || !commandCenterId} onClick={build}><Building2 size={16} /> Construir {definition.name.toLowerCase()}</Button></DialogContent></Dialog>
+    {infrastructure && <Dialog open={buildOpen} onOpenChange={setBuildOpen}><DialogContent className="game-modal"><div className="modal-eyebrow"><Building2 size={15} /> INFRAESTRUTURA DE APOIO</div><DialogTitle>Construir instalação</DialogTitle><DialogDescription>Estas instalações desbloqueiam transporte, internamento, custódia e formação. Investimentos elegíveis preservam sempre a reserva operacional.</DialogDescription><label className="field-label">Centro de Comando<select value={commandCenterId} onChange={event=>setCommandCenterId(event.target.value)}>{(game.command_centers||[]).filter(center=>center.active!==false).map(center=><option value={center.id} key={center.id}>{center.name}</option>)}</select></label><label className="field-label">Tipo<select value={facilityType} onChange={event => setFacilityType(event.target.value)}>{Object.entries(world.facility_catalog).map(([id,item]) => <option value={id} key={id}>{item.name}</option>)}</select></label><label className="field-label">Localização<select value={site} onChange={event => setSite(event.target.value)}>{world.sites.map(option => <option value={option.id} key={option.id} disabled={facilities.some(facility => facility.type === facilityType && facility.node === option.node)}>{option.name}</option>)}</select></label><div className="purchase-total"><span>Capacidade inicial</span><b>{definition.capacity}</b><strong>{money(buildPrice)}</strong></div><Button className="primary-button" disabled={busy || !commandCenterId} onClick={build}><Building2 size={16} /> Construir {definition.name.toLowerCase()}</Button></DialogContent></Dialog>}
   </main>;
 }
