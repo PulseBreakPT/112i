@@ -1,0 +1,67 @@
+/* Semantic action states
+   Green = executable commitment / spend.
+   Red = blocked or destructive.
+   Neutral = navigation, configuration, toggles and non-committing actions. */
+
+:root {
+  --action-ready: var(--theme-success);
+  --action-blocked: var(--theme-danger);
+  --action-neutral: var(--theme-info);
+}
+
+/* Ready commitments: money will be spent or a consequential action will start. */
+.minimal-shell.distrito-interface [data-action-tone="positive"]:not(:disabled),
+.game-modal [data-action-tone="positive"]:not(:disabled) {
+  color: var(--action-ready) !important;
+  background: color-mix(in srgb, var(--action-ready) 14%, var(--theme-surface)) !important;
+  border-color: color-mix(in srgb, var(--action-ready) 52%, var(--theme-border-strong)) !important;
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--theme-highlight) 5%, transparent),
+    inset 0 -2px 0 color-mix(in srgb, var(--action-ready) 34%, transparent) !important;
+}
+
+.minimal-shell.distrito-interface [data-action-tone="positive"]:not(:disabled):hover,
+.game-modal [data-action-tone="positive"]:not(:disabled):hover {
+  color: color-mix(in srgb, var(--action-ready) 88%, white) !important;
+  background: color-mix(in srgb, var(--action-ready) 22%, var(--theme-surface)) !important;
+  border-color: color-mix(in srgb, var(--action-ready) 72%, var(--theme-border-strong)) !important;
+}
+
+/* Anything currently unavailable is immediately recognisable as blocked. */
+.minimal-shell.distrito-interface :is(.game-workspace, .tactical-drawer) button:disabled,
+.game-modal button:disabled {
+  color: var(--action-blocked) !important;
+  background: color-mix(in srgb, var(--action-blocked) 10%, var(--theme-surface)) !important;
+  border-color: color-mix(in srgb, var(--action-blocked) 45%, var(--theme-border-strong)) !important;
+  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--action-blocked) 24%, transparent) !important;
+  opacity: .82 !important;
+  cursor: not-allowed !important;
+}
+
+/* Irreversible/removal actions stay red even when they are available. */
+.minimal-shell.distrito-interface [data-action-tone="danger"]:not(:disabled),
+.game-modal [data-action-tone="danger"]:not(:disabled) {
+  color: var(--action-blocked) !important;
+  background: color-mix(in srgb, var(--action-blocked) 11%, var(--theme-surface)) !important;
+  border-color: color-mix(in srgb, var(--action-blocked) 43%, var(--theme-border-strong)) !important;
+}
+
+.minimal-shell.distrito-interface [data-action-tone="danger"]:not(:disabled):hover,
+.game-modal [data-action-tone="danger"]:not(:disabled):hover {
+  background: color-mix(in srgb, var(--action-blocked) 18%, var(--theme-surface)) !important;
+  border-color: color-mix(in srgb, var(--action-blocked) 65%, var(--theme-border-strong)) !important;
+}
+
+/* Explicit neutral controls are for navigation/configuration, never affordability. */
+.minimal-shell.distrito-interface [data-action-tone="neutral"]:not(:disabled),
+.game-modal [data-action-tone="neutral"]:not(:disabled) {
+  color: var(--distrito-text) !important;
+  background: color-mix(in srgb, var(--action-neutral) 7%, var(--theme-surface)) !important;
+  border-color: color-mix(in srgb, var(--action-neutral) 24%, var(--theme-border-strong)) !important;
+}
+
+/* Do not let semantic states turn compact icon-only close/navigation controls into filled tiles. */
+.minimal-shell.distrito-interface :is(.workspace-close, .panel-heading-actions > .icon-btn, .game-menu-heading .icon-btn):disabled {
+  background: transparent !important;
+  box-shadow: none !important;
+}
