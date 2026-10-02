@@ -20,11 +20,30 @@ export const RISK_ZONES = {
   funchal: { fire: 1.15, medical: 1.1, police: 1.05, label: 'insular' },
 };
 
-export const freshConditions = elapsed => {
-  const weather = WEATHER[Math.floor(Math.random()*WEATHER.length)];
-  const traffic = TRAFFIC[Math.floor(Math.random()*TRAFFIC.length)];
-  const hour = (14 + Math.floor((32*60+elapsed)/3600)) % 24;
-  return {weather:weather.id,weather_label:weather.label,weather_factor:weather.factor,traffic:traffic.id,traffic_label:traffic.label,traffic_factor:traffic.factor,roadworks:Math.random()<.22,night:hour>=20||hour<7,updated_at:elapsed};
+const WEATHER_TRANSITIONS = {
+  clear:['clear','clear','rain','fog'],
+  rain:['rain','rain','clear','storm','fog'],
+  storm:['storm','rain','rain','clear'],
+  fog:['fog','clear','rain','fog'],
+};
+
+export const freshConditions = (elapsed, previous = null, random = Math.random) => {
+  const previousWeather=previous?.weather||'clear';
+  const options=WEATHER_TRANSITIONS[previousWeather]||WEATHER_TRANSITIONS.clear;
+  const weatherId=options[Math.floor(random()*options.length)];
+  const weather=WEATHER.find(item=>item.id===weatherId)||WEATHER[0];
+  const hour=(14+Math.floor((32*60+elapsed)/3600))%24;
+  const rushHour=(hour>=7&&hour<=9)||(hour>=16&&hour<=19);
+  const trafficRoll=random();
+  const trafficId=rushHour?(trafficRoll<.55?'heavy':trafficRoll<.9?'moderate':'light'):(trafficRoll<.15?'heavy':trafficRoll<.55?'moderate':'light');
+  const traffic=TRAFFIC.find(item=>item.id===trafficId)||TRAFFIC[0];
+  const duration=1800+Math.floor(random()*5400);
+  return {
+    weather:weather.id,weather_label:weather.label,weather_factor:weather.factor,
+    traffic:traffic.id,traffic_label:traffic.label,traffic_factor:traffic.factor,
+    roadworks:previous?.roadworks?(random()<.72):(random()<.16),
+    night:hour>=20||hour<7,updated_at:elapsed,next_change_at:elapsed+duration,
+  };
 };
 
 export const conditionsFactor = c => (c?.weather_factor||1)*(c?.traffic_factor||1)*(c?.roadworks?1.12:1)*(c?.night?1.06:1);
