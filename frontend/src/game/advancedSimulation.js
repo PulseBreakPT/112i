@@ -1,8 +1,8 @@
 import { payCost, reserveFloor } from './engines/economyEngine';
+import { PERSONNEL_PROFILES, normalizePersonnelProfile } from './personnelProfiles';
 
 const id = () => globalThis.crypto?.randomUUID?.() || `adv-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
-const NAMES = ['Alexandre Matos','Alice Rocha','Duarte Lima','Eva Cardoso','Francisco Melo','Helena Pinto','Isaac Moreira','Lara Cunha','Martim Reis','Nádia Vieira','Óscar Tavares','Raquel Faria'];
 const DEFAULT_POLICY = {
   reserve_by_service:{fire:1,medical:1,police:1},
   max_response_km:80,
@@ -134,7 +134,12 @@ export function tickAdvancedState(game,dt,log=()=>{},random=Math.random) {
   (game.recruitment_queue||[]).forEach(entry=>{
     if(entry.status!=='pending'||game.elapsed<entry.completes_at)return;
     const base=game.bases.find(item=>item.id===entry.base_id);if(!base){entry.status='cancelled';return;}
-    for(let index=0;index<entry.amount;index++)game.personnel.push({id:id(),name:NAMES[(game.personnel.length+index)%NAMES.length],service:base.service,base_id:base.id,unit_id:null,status:'available',qualifications:[],fatigue:0,experience:0,rank:'Operacional',recruited_at:game.elapsed});
+    for(let index=0;index<entry.amount;index++){
+      const used=new Set((game.personnel||[]).map(person=>person.profile_index).filter(Number.isInteger));
+      let profileIndex=PERSONNEL_PROFILES.findIndex((_,candidate)=>!used.has(candidate));
+      if(profileIndex<0)profileIndex=(game.personnel.length+index)%PERSONNEL_PROFILES.length;
+      game.personnel.push(normalizePersonnelProfile({id:id(),name:PERSONNEL_PROFILES[profileIndex]?.name||`Elemento ${game.personnel.length+1}`,profile_index:profileIndex,service:base.service,base_id:base.id,unit_id:null,status:'available',qualifications:[],fatigue:0,experience:0,rank:'Operacional',recruited_at:game.elapsed},profileIndex));
+    }
     base.personnel=(base.personnel||0)+entry.amount;entry.status='completed';log(game,`${entry.amount} novos elementos apresentaram-se em ${base.name}.`,'success');
   });
   (game.units||[]).forEach(unit=>{
