@@ -175,7 +175,7 @@ export default function Management({ game, world, act, busy, mode }) {
         return <article className="fleet-card" key={unit.id} role="button" tabIndex={0} aria-label={`Abrir gestão de ${unit.callsign || unit.name}`} data-testid={`fleet-unit-${unit.name}`} style={{ '--service-color': SERVICE[unit.service].ink }} onClick={() => openUnit(unit)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openUnit(unit); } }}>
           <header><VehicleThumbnail unit={unit} className="fleet-card-thumbnail" /><div><small>{SERVICE[unit.service].short}</small><strong>{unit.callsign || unit.name}</strong></div></header>
           <div className="fleet-card-base"><MapPin size={13} /><span><small>{unit.status === 'base_transfer' ? 'TRANSFERÊNCIA' : 'BASE OPERACIONAL'}</small><b>{unit.status === 'base_transfer' ? `${base?.name || 'Origem'} → ${transferBase?.name || 'Destino'}` : base?.name || 'Base por definir'}</b></span></div>
-          <div className="fleet-card-details"><span className={`fleet-status ${unit.status}`}><i />{STATUS[unit.status] || (unit.status === 'uncrewed' ? 'Sem equipa' : unit.status)}</span><span><small>CONDIÇÃO</small><b>{Math.round(unit.condition || 100)}%</b></span><span><small>EQUIPA</small><b>{unit.crew_assigned || 0}/{unit.crew_required || 0}</b></span><span><small>{unit.status === 'base_transfer' ? 'CHEGADA' : 'FADIGA'}</small><b>{unit.status === 'base_transfer' ? duration(Math.max(0, (unit.travel_total || 0) - (unit.travel || 0))) : `${Math.round(unit.fatigue || 0)}%`}</b></span></div>
+          <div className="fleet-card-details"><span className={`fleet-status ${unit.status}`}><i />{STATUS[unit.status] || (unit.status === 'uncrewed' ? 'Sem equipa' : unit.status)}</span><span><small>CONDIÇÃO</small><b>{Math.round(unit.condition || 100)}%</b></span><span><small>EQUIPA</small><b>{unit.crew_assigned || 0}/{unit.crew_required || 0}</b></span><span><small>{unit.status === 'base_transfer' ? 'CHEGADA' : 'FADIGA EQUIPA'}</small><b>{unit.status === 'base_transfer' ? duration(Math.max(0, (unit.travel_total || 0) - (unit.travel || 0))) : `${Math.round(crewFatigue(game,unit))}%`}</b></span></div>
         </article>;
       })}</div>
       <FleetAdvancedControls game={game} act={act} busy={busy}/>
@@ -246,15 +246,15 @@ export default function Management({ game, world, act, busy, mode }) {
               <span><small>TODO-O-TERRENO</small><b>{Math.round(selectedUnit.offroad || 0)}/100</b></span>
               <span><small>MAU TEMPO</small><b>{Math.round(selectedUnit.weather_resistance || 0)}/100</b></span>
               <span><small>COMBUSTÍVEL</small><b>{Math.round(selectedUnit.resources?.fuel ?? 0)}% · {Math.round(selectedUnit.fuel_capacity_l || 0)} L</b></span>
-              <span><small>CONSUMO</small><b>{Number(selectedUnit.fuel_consumption_l_100km || 0).toFixed(1)} L/100 km</b></span>
-              <span><small>QUILOMETRAGEM</small><b>{Math.round(selectedUnit.mileage_km || 0).toLocaleString('pt-PT')} km</b></span>
+              <span><small>CONSUMO</small><b>{Number(selectedUnit.fuel_consumption_l_100km || 0).toFixed(1)} L/100 km · {money(selectedUnit.operating_cost_per_km || 0)}/km</b></span>
+              <span><small>QUILOMETRAGEM</small><b>{Math.round(selectedUnit.mileage_km || 0).toLocaleString('pt-PT')} / {Math.round(selectedUnit.service_life_km || 180000).toLocaleString('pt-PT')} km</b></span>
               <span><small>HORAS OPERACIONAIS</small><b>{Number(selectedUnit.operating_hours || 0).toFixed(1)} h</b></span>
               <span><small>PRÓXIMA REVISÃO</small><b>{Math.round(selectedUnit.next_maintenance_km || 5000).toLocaleString('pt-PT')} km{selectedUnit.maintenance_due ? ' · ATRASADA' : ''}</b></span>
               <span><small>TRANSPORTE</small><b>{selectedUnit.patient_capacity || 0} vítima(s) · {selectedUnit.detainee_capacity || 0} detido(s)</b></span>
               <span><small>CARGA</small><b>{Math.round(selectedUnit.cargo_capacity || 0)} kg · {selectedUnit.equipment_slots || 0} slots</b></span>
-              <span><small>RAIO RECOMENDADO</small><b>{selectedUnit.recommended_response_km || 0} km · máx. {selectedUnit.max_response_km || 0} km</b></span>
+              <span><small>RAIO / AUTONOMIA</small><b>{selectedUnit.recommended_response_km || 0} km · máx. {selectedUnit.max_response_km || 0} km · autonomia ~{Math.round((((selectedUnit.resources?.fuel ?? 0)/100)*(selectedUnit.fuel_capacity_l || 0))/Math.max(.1,(selectedUnit.fuel_consumption_l_100km || 1)/100))} km</b></span>
               <span><small>MISSÕES</small><b>{selectedUnit.missions_success || 0}/{selectedUnit.missions_total || 0} sucesso · {selectedUnit.critical_incidents || 0} críticas</b></span>
-              <span><small>AVARIAS</small><b>{selectedUnit.breakdowns || 0}</b></span>
+              <span><small>AVARIAS / DESPACHO</small><b>{selectedUnit.breakdowns || 0} · prioridade {selectedUnit.dispatch_priority ?? 50}{selectedUnit.operational_reserve ? ' · RESERVA' : ''}{selectedUnit.auto_dispatch===false ? ' · MANUAL' : ''}</b></span>
             </div>
             <div className="vehicle-tags"><strong>Capacidades</strong>{(selectedUnit.capabilities || []).map(item => <span key={item}>{item}</span>)}</div>
             <div className="vehicle-tags"><strong>Equipamento</strong>{(selectedUnit.equipment_installed || []).map(item => <span key={item}>{item}</span>)}</div>
