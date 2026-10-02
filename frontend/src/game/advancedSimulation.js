@@ -28,7 +28,7 @@ const WEEKLY_TASKS = [
   {metric:'trust_hold',title:'Manter confiança ≥95% durante 1 hora',threshold:95,target:3600,reward:3200},
 ];
 
-const resourceState = service => Object.fromEntries(Object.entries(RESOURCE_PROFILE[service] || {}).map(([key,value]) => [key,value.capacity]));
+const resourceState = (service,capacity={}) => Object.fromEntries(Object.entries(RESOURCE_PROFILE[service] || {}).map(([key,value]) => [key,Number(capacity?.[key])||value.capacity]));
 const metricValue = (game,metric) => metric === 'completed' ? game.completed || 0 : metric === 'transported' ? game.operations_metrics?.transported || 0 : metric === 'trained' ? game.operations_metrics?.trained || 0 : 0;
 const makeTask = (game,task,period) => ({id:id(),...task,period,baseline:metricValue(game,task.metric),progress_value:0,started_at:game.elapsed||0,claimed:false});
 const reservedStaff=(game,baseId)=>(game.recruitment_queue||[]).filter(item=>item.base_id===baseId&&item.status==='pending').reduce((sum,item)=>sum+(item.amount||0),0)+(game.units||[]).filter(unit=>unit.status==='base_transfer'&&unit.fixed_crew&&unit.transfer_target_base_id===baseId).reduce((sum,unit)=>sum+(unit.personnel_ids?.length||0),0);
@@ -93,7 +93,8 @@ export function initializeAdvancedState(game) {
     unit.category=unit.category||unit.service;
     unit.max_response_km=Number(unit.max_response_km)||game.dispatch_policy.max_response_km;
     unit.fixed_crew=unit.fixed_crew===true;
-    unit.resources={...resourceState(unit.service),...(unit.resources||{})};
+    unit.resources={...resourceState(unit.service,unit.resource_capacity),...(unit.resources||{})};
+    unit.operational_reserve=unit.operational_reserve===true;unit.auto_dispatch=unit.auto_dispatch!==false;unit.dispatch_priority=Math.max(0,Math.min(100,Number(unit.dispatch_priority)||50));
   });
   game.personnel=(game.personnel||[]).map((person,index)=>({...normalizePersonnelProfile(person,index),leave_until:person.leave_until||0}));
   (game.complexes||[]).forEach(complex=>{complex.shared_services=complex.shared_services!==false;complex.operating_cost_discount=complex.operating_cost_discount||.08;});
@@ -151,7 +152,7 @@ export function tickAdvancedState(game,dt,log=()=>{},random=Math.random) {
       const base=(game.bases||[]).find(item=>item.id===unit.base_id);
       if(base?.enabled===false)return;
       Object.entries(RESOURCE_PROFILE[unit.service]||{}).forEach(([key,profile])=>{
-        const current=unit.resources[key]||0,missing=Math.max(0,profile.capacity-current),rate=dt*profile.capacity/180;
+        const capacity=Math.max(0,Number(unit.resource_capacity?.[key])||profile.capacity),current=unit.resources[key]||0,missing=Math.max(0,capacity-current),rate=dt*capacity/180;
         const available=Math.max(0,base?.supply_reserve?.[key]||0),transfer=Math.min(missing,rate,available);
         unit.resources[key]=current+transfer;
         if(base)base.supply_reserve[key]=Math.max(0,available-transfer);
@@ -227,6 +228,9 @@ export function applyAdvancedAction(game,kind,data,log=()=>{}) {
     if(data.category!==undefined)unit.category=String(data.category).trim().slice(0,24)||unit.service;
     if(data.max_response_km!==undefined)unit.max_response_km=Math.max(1,Math.min(300,Number(data.max_response_km)||1));
     if(data.fixed_crew!==undefined)unit.fixed_crew=!!data.fixed_crew;
+    if(data.operational_reserve!==undefined)unit.operational_reserve=!!data.operational_reserve;
+    if(data.auto_dispatch!==undefined)unit.auto_dispatch=!!data.auto_dispatch;
+    if(data.dispatch_priority!==undefined)unit.dispatch_priority=Math.max(0,Math.min(100,Math.round(Number(data.dispatch_priority)||50)));
     log(game,`${unit.name}: configuração operacional atualizada.`,'success');return true;
   }
   if(kind==='toggle_building_generation'){
