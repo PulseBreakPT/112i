@@ -4,7 +4,7 @@ import { applyAdvancedAction, initializeAdvancedState, tickAdvancedState } from 
 import { distanceMeters, fetchRoadRoute as fetchRoadRouteEngine, freshConditions, reverseRoute, RISK_ZONES } from './engines/mapEngine';
 import { facilityOccupancy, hospitalCanReceive } from './engines/hospitalEngine';
 import { operationalPhasesFor, generatedEvolution, vehicleTraining as vehicleTrainingEngine, requiredTrainingsFor as requiredTrainingsForEngine, trainedOnScene, mergeIncidentRequirements, readinessFor, PHASE_REQUIREMENTS } from './engines/missionEngine';
-import { operationalUnit, selectArrUnitIds as selectArrUnitIdsEngine, selectRecommendedUnitIds as selectRecommendedUnitIdsEngine } from './engines/dispatchEngine';
+import { operationalUnit, hasOperationalResources, selectArrUnitIds as selectArrUnitIdsEngine, selectRecommendedUnitIds as selectRecommendedUnitIdsEngine } from './engines/dispatchEngine';
 import { locate, returnToBase, startRoute } from './engines/unitEngine';
 
 import { GAME_SAVE_KEY as SAVE_KEY } from './storageCompatibility';
@@ -224,12 +224,12 @@ export function newGame(){
   log(g,'Portugal · Central do Porto operacional. Modo local ativo.','success');
   return initializeAdvancedState(g);
 }
-const createAftercare=(g,incident)=>{
+const createAftercare=(g,incident,careQuality=.5)=>{
   if(incident.false_alarm)return;
   if((incident.casualties||0)>0){
     const count=incident.casualties;
     const specialtyPool=['urgency','trauma','burns','pediatrics','cardiology','neurology','obstetrics','intensive-care'];
-    for(let index=0;index<count;index++){const severity=1+Math.floor(Math.random()*3),specialty=severity===1?'urgency':specialtyPool[1+Math.floor(Math.random()*(specialtyPool.length-1))];g.patients.push({id:uid(),incident:incident.title,source_node:incident.node,city:incident.district,severity,specialty,needs_doctor:severity===3,transport_required:severity===3||Math.random()<(incident.transport_probability||.58),treatment_progress:0,status:'waiting',created:g.elapsed,hospital_id:null});}
+    for(let index=0;index<count;index++){const severity=1+Math.floor(Math.random()*3),specialty=severity===1?'urgency':specialtyPool[1+Math.floor(Math.random()*(specialtyPool.length-1))];g.patients.push({id:uid(),incident:incident.title,source_node:incident.node,city:incident.district,severity,specialty,needs_doctor:severity===3,transport_required:severity===3||Math.random()<(incident.transport_probability||.58),treatment_progress:Math.round(18+careQuality*22),care_quality:careQuality,stability:Math.max(35,100-severity*14+careQuality*8),status:'waiting',created:g.elapsed,hospital_id:null});}
     log(g,`${count} vítima(s) aguardam transporte hospitalar.`,'alert');
   }
   if((incident.detainees||0)>0){
@@ -239,13 +239,17 @@ const createAftercare=(g,incident)=>{
   }
 };
 const resolveIncident=(g,incident,success)=>{
+  const medicalUnits=g.units.filter(unit=>unit.incident_id===incident.id&&unit.service==='medical'&&unit.status==='onscene');
+  const medicalPeople=medicalUnits.flatMap(unit=>unit.personnel_ids||[]).map(id=>g.personnel.find(person=>person.id===id)).filter(Boolean);
+  const advancedCare=medicalPeople.some(person=>(person.qualifications||[]).includes('advanced-care'));
+  const careQuality=medicalUnits.length?Math.min(1.5,.65+medicalUnits.length*.15+(advancedCare?.25:0)):0.35;
   const trustFactor=.8+g.trust/500;
   const seasonal=(g.seasonal_events||[]).filter(event=>event.status==='active').reduce((factor,event)=>factor*(event.reward_multiplier||1),1);
   const payout=success?(incident.false_alarm?Math.round(incident.reward*.25):Math.round(incident.reward*trustFactor*seasonal)):0;
   log(g,`${incident.title} — ${success?(incident.false_alarm?'falso alarme confirmado.':'resolvida.'):'prazo de resposta excedido.'}`,success?'success':'alert');
   g.history.unshift({id:incident.id,title:incident.title,service:incident.service,success,reward:payout,time:g.elapsed});g.history=g.history.slice(0,100);
   g.units.filter(u=>u.incident_id===incident.id).forEach(u=>{u.fatigue=Math.min(100,(u.fatigue||0)+24);u.condition=Math.max(10,(u.condition||100)-6);(u.personnel_ids||[]).forEach(personId=>{const person=g.personnel.find(item=>item.id===personId);if(person){person.experience=(person.experience||0)+(success?12:4);person.rank=person.experience>=500?'Chefe':person.experience>=200?'Graduado':'Operacional';person.fatigue=Math.min(100,(person.fatigue||0)+18);}});if(u.resources){const use=u.service==='fire'?{water:650,foam:35,fuel:8}:u.service==='medical'?{oxygen:14,medical:18,fuel:7}:{equipment:9,fuel:7};Object.entries(use).forEach(([key,value])=>{u.resources[key]=Math.max(0,(u.resources[key]||0)-value);});}returnToBase(g,u);});
-  if(success){g.money+=payout;g.earned+=payout;g.xp+=incident.false_alarm?20:incident.xp;g.completed++;g.trust=Math.min(100,g.trust+(incident.false_alarm?0:1));createAftercare(g,incident);if(!incident.false_alarm&&incident.service==='police'&&(incident.detainees>0||/assalto|roubo|sequestro|tráfico|desaparecid/i.test(incident.title))&&Math.random()<.45){const next=spawn(g,9,incident.node,incident.command_center_id);if(next){next.title='Investigação complementar';next.definition=next.title;next.parent_incident_id=incident.id;next.needs={police:Math.max(1,next.needs.police||1)};mergeIncidentRequirements(g,next,{trainings:['investigation']},true);log(g,`Ocorrência subsequente criada: ${next.title}.`,'alert');}}if(!incident.false_alarm&&incident.service==='fire'&&incident.priority===1&&Math.random()<.35){const next=spawn(g,4,incident.node,incident.command_center_id);if(next){next.title='Vistoria e rescaldo preventivo';next.definition=next.title;next.parent_incident_id=incident.id;next.needs={fire:1,police:incident.district==='Porto'?1:0};next.reward=Math.round(next.reward*.75);log(g,`Ocorrência subsequente criada: ${next.title}.`,'alert');}}if(incident.evolution?.type==='subsequent'&&!incident.evolution_spawned){const next=spawn(g,incident.evolution.scenario,incident.node,incident.command_center_id);if(next){next.title=incident.evolution.title;next.definition=incident.evolution.title;next.parent_incident_id=incident.id;log(g,`Ocorrência subsequente criada: ${next.title}.`,'alert');}}}
+  if(success){g.money+=payout;g.earned+=payout;g.xp+=incident.false_alarm?20:incident.xp;g.completed++;g.trust=Math.min(100,g.trust+(incident.false_alarm?0:1));createAftercare(g,incident,careQuality);if(!incident.false_alarm&&incident.service==='police'&&(incident.detainees>0||/assalto|roubo|sequestro|tráfico|desaparecid/i.test(incident.title))&&Math.random()<.45){const next=spawn(g,9,incident.node,incident.command_center_id);if(next){next.title='Investigação complementar';next.definition=next.title;next.parent_incident_id=incident.id;next.needs={police:Math.max(1,next.needs.police||1)};mergeIncidentRequirements(g,next,{trainings:['investigation']},true);log(g,`Ocorrência subsequente criada: ${next.title}.`,'alert');}}if(!incident.false_alarm&&incident.service==='fire'&&incident.priority===1&&Math.random()<.35){const next=spawn(g,4,incident.node,incident.command_center_id);if(next){next.title='Vistoria e rescaldo preventivo';next.definition=next.title;next.parent_incident_id=incident.id;next.needs={fire:1,police:incident.district==='Porto'?1:0};next.reward=Math.round(next.reward*.75);log(g,`Ocorrência subsequente criada: ${next.title}.`,'alert');}}if(incident.evolution?.type==='subsequent'&&!incident.evolution_spawned){const next=spawn(g,incident.evolution.scenario,incident.node,incident.command_center_id);if(next){next.title=incident.evolution.title;next.definition=incident.evolution.title;next.parent_incident_id=incident.id;log(g,`Ocorrência subsequente criada: ${next.title}.`,'alert');}}}
   else{const penalty=Math.min(g.money,Math.round(incident.reward*.08));g.money-=penalty;g.expenses+=penalty;g.failed++;g.trust=Math.max(0,g.trust-6);}
   g.incidents=g.incidents.filter(i=>i.id!==incident.id);
 };
@@ -254,6 +258,7 @@ const mobilize=(g,incident,units,routes={},returnRoutes={})=>{
   requireValue(units.every(unit=>unit.land===incident.land),'Sem ligação rodoviária para esta ocorrência.');
   requireValue(units.every(unit=>(unit.condition||100)>20),'Uma das viaturas precisa de manutenção antes de sair.');
   requireValue(units.every(unit=>(unit.fatigue||0)<90),'Uma das equipas precisa de descanso antes de nova mobilização.');
+  requireValue(units.every(hasOperationalResources),'Uma das viaturas não tem combustível ou consumíveis suficientes.');
   units.forEach(unit=>{const plan=routes[unit.id],returnPlan=returnRoutes[unit.id];requireValue(plan?.coordinates?.length>1&&plan?.times?.length===plan.coordinates.length,'Percurso rodoviário não preparado. Tenta despachar novamente.');unit.road_return_plan=returnPlan?.coordinates?.length>1?returnPlan:reverseRoute(plan);startRoute(unit,plan,'enroute',incident.node);unit.incident_id=incident.id;if(!incident.assigned.includes(unit.id))incident.assigned.push(unit.id);});
   incident.status='enroute';log(g,`${units.length} unidade(s) mobilizada(s) pela rede rodoviária.`);
 };
