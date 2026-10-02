@@ -259,6 +259,7 @@ const mobilize=(g,incident,units,routes={},returnRoutes={})=>{
   requireValue(units.every(unit=>(unit.condition||100)>20),'Uma das viaturas precisa de manutenção antes de sair.');
   requireValue(units.every(unit=>(unit.fatigue||0)<90),'Uma das equipas precisa de descanso antes de nova mobilização.');
   requireValue(units.every(hasOperationalResources),'Uma das viaturas não tem combustível ou consumíveis suficientes.');
+  requireValue(units.every(unit=>distanceMeters(unit,incident)/1000<=Math.min(Number(g.dispatch_policy?.max_response_km)||Infinity,Number(unit.max_response_km)||Infinity)),'Uma das viaturas está fora do raio máximo de resposta.');
   units.forEach(unit=>{const plan=routes[unit.id],returnPlan=returnRoutes[unit.id];requireValue(plan?.coordinates?.length>1&&plan?.times?.length===plan.coordinates.length,'Percurso rodoviário não preparado. Tenta despachar novamente.');unit.road_return_plan=returnPlan?.coordinates?.length>1?returnPlan:reverseRoute(plan);startRoute(unit,plan,'enroute',incident.node);unit.incident_id=incident.id;if(!incident.assigned.includes(unit.id))incident.assigned.push(unit.id);});
   incident.status='enroute';log(g,`${units.length} unidade(s) mobilizada(s) pela rede rodoviária.`);
 };
