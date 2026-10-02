@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react';
-import { Building2, Plus, ArrowUpRight, CarFront, MapPin, ShieldCheck, Users, Wrench, Target, Power } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Building2, Plus, ArrowUpRight, CarFront, MapPin, ShieldCheck, Users, Wrench, Target, Power, Clock3, Navigation, Pencil, Route, UserMinus, UserPlus } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../components/ui/dialog';
 import { Button } from '../components/ui/button';
 import { toast } from 'sonner';
-import { SERVICE, ServiceIcon, money, STATUS } from './common';
+import { SERVICE, ServiceIcon, money, STATUS, duration } from './common';
 import { vehicleImage, VehicleThumbnail } from './vehicleMedia';
+import { fetchRoadRoute } from './localGame';
 
 const VehicleArt = ({ service, vehicleType, name }) => {
   const [failed, setFailed] = useState(false);
@@ -25,6 +26,12 @@ export default function Management({ game, world, act, busy, mode }) {
   const [purchase, setPurchase] = useState(null);
   const [baseId, setBaseId] = useState('');
   const [filter, setFilter] = useState('all');
+  const [unitOpenId, setUnitOpenId] = useState(null);
+  const [unitNameDraft, setUnitNameDraft] = useState('');
+  const [targetBaseId, setTargetBaseId] = useState('');
+  const [transferEstimate, setTransferEstimate] = useState(null);
+  const [transferBusy, setTransferBusy] = useState(false);
+  const transferRequest = useRef(0);
   const fleet = mode === 'fleet';
   const buildPrice = game.progression?.next_building_costs?.[service] || world.services[service].base_price;
   const selectedVehicle = purchase && world.vehicle_catalog[purchase.service].find(vehicle => vehicle.id === purchase.vehicle_type);
@@ -35,12 +42,67 @@ export default function Management({ game, world, act, busy, mode }) {
     if (!purchase || !selectedVehicle) return [];
     return game.bases.filter(base => base.service === purchase.service && (base.level || 1) >= selectedVehicle.level && (!selectedVehicle.extension || installed(base, selectedVehicle.extension)?.active) && (!selectedVehicle.training || (base.qualifications?.[selectedVehicle.training] || 0) >= selectedVehicle.crew));
   }, [game.bases, purchase, selectedVehicle]);
+  const selectedUnit = unitOpenId ? game.units.find(unit => unit.id === unitOpenId) : null;
+  const selectedBase = selectedUnit ? game.bases.find(base => base.id === selectedUnit.base_id) : null;
+  const selectedTransferBase = selectedUnit?.transfer_target_base_id ? game.bases.find(base => base.id === selectedUnit.transfer_target_base_id) : null;
+  const selectedDefinition = selectedUnit ? world.vehicle_catalog[selectedUnit.service]?.find(vehicle => vehicle.id === selectedUnit.vehicle_type) : null;
+  const requiredTraining = selectedDefinition?.training || selectedUnit?.training || null;
+  const requiredTrainingName = requiredTraining ? world.training_catalog?.find(course => course.id === requiredTraining)?.name || requiredTraining : null;
+  const selectedCrew = selectedUnit ? (selectedUnit.personnel_ids || []).map(id => (game.personnel || []).find(person => person.id === id)).filter(Boolean) : [];
+  const freeBaseCrew = selectedUnit && selectedBase ? (game.personnel || []).filter(person => person.base_id === selectedBase.id && person.service === selectedUnit.service && !person.unit_id && person.status === 'available') : [];
+  const crewLimit = selectedUnit ? Math.max(selectedUnit.crew_required || 1, selectedUnit.max_crew || selectedUnit.crew_required || 1) : 0;
+  const canManageCrew = !!(selectedUnit && selectedBase && ['available', 'uncrewed'].includes(selectedUnit.status) && selectedUnit.node === selectedBase.node);
+  const transferTargets = selectedUnit ? game.bases.filter(base => base.id !== selectedUnit.base_id && base.service === selectedUnit.service && base.land === selectedUnit.land) : [];
+  const transferTarget = targetBaseId ? game.bases.find(base => base.id === targetBaseId) : null;
+  const transferTargetCount = transferTarget ? game.units.filter(unit => unit.base_id === transferTarget.id || unit.transfer_target_base_id === transferTarget.id).length : 0;
+  const unitAtBase = !!(selectedUnit && selectedBase && selectedUnit.status === 'available' && selectedUnit.node === selectedBase.node);
+
+  useEffect(() => {
+    if (unitOpenId && !game.units.some(unit => unit.id === unitOpenId)) setUnitOpenId(null);
+  }, [unitOpenId, game.units]);
 
   const run = async (kind, data, success) => {
     const next = await act(kind, data);
     if (next && success) toast.success(success);
     return next;
   };
+  const openUnit = unit => {
+    transferRequest.current += 1;
+    setUnitOpenId(unit.id);
+    setUnitNameDraft(unit.callsign || unit.name);
+    setTargetBaseId('');
+    setTransferEstimate(null);
+    setTransferBusy(false);
+  };
+  const estimateTransfer = async baseId => {
+    const unit = game.units.find(item => item.id === unitOpenId);
+    const target = game.bases.find(base => base.id === baseId);
+    const request = ++transferRequest.current;
+    setTargetBaseId(baseId);
+    setTransferEstimate(null);
+    if (!unit || !target) { setTransferBusy(false); return; }
+    setTransferBusy(true);
+    try {
+      const route = await fetchRoadRoute({ lng: unit.lng, lat: unit.lat }, target.node, game.conditions);
+      if (request === transferRequest.current) setTransferEstimate({ base_id: baseId, route });
+    } catch (error) {
+      if (request === transferRequest.current) setTransferEstimate({ base_id: baseId, error: error?.message || 'Não foi possível calcular o percurso.' });
+    } finally {
+      if (request === transferRequest.current) setTransferBusy(false);
+    }
+  };
+  const startTransfer = async () => {
+    if (!selectedUnit || !transferTarget || !transferEstimate?.route || transferEstimate.base_id !== transferTarget.id) return;
+    const next = await run('transfer_unit', { unit_id: selectedUnit.id, base_id: transferTarget.id, route: transferEstimate.route }, 'Transferência rodoviária iniciada.');
+    if (next) { setTargetBaseId(''); setTransferEstimate(null); }
+  };
+  const saveUnitName = async () => {
+    if (!selectedUnit) return;
+    const name = unitNameDraft.trim().slice(0, 24) || selectedUnit.name;
+    if (await run('update_advanced_unit', { unit_id: selectedUnit.id, callsign: name }, 'Nome da viatura atualizado.')) setUnitNameDraft(name);
+  };
+  const assignPerson = personId => selectedUnit && run('assign_unit_personnel', { unit_id: selectedUnit.id, person_id: personId }, 'Elemento atribuído à viatura.');
+  const removePerson = personId => selectedUnit && run('remove_unit_personnel', { unit_id: selectedUnit.id, person_id: personId }, 'Elemento removido da viatura.');
   const openPurchase = (serviceId, vehicle) => {
     setPurchase({ service: serviceId, vehicle_type: vehicle.id });
     setBaseId(game.bases.find(base => base.service === serviceId)?.id || '');
@@ -102,10 +164,11 @@ export default function Management({ game, world, act, busy, mode }) {
       <div className="section-line"><h2>As tuas viaturas <span>{game.units.length}</span></h2><select aria-label="Filtrar frota" data-testid="fleet-filter" value={filter} onChange={event => setFilter(event.target.value)}><option value="all">Todos os serviços</option>{Object.entries(SERVICE).map(([key, info]) => <option key={key} value={key}>{info.name}</option>)}</select></div>
       <div className="fleet-grid">{game.units.filter(unit => filter === 'all' || filter === unit.service).map(unit => {
         const base = game.bases.find(item => item.id === unit.base_id);
-        return <article className="fleet-card" key={unit.id} data-testid={`fleet-unit-${unit.name}`} style={{ '--service-color': SERVICE[unit.service].color }}>
+        const transferBase = unit.transfer_target_base_id ? game.bases.find(item => item.id === unit.transfer_target_base_id) : null;
+        return <article className="fleet-card" key={unit.id} role="button" tabIndex={0} aria-label={`Abrir gestão de ${unit.callsign || unit.name}`} data-testid={`fleet-unit-${unit.name}`} style={{ '--service-color': SERVICE[unit.service].color }} onClick={() => openUnit(unit)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openUnit(unit); } }}>
           <header><VehicleThumbnail unit={unit} className="fleet-card-thumbnail" /><div><small>{SERVICE[unit.service].short}</small><strong>{unit.callsign || unit.name}</strong></div></header>
-          <div className="fleet-card-base"><MapPin size={13} /><span><small>BASE OPERACIONAL</small><b>{base?.name || 'Base por definir'}</b></span></div>
-          <div className="fleet-card-details"><span className={`fleet-status ${unit.status}`}><i />{STATUS[unit.status] || (unit.status === 'uncrewed' ? 'Sem equipa' : unit.status)}</span><span><small>CONDIÇÃO</small><b>{Math.round(unit.condition || 100)}%</b></span><span><small>EQUIPA</small><b>{unit.crew_assigned || 0}/{unit.crew_required || 0}</b></span><span><small>FADIGA</small><b>{Math.round(unit.fatigue || 0)}%</b></span></div>
+          <div className="fleet-card-base"><MapPin size={13} /><span><small>{unit.status === 'base_transfer' ? 'TRANSFERÊNCIA' : 'BASE OPERACIONAL'}</small><b>{unit.status === 'base_transfer' ? `${base?.name || 'Origem'} → ${transferBase?.name || 'Destino'}` : base?.name || 'Base por definir'}</b></span></div>
+          <div className="fleet-card-details"><span className={`fleet-status ${unit.status}`}><i />{STATUS[unit.status] || (unit.status === 'uncrewed' ? 'Sem equipa' : unit.status)}</span><span><small>CONDIÇÃO</small><b>{Math.round(unit.condition || 100)}%</b></span><span><small>EQUIPA</small><b>{unit.crew_assigned || 0}/{unit.crew_required || 0}</b></span><span><small>{unit.status === 'base_transfer' ? 'CHEGADA' : 'FADIGA'}</small><b>{unit.status === 'base_transfer' ? duration(Math.max(0, (unit.travel_total || 0) - (unit.travel || 0))) : `${Math.round(unit.fatigue || 0)}%`}</b></span></div>
         </article>;
       })}</div>
       <div className="section-line"><h2>Catálogo de viaturas</h2><span>EXPANDIR A FROTA</span></div>
@@ -122,6 +185,59 @@ export default function Management({ game, world, act, busy, mode }) {
     </>}
 
     <Dialog open={buildOpen} onOpenChange={setBuildOpen}><DialogContent className="game-modal" data-testid="build-base-modal"><div className="modal-eyebrow"><Building2 size={15} /> EXPANSÃO DA REDE</div><DialogTitle>Construir uma base</DialogTitle><DialogDescription>O preço cresce de forma moderada com a rede. A reserva operacional é protegida e o investimento elegível recebe cofinanciamento automático.</DialogDescription><label className="field-label">Centro de Comando<select value={commandCenterId} onChange={event=>setCommandCenterId(event.target.value)}>{(game.command_centers||[]).filter(center=>center.active!==false).map(center=><option value={center.id} key={center.id}>{center.name}</option>)}</select></label><label className="field-label">Serviço<select data-testid="base-service-select" value={service} onChange={event => setService(event.target.value)}>{Object.entries(SERVICE).map(([key, info]) => <option key={key} value={key}>{info.name}</option>)}</select></label><label className="field-label">Localização<select data-testid="base-site-select" value={site} onChange={event => setSite(event.target.value)}>{world.sites.map(option => <option key={option.id} value={option.id} disabled={option.unlock_level > game.level || game.bases.some(base => base.node === option.node && base.service === service)}>{option.name}{option.unlock_level > game.level ? ` · Nível ${option.unlock_level}` : game.bases.some(base => base.node === option.node && base.service === service) ? ' · Ocupado' : ''}</option>)}</select></label><div className="purchase-total"><span>Investimento progressivo</span><strong data-testid="base-price">{money(buildPrice)}</strong></div><Button data-testid="buy-station-button" className="primary-button" disabled={busy || !commandCenterId || game.bases.some(base => base.node === world.sites.find(option => option.id === site)?.node && base.service === service)} onClick={build}><Building2 size={16} />Confirmar construção · cofinanciamento automático</Button></DialogContent></Dialog>
+    <Dialog open={!!selectedUnit} onOpenChange={open => { if (!open) { transferRequest.current += 1; setUnitOpenId(null); setTargetBaseId(''); setTransferEstimate(null); setTransferBusy(false); } }}>
+      <DialogContent className="game-modal vehicle-command-modal" data-testid="fleet-unit-modal">
+        {selectedUnit && <>
+          <div className="modal-eyebrow"><CarFront size={15} /> GESTÃO DA VIATURA</div>
+          <DialogTitle>{selectedUnit.callsign || selectedUnit.name}</DialogTitle>
+          <DialogDescription>{SERVICE[selectedUnit.service].name} · {selectedDefinition?.name || selectedUnit.vehicle_type} · ID {selectedUnit.name}</DialogDescription>
+          <div className="vehicle-command-hero" style={{ '--service-color': SERVICE[selectedUnit.service].color }}>
+            <VehicleThumbnail unit={selectedUnit} className="vehicle-command-thumbnail" />
+            <div><span className={`fleet-status ${selectedUnit.status}`}><i />{STATUS[selectedUnit.status] || selectedUnit.status}</span><strong>{selectedBase?.name || 'Base por definir'}</strong><small>{Math.round(selectedUnit.condition || 100)}% condição · {Math.round(selectedUnit.fatigue || 0)}% fadiga · {selectedUnit.crew_assigned || 0}/{selectedUnit.crew_required || 0} elementos</small></div>
+          </div>
+
+          <section className="vehicle-command-section">
+            <header><Pencil size={15} /><div><h3>Nome da viatura</h3><p>Altera o nome operacional sem mudar o identificador interno.</p></div></header>
+            <div className="vehicle-name-row"><input aria-label="Nome da viatura" maxLength={24} value={unitNameDraft} onChange={event => setUnitNameDraft(event.target.value)} /><Button className="outline-button" disabled={busy || !unitNameDraft.trim() || unitNameDraft.trim() === (selectedUnit.callsign || selectedUnit.name)} onClick={saveUnitName}><Pencil size={13} /> Guardar</Button></div>
+          </section>
+
+          <section className="vehicle-command-section">
+            <header><Route size={15} /><div><h3>Transferir para outra base</h3><p>Calcula a rota rodoviária, distância, combustível e tempo antes de autorizar a saída.</p></div></header>
+            {selectedUnit.status === 'base_transfer' ? <div className="transfer-live">
+              <Navigation size={18} /><div><strong>A caminho de {selectedTransferBase?.name || 'nova base'}</strong><span>{duration(Math.max(0, (selectedUnit.travel_total || 0) - (selectedUnit.travel || 0)))} restantes · {((selectedUnit.route_distance || 0) / 1000).toFixed(1)} km</span></div>
+              <div className="transfer-progress"><i style={{ width: `${selectedUnit.travel_total ? Math.min(100, Math.max(0, selectedUnit.travel / selectedUnit.travel_total * 100)) : 0}%` }} /></div>
+            </div> : <>
+              <label className="field-label">Base de destino<select value={targetBaseId} disabled={!unitAtBase || busy} onChange={event => estimateTransfer(event.target.value)}>
+                <option value="">Escolher base...</option>
+                {transferTargets.map(base => {
+                  const count = game.units.filter(unit => unit.base_id === base.id || unit.transfer_target_base_id === base.id).length;
+                  const unavailable = base.enabled === false || base.operational_at > game.elapsed || count >= (base.capacity || 2);
+                  return <option key={base.id} value={base.id} disabled={unavailable}>{base.name} · garagem {count}/{base.capacity || 2}{unavailable ? ' · indisponível' : ''}</option>;
+                })}
+              </select></label>
+              {!unitAtBase && <p className="vehicle-command-warning">A viatura tem de estar disponível e fisicamente na base antes de poder ser transferida.</p>}
+              {transferBusy && <div className="transfer-estimate loading"><Clock3 size={15} /> A calcular percurso rodoviário...</div>}
+              {transferEstimate?.error && <div className="transfer-estimate error">{transferEstimate.error}</div>}
+              {transferEstimate?.route && transferEstimate.base_id === targetBaseId && <div className="transfer-estimate"><div><Navigation size={15} /><span><small>DISTÂNCIA</small><strong>{(transferEstimate.route.distance / 1000).toFixed(1)} km</strong></span></div><div><Clock3 size={15} /><span><small>TEMPO</small><strong>{duration(transferEstimate.route.duration)}</strong></span></div><div><span><small>COMBUSTÍVEL EST.</small><strong>{Math.max(.2, transferEstimate.route.distance / 1000 * .42).toFixed(1)}</strong></span></div></div>}
+              <label className="vehicle-fixed-crew"><input type="checkbox" checked={selectedUnit.fixed_crew === true} disabled={busy} onChange={event => run('update_advanced_unit', { unit_id: selectedUnit.id, fixed_crew: event.target.checked }, event.target.checked ? 'A tripulação acompanhará futuras transferências.' : 'A tripulação será substituída na base de destino.')} /><span><b>Levar a tripulação atual</b><small>Se desligado, a equipa atual fica na origem e a base de destino atribui uma nova equipa disponível.</small></span></label>
+              <Button className="primary-button transfer-start-button" disabled={busy || transferBusy || !unitAtBase || !transferTarget || transferTargetCount >= (transferTarget?.capacity || 2) || !transferEstimate?.route || transferEstimate.base_id !== targetBaseId} onClick={startTransfer}><Navigation size={15} /> Iniciar transferência</Button>
+            </>}
+          </section>
+
+          <section className="vehicle-command-section">
+            <header><Users size={15} /><div><h3>Tripulação</h3><p>{selectedCrew.length}/{crewLimit} lugares ocupados{requiredTrainingName ? ` · requer ${requiredTrainingName}` : ''}.</p></div></header>
+            {!canManageCrew && selectedUnit.status !== 'base_transfer' && <p className="vehicle-command-warning">A gestão da equipa só está disponível com a viatura parada na sua base.</p>}
+            <div className="crew-columns">
+              <div><h4>ATRIBUÍDOS</h4><div className="crew-list">{selectedCrew.length ? selectedCrew.map(person => <div className="crew-row" key={person.id}><span><b>{person.name}</b><small>{person.rank || 'Operacional'} · fadiga {Math.round(person.fatigue || 0)}%</small></span><button aria-label={`Remover ${person.name}`} disabled={busy || !canManageCrew} onClick={() => removePerson(person.id)}><UserMinus size={14} /> Remover</button></div>) : <p className="crew-empty">Sem elementos atribuídos.</p>}</div></div>
+              <div><h4>DISPONÍVEIS NA BASE</h4><div className="crew-list">{freeBaseCrew.length ? freeBaseCrew.map(person => {
+                const qualified = !requiredTraining || (person.qualifications || []).includes(requiredTraining);
+                return <div className="crew-row" key={person.id}><span><b>{person.name}</b><small>{person.rank || 'Operacional'}{qualified ? ' · disponível' : ` · falta ${requiredTrainingName}`}</small></span><button aria-label={`Atribuir ${person.name}`} disabled={busy || !canManageCrew || selectedCrew.length >= crewLimit || !qualified} onClick={() => assignPerson(person.id)}><UserPlus size={14} /> Atribuir</button></div>;
+              }) : <p className="crew-empty">Não há elementos livres nesta base.</p>}</div></div>
+            </div>
+          </section>
+        </>}
+      </DialogContent>
+    </Dialog>
     <Dialog open={!!purchase} onOpenChange={open => !open && setPurchase(null)}><DialogContent className="game-modal" data-testid="buy-vehicle-modal"><div className="modal-eyebrow"><CarFront size={15} /> NOVA VIATURA</div><DialogTitle>Reforçar a frota</DialogTitle><DialogDescription>{selectedVehicle?.name} · {selectedVehicle?.crew} elementos</DialogDescription>{purchase && selectedVehicle && <><VehicleArt service={purchase.service} vehicleType={selectedVehicle.id} name={selectedVehicle.name} /><label className="field-label">Base de afetação<select data-testid="vehicle-base-select" value={baseId} onChange={event => setBaseId(event.target.value)}>{availableBases.map(base => <option key={base.id} value={base.id}>{base.name} ({unitCount(base)}/{capacity(base)} viaturas · {(base.personnel || 0) - assigned(base)} disponíveis)</option>)}</select></label><div className="purchase-total"><span>Viatura</span><strong data-testid="vehicle-purchase-price">{money(selectedVehicle.price)}</strong></div><Button data-testid="buy-vehicle-button" className="primary-button" disabled={busy || !baseId} onClick={buy}><Plus size={16} />Confirmar aquisição</Button></>}</DialogContent></Dialog>
   </main>;
 }
