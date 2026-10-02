@@ -42,8 +42,9 @@ export const publicFundingAmount = game => {
   const facilities=(game.facilities||[]).filter(facility=>facility.enabled!==false).length;
   const commands=(game.command_centers||[]).filter(center=>center.active!==false).length;
   const trustFactor=.8+Math.max(0,Math.min(100,game.trust||0))/250;
+  const reputationFactor=1+Math.min(.15,Math.max(0,Number(game.reputation)||0)/2000);
   const network=1800+operationalBases*180+facilities*140+Math.max(0,commands-1)*300;
-  return Math.round(network*trustFactor);
+  return Math.round(network*trustFactor*reputationFactor);
 };
 
 export const applyPeriodicFunding = (game, log) => {
