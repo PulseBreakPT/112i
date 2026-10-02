@@ -75,6 +75,53 @@ test('personnel are individual, assigned to vehicles and can be recruited or dis
   expect(game.personnel).toHaveLength(before+1);
 });
 
+test('personnel have persistent gameplay attributes and career metadata', () => {
+  const game=newGame(),person=game.personnel[0];
+  expect(person).toMatchObject({
+    level:1,
+    rank:'Operacional',
+    missions_completed:0,
+    successes:0,
+    failures:0,
+  });
+  for(const key of ['morale','health','stress','skill','response_speed','decision_making','teamwork','discipline','endurance','first_aid','emergency_driving','leadership','communication','team_affinity']){
+    expect(person[key]).toBeGreaterThanOrEqual(0);
+    expect(person[key]).toBeLessThanOrEqual(100);
+  }
+  expect(person.age).toBeGreaterThanOrEqual(22);
+  expect(person.salary).toBeGreaterThan(0);
+  expect(person.specialization).toBeTruthy();
+  expect(person.trait).toBeTruthy();
+});
+
+test('better personnel attributes improve incident resolution speed', () => {
+  const base=newGame(),incident=base.incidents[0];
+  const units=['fire','medical'].map(service=>base.units.find(unit=>unit.service===service));
+  incident.needs={fire:1,medical:1};incident.required_personnel=units.reduce((sum,unit)=>sum+unit.crew_assigned,0);incident.required_vehicle_types=[];incident.required_trainings=[];
+  units.forEach(unit=>{unit.status='onscene';unit.incident_id=incident.id;if(!incident.assigned.includes(unit.id))incident.assigned.push(unit.id);});
+  const strong=JSON.parse(JSON.stringify(base)),weak=JSON.parse(JSON.stringify(base));
+  strong.personnel.forEach(person=>{if(units.some(unit=>unit.personnel_ids.includes(person.id))){person.skill=95;person.decision_making=95;person.teamwork=95;person.discipline=95;person.morale=95;person.health=100;person.stress=0;person.fatigue=0;person.leadership=90;}});
+  weak.personnel.forEach(person=>{if(units.some(unit=>unit.personnel_ids.includes(person.id))){person.skill=35;person.decision_making=35;person.teamwork=35;person.discipline=35;person.morale=40;person.health=65;person.stress=70;person.fatigue=65;person.leadership=30;}});
+  const strongTick=tickGame(strong,10),weakTick=tickGame(weak,10);
+  expect(strongTick.incidents[0].progress).toBeGreaterThan(weakTick.incidents[0].progress);
+});
+
+test('resolved incidents advance individual personnel careers and wellbeing', () => {
+  let game=newGame();
+  const incident=game.incidents[0],unit=game.units.find(item=>item.service==='fire');
+  incident.needs={fire:1};incident.required_personnel=unit.crew_assigned;incident.required_vehicle_types=[];incident.required_trainings=[];incident.assigned=[unit.id];incident.progress=99;incident.status='onscene';
+  unit.status='onscene';unit.incident_id=incident.id;
+  const personId=unit.personnel_ids[0],before=game.personnel.find(person=>person.id===personId),beforeStress=before.stress,beforeExperience=before.experience||0;
+  game=tickGame(game,10);
+  const after=game.personnel.find(person=>person.id===personId);
+  expect(game.incidents.some(item=>item.id===incident.id)).toBe(false);
+  expect(after.missions_completed).toBe(1);
+  expect(after.successes).toBe(1);
+  expect(after.experience).toBeGreaterThan(beforeExperience);
+  expect(after.stress).toBeGreaterThan(beforeStress);
+  expect(after.level).toBeGreaterThanOrEqual(1);
+});
+
 test('extra personnel increase operational resolution speed', () => {
   const normal = newGame();
   const incident = normal.incidents[0];
