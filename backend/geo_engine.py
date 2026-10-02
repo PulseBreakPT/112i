@@ -107,8 +107,15 @@ def return_to_base(unit, base):
 
 def resolve(g, incident, success):
     log(g, f"{incident['title']} — " + ('resolvida.' if success else 'prazo de resposta excedido.'), 'success' if success else 'alert')
+    assigned_count = sum(1 for unit in g['units'] if unit.get('incident_id') == incident['id'])
+    required_count = sum(incident.get('needs', {}).values())
+    response_time = max(0, incident.get('response_arrived_at', g['elapsed']) - incident.get('created', g['elapsed']))
+    resolution_time = max(0, g['elapsed'] - incident.get('created', g['elapsed']))
     g['history'].insert(0, {'id': incident['id'], 'title': incident['title'], 'service': incident['service'],
-                          'success': success, 'reward': incident['reward'] if success else 0, 'time': g['elapsed']})
+                          'success': success, 'reward': incident['reward'] if success else 0, 'time': g['elapsed'],
+                          'response_time': response_time, 'resolution_time': resolution_time,
+                          'units_used': assigned_count, 'required_units': required_count,
+                          'triage_correct': bool(incident.get('call_result', {}).get('correct'))})
     g['history'] = g['history'][:100]
     for unit in g['units']:
         if unit['incident_id'] != incident['id']:
