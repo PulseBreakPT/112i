@@ -16,6 +16,27 @@ export function GameHUD({ game, act, sound, setSound, onSave, error }) {
   }, [optionsOpen]);
   const rank = game.level === 1 ? 'Operador em formação' : game.level < 4 ? 'Operador' : 'Coordenador de operações';
   return <header className="minimal-hud" aria-label="Painel de comando">
+    <svg className="hud-svg-filters" aria-hidden="true" focusable="false">
+      <defs>
+        <filter id="hud-icon-texture" x="-45%" y="-45%" width="190%" height="190%" colorInterpolationFilters="sRGB">
+          <feTurbulence type="fractalNoise" baseFrequency=".78" numOctaves="2" seed="12" result="hudNoise" />
+          <feColorMatrix in="hudNoise" type="saturate" values="0" result="hudNoiseMono" />
+          <feComponentTransfer in="hudNoiseMono" result="hudNoiseSoft">
+            <feFuncA type="table" tableValues="0 .16" />
+          </feComponentTransfer>
+          <feComposite in="hudNoiseSoft" in2="SourceAlpha" operator="in" result="hudGrain" />
+          <feBlend in="SourceGraphic" in2="hudGrain" mode="soft-light" result="hudTextured" />
+          <feGaussianBlur in="SourceAlpha" stdDeviation=".7" result="hudBlur" />
+          <feOffset in="hudBlur" dy="1" result="hudOffset" />
+          <feFlood floodColor="#000000" floodOpacity=".62" result="hudShadowColor" />
+          <feComposite in="hudShadowColor" in2="hudOffset" operator="in" result="hudShadow" />
+          <feMerge>
+            <feMergeNode in="hudShadow" />
+            <feMergeNode in="hudTextured" />
+          </feMerge>
+        </filter>
+      </defs>
+    </svg>
     <Link to="/" className="minimal-brand" data-testid="brand-home" aria-label={`${APP_NAME} — voltar ao mapa`}><Radio size={18} /><span className="brand-wordmark" data-testid="game-brand">{BRAND_WORD}{' '}<span>{BRAND_NUMBER}</span></span></Link>
     <div className="minimal-readout">
       <div className="hud-stat hud-budget"><small>Orçamento</small><span className="minimal-budget" data-testid="user-budget-display" title={money(game.money)}>{money(game.money)}</span></div>
