@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { fetchRoadRoute } from './localGame';
+import { fetchRoadRoute, selectRecommendedUnitIds } from './localGame';
 import { ArrowUpRight, Check, MapPin, Radio, Send, PhoneIncoming, Crosshair, X, ClipboardList, HeartPulse, Shield, Gauge, Clock3, ChevronDown, CarFront, GraduationCap, Coins, Star } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { SERVICE, ServiceIcon, STATUS, money, duration } from './common';
@@ -17,6 +17,8 @@ export const DispatchPanel = ({ game, world, incident, act, busy, onCall, onFocu
   const operationalEstimate=(unit,route)=>route&&!route.error?adjustedRoutePlan(unit,route,'enroute'):route;
   const smartScore=(unit,route)=>{const adjusted=operationalEstimate(unit,route);const doctrineBonus=(incident?.required_vehicle_types||[]).includes(unit.vehicle_type)?900:(incident?.recommended_vehicle_types||[]).includes(unit.vehicle_type)?420:(incident?.support_vehicle_types||[]).includes(unit.vehicle_type)?160:0;return (adjusted?.duration||999999)+(unit.operational_reserve?600:0)+(unit.maintenance_due?240:0)+crewFatigue(game,unit)*1.5+vehicleAccessPenalty(unit,incident,game.conditions)/35-(Math.max(0,Math.min(100,unit.dispatch_priority??50))-50)*2-doctrineBonus;};
   const needed = s => Math.max(0, (incident?.needs[s] || 0) - assigned.filter(u => u.service === s).length);
+  const doctrineTypes = new Set([...(incident?.required_vehicle_types||[]),...(incident?.recommended_vehicle_types||[]),...(incident?.support_vehicle_types||[])]);
+  const doctrineNeeded = unit => doctrineTypes.has(unit.vehicle_type) && !assigned.some(item=>item.vehicle_type===unit.vehicle_type) && !picked.some(id=>id!==unit.id&&game.units.find(item=>item.id===id)?.vehicle_type===unit.vehicle_type);
   const trainingName = id => world.training_catalog?.find(item => item.id === id)?.name || id;
   const vehicleName = id => Object.values(world.vehicle_catalog).flat().find(item => item.id === id)?.name || id;
   const send = async () => {
@@ -34,26 +36,24 @@ export const DispatchPanel = ({ game, world, incident, act, busy, onCall, onFocu
     } finally { setEstimating(false); }
   };
   const estimateRoutes = async (autoSelect=false) => {
-    const request = ++estimateRequest.current;
+    const request=++estimateRequest.current;
     setEstimating(true);
-    const origins = available.filter(u => needed(u.service) && u.land === incident.land && (!autoSelect || u.auto_dispatch!==false));
-    const routes = await Promise.all(origins.map(async unit => {
-      try { return [unit.id, await fetchRoadRoute({lng:unit.lng,lat:unit.lat}, incident.node, game.conditions)]; }
-      catch (error) { return [unit.id, { error: operationalText(error?.message || 'Estimativa indisponível. Tenta novamente.') }]; }
-    }));
-    if (request === estimateRequest.current) {
-      const routeMap=Object.fromEntries(routes);
-      setEstimates(routeMap);
-      if(autoSelect){
-        const chosen=[];
-        Object.entries(incident.needs||{}).forEach(([service,count])=>{
-          const missing=Math.max(0,count-assigned.filter(unit=>unit.service===service).length),reserve=game.dispatch_policy?.reserve_by_service?.[service]||0;
-          const candidates=origins.filter(unit=>unit.service===service&&!routeMap[unit.id]?.error&&routeMap[unit.id].distance/1000<=(unit.max_response_km||game.dispatch_policy?.max_response_km||80)).sort((a,b)=>smartScore(a,routeMap[a.id])-smartScore(b,routeMap[b.id]));
-          chosen.push(...candidates.slice(0,Math.min(missing,Math.max(0,candidates.length-reserve))).map(unit=>unit.id));
-        });
-        setPicked(chosen);
+    try {
+      const autoIds=autoSelect?selectRecommendedUnitIds(game,incident.id,'safe'):[];
+      const origins=available.filter(unit=>unit.land===incident.land&&unit.auto_dispatch!==false&&(autoSelect?autoIds.includes(unit.id):needed(unit.service)));
+      const routes=await Promise.all(origins.map(async unit=>{
+        try{return [unit.id,await fetchRoadRoute({lng:unit.lng,lat:unit.lat},incident.node,game.conditions)];}
+        catch(error){return [unit.id,{error:operationalText(error?.message||'Estimativa indisponível. Tenta novamente.')}];}
+      }));
+      if(request===estimateRequest.current){
+        const routeMap=Object.fromEntries(routes);
+        setEstimates(routeMap);
+        if(autoSelect)setPicked(autoIds.filter(id=>!routeMap[id]?.error));
       }
-      setEstimating(false);
+    } catch(error) {
+      if(request===estimateRequest.current)setEstimates({_error:{error:operationalText(error?.message||'Não foi possível selecionar os meios.')}});
+    } finally {
+      if(request===estimateRequest.current)setEstimating(false);
     }
   };
   return <aside className="dispatch-panel">
@@ -77,14 +77,15 @@ export const DispatchPanel = ({ game, world, incident, act, busy, onCall, onFocu
       {assigned.length > 0 && <div className="assigned-units"><h3>MEIOS MOBILIZADOS</h3>{assigned.map(u => <div key={u.id} data-testid={`assigned-${u.name}`}><VehicleThumbnail unit={u} className="assigned-vehicle-thumbnail" /><b>{u.callsign||u.name}</b><span className="route-distance">{(u.route_distance / 1000).toFixed(1)} km</span><span className={`state-label ${u.status}`}>{['enroute', 'returning'].includes(u.status) ? `${duration(u.travel_total - u.travel)} · ${STATUS[u.status]}` : STATUS[u.status] || 'Estado indisponível'}</span>{u.status==='enroute'&&<button className="unit-recall" onClick={()=>act('recall_unit',{unit_id:u.id})}>Recolher</button>}</div>)}{incident.status === 'onscene' && <div className="resolution-progress" data-testid="resolution-progress"><i style={{ width: `${incident.progress}%` }} /></div>}</div>}
       <div className="units-heading"><h3>Seleciona os meios</h3><span data-testid="available-unit-count">{available.length} disponíveis</span></div>
       {incident.shared_with_alliance && <p className="route-estimate-note" data-testid="shared-alliance-note">Ocorrência partilhada com a rede cooperativa. O prazo operacional recebeu margem adicional.</p>}
-      <button className="route-estimate-action smart-dispatch dispatch-automation" data-testid="smart-select-button" disabled={busy || estimating || !available.some(u => needed(u.service) && u.land === incident.land)} onClick={()=>estimateRoutes(true)}><Gauge size={16} />{estimating ? 'A analisar meios e percursos…' : 'Selecionar viaturas automaticamente'}<ArrowUpRight size={15} /></button>
+      <button className="route-estimate-action smart-dispatch dispatch-automation" data-testid="smart-select-button" disabled={busy || estimating || !available.some(u => u.land === incident.land && (needed(u.service) || doctrineNeeded(u)))} onClick={()=>estimateRoutes(true)}><Gauge size={16} />{estimating ? 'A analisar meios e percursos…' : 'Selecionar viaturas automaticamente'}<ArrowUpRight size={15} /></button>
       {Object.values(estimates).some(route => route.error) && <p className="route-estimate-note route-estimate-error" role="alert">{Object.values(estimates).find(route => route.error).error}</p>}
       <div className="units-scroll">{available.map(u => {
         const selected = picked.includes(u.id);
         const full = picked.filter(id => game.units.find(v => v.id === id)?.service === u.service).length >= needed(u.service);
         const disconnected = u.land !== incident.land;
-        const disabled = disconnected || (!selected && (full || !needed(u.service)));
-        const state = disconnected ? 'Sem ligação' : selected ? 'Selecionada' : !incident.needs[u.service] ? 'Não necessária' : !needed(u.service) || full ? 'Meios suficientes' : u.status === 'patrol' ? 'Em patrulha' : 'Disponível';
+        const specialist=doctrineNeeded(u);
+        const disabled = disconnected || (!selected && (full || !needed(u.service)) && !specialist);
+        const state = disconnected ? 'Sem ligação' : selected ? 'Selecionada' : specialist ? 'Apoio especializado' : !incident.needs[u.service] ? 'Não necessária' : !needed(u.service) || full ? 'Meios suficientes' : u.status === 'patrol' ? 'Em patrulha' : 'Disponível';
         return <button key={u.id} data-testid={`select-unit-${u.name}`} disabled={disabled} aria-pressed={selected} className={`unit-choice ${selected ? 'selected' : ''}`} onClick={() => setPicked(p => selected ? p.filter(id => id !== u.id) : [...p, u.id])}>
           <VehicleThumbnail unit={u} className="dispatch-vehicle-thumbnail" />
           <span className="unit-choice-text"><strong>{u.callsign || u.name}</strong><small title={game.bases.find(b => b.id === u.base_id)?.name}>{u.status==='staged'?'Zona de concentração':game.bases.find(b => b.id === u.base_id)?.name}</small>{estimates[u.id] && !estimates[u.id].error && <span className="unit-road-eta" data-testid={`route-estimate-${u.name}`}>{duration(operationalEstimate(u,estimates[u.id]).duration)} · {(estimates[u.id].distance / 1000).toFixed(1)} km</span>}</span>
