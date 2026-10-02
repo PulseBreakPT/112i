@@ -41,6 +41,7 @@ import './ThemeComponents.css';
 import './VehicleTechnical.css';
 import './ActionStates.css';
 import './DarkMode.css';
+import './GraphiteRefinement.css';
 
 function GameApp() {
   const { game, world, error, busy, act, retry, feedback, clearFeedback } = useGame();
