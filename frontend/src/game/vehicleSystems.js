@@ -6,19 +6,19 @@ const clamp=(value,min=0,max=100)=>Math.max(min,Math.min(max,Number(value)||0));
 const SERVICE_DEFAULTS={
   fire:{
     vehicle_class:'heavy',size_class:'large',speed_multiplier:.88,acceleration:42,maneuverability:45,offroad:45,weather_resistance:82,reliability:84,
-    wear_rate:.0032,fuel_capacity_l:180,fuel_consumption_l_100km:31,preparation_time:32,recommended_response_km:35,max_response_km:80,
+    wear_rate:.0032,fuel_capacity_l:180,fuel_consumption_l_100km:31,operating_cost_per_km:.78,service_life_km:220000,preparation_time:32,recommended_response_km:35,max_response_km:80,
     cargo_capacity:900,patient_capacity:0,detainee_capacity:0,equipment_slots:5,maintenance_base_cost:220,maintenance_duration:150,
     resource_capacity:{water:3000,foam:300,fuel:100},capabilities:['fire-response'],equipment:['rádio TETRA','material de primeira intervenção']
   },
   medical:{
     vehicle_class:'medium',size_class:'medium',speed_multiplier:1.02,acceleration:68,maneuverability:72,offroad:20,weather_resistance:74,reliability:90,
-    wear_rate:.0025,fuel_capacity_l:75,fuel_consumption_l_100km:13,preparation_time:18,recommended_response_km:30,max_response_km:70,
+    wear_rate:.0025,fuel_capacity_l:75,fuel_consumption_l_100km:13,operating_cost_per_km:.42,service_life_km:180000,preparation_time:18,recommended_response_km:30,max_response_km:70,
     cargo_capacity:320,patient_capacity:1,detainee_capacity:0,equipment_slots:4,maintenance_base_cost:170,maintenance_duration:120,
     resource_capacity:{oxygen:100,medical:100,fuel:100},capabilities:['medical-response'],equipment:['oxigénio','DAE','mala de emergência']
   },
   police:{
     vehicle_class:'light',size_class:'medium',speed_multiplier:1.06,acceleration:76,maneuverability:78,offroad:22,weather_resistance:72,reliability:88,
-    wear_rate:.0023,fuel_capacity_l:65,fuel_consumption_l_100km:10,preparation_time:12,recommended_response_km:40,max_response_km:90,
+    wear_rate:.0023,fuel_capacity_l:65,fuel_consumption_l_100km:10,operating_cost_per_km:.34,service_life_km:190000,preparation_time:12,recommended_response_km:40,max_response_km:90,
     cargo_capacity:220,patient_capacity:0,detainee_capacity:2,equipment_slots:4,maintenance_base_cost:150,maintenance_duration:105,
     resource_capacity:{equipment:100,fuel:100},capabilities:['police-response'],equipment:['rádio TETRA','kit de sinalização']
   }
@@ -72,10 +72,13 @@ export function fuelPercentForDistance(unit,distanceMeters,margin=0){
 export function adjustedRoutePlan(unit,plan,status){
   if(!plan?.coordinates?.length||!Number.isFinite(Number(plan.duration)))return plan;
   const speed=Math.max(.55,Math.min(1.8,Number(unit.speed_multiplier)||1));
-  const movingDuration=Math.max(1,Number(plan.duration)/speed);
+  const handlingFactor=1+Math.max(0,60-(Number(unit.maneuverability)||50))*.0018;
+  const accelerationPenalty=Math.min(14,Math.max(0,70-(Number(unit.acceleration)||50))*.18);
+  const movingDuration=Math.max(1,Number(plan.duration)/speed*handlingFactor+accelerationPenalty);
   const prep=['enroute','staging_enroute','base_transfer'].includes(status)?Math.max(0,Number(unit.preparation_time)||0)+Math.max(0,Number(unit.response_delay)||0):0;
   const rawTimes=Array.isArray(plan.times)&&plan.times.length===plan.coordinates.length?plan.times:plan.coordinates.map((_,index)=>Number(plan.duration)*index/Math.max(1,plan.coordinates.length-1));
-  const times=rawTimes.map(value=>prep+Math.max(0,Number(value)||0)/speed);
+  const rawDuration=Math.max(1,Number(plan.duration)||1),scale=movingDuration/rawDuration;
+  const times=rawTimes.map(value=>prep+Math.max(0,Number(value)||0)*scale);
   return {...plan,duration:prep+movingDuration,times};
 }
 
@@ -147,7 +150,7 @@ export function normalizeVehicleUnit(unit,definition,elapsed=0){
   const defaults={
     vehicle_class:spec.vehicle_class,size_class:spec.size_class,speed_multiplier:spec.speed_multiplier,acceleration:spec.acceleration,maneuverability:spec.maneuverability,
     offroad:spec.offroad,weather_resistance:spec.weather_resistance,reliability:spec.reliability,wear_rate:spec.wear_rate,fuel_capacity_l:spec.fuel_capacity_l,
-    fuel_consumption_l_100km:spec.fuel_consumption_l_100km,preparation_time:spec.preparation_time,recommended_response_km:spec.recommended_response_km,
+    fuel_consumption_l_100km:spec.fuel_consumption_l_100km,operating_cost_per_km:spec.operating_cost_per_km,service_life_km:spec.service_life_km,preparation_time:spec.preparation_time,recommended_response_km:spec.recommended_response_km,
     max_response_km:spec.max_response_km,cargo_capacity:spec.cargo_capacity,patient_capacity:spec.patient_capacity,detainee_capacity:spec.detainee_capacity,
     equipment_slots:spec.equipment_slots,equipment_installed:[...(spec.equipment||[])],capabilities:[...(spec.capabilities||[])],required_trainings:[...(spec.required_trainings||[])],
     resource_capacity:{...spec.resource_capacity},maintenance_base_cost:spec.maintenance_base_cost,maintenance_duration:spec.maintenance_duration,
