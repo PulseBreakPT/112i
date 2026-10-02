@@ -31,7 +31,7 @@ test('planned missions start at their scheduled time', () => {
   const center = game.command_centers[0];
   const beforeMoney=game.money;
   game = applyAction(game,'create_planned_mission',{title:'Jogo de teste',scenario:5,delay:300,site_id:'porto-aliados',command_center_id:center.id});
-  expect(game.money).toBe(beforeMoney-250);
+  expect(game.money).toBe(beforeMoney-100);
   const planned = game.planned_missions[0];
   expect(planned.status).toBe('scheduled');
   game = tickGame(game,301);
@@ -164,12 +164,14 @@ test('base stock is consumed when an idle vehicle is resupplied', () => {
   expect(afterBase.supply_reserve.water).toBeLessThan(before);
 });
 
-test('unpaid operating costs create debt instead of disappearing', () => {
+test('operating costs are co-financed instead of creating a debt spiral', () => {
   let game=newGame();
   game.money=0;
   game.next_upkeep=game.elapsed;
   game=tickGame(game,1);
-  expect(game.operating_debt).toBeGreaterThan(0);
+  expect(game.operating_debt).toBe(0);
+  expect(game.money).toBeGreaterThanOrEqual(5000);
+  expect(game.public_funding).toBeGreaterThan(0);
 });
 
 test('seeded simulation state advances deterministically', () => {
@@ -217,13 +219,13 @@ test('vehicle transfers reserve capacity and take time', () => {
   expect(game.units.find(item=>item.id===unit.id).base_id).toBe(target.id);
 });
 
-test('continuity aid is not counted as operational earnings', () => {
+test('protected reserve funding is not counted as operational earnings', () => {
   let game=newGame();
   game.money=0;game.next_upkeep=999999;
-  game.units.forEach(unit=>{unit.status='resting';unit.rest_until=99999;});
   const earned=game.earned;
   game=tickGame(game,1);
-  expect(game.emergency_aid).toBe(1500);
+  expect(game.money).toBeGreaterThanOrEqual(5000);
+  expect(game.public_funding).toBeGreaterThan(0);
   expect(game.earned).toBe(earned);
 });
 
