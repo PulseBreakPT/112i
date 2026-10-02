@@ -8,6 +8,6 @@ export const SERVICE = {
 export const money = n => new Intl.NumberFormat('pt-PT', { maximumFractionDigits: 0 }).format(n) + ' €';
 export const clock = elapsed => { const total = 14 * 3600 + 32 * 60 + Math.floor(elapsed); return [Math.floor(total / 3600) % 24, Math.floor(total / 60) % 60, total % 60].map(n => String(n).padStart(2, '0')).join(':'); };
 export const duration = n => `${Math.floor(Math.max(0, n) / 60).toString().padStart(2, '0')}:${Math.floor(Math.max(0, n) % 60).toString().padStart(2, '0')}`;
-export const STATUS = { waiting: 'A aguardar mobilização', enroute: 'Em deslocação', onscene: 'No local', available: 'Disponível', patrol: 'Em patrulha', staged: 'Em concentração', staging_enroute: 'Para concentração', transporting: 'Em transporte', returning: 'Em regresso', broken: 'Avariada', resting: 'Equipa em descanso', uncrewed: 'Sem equipa' };
+export const STATUS = { waiting: 'A aguardar mobilização', enroute: 'Em deslocação', onscene: 'No local', available: 'Disponível', patrol: 'Em patrulha', staged: 'Em concentração', staging_enroute: 'Para concentração', transporting: 'Em transporte', returning: 'Em regresso', base_transfer: 'Em transferência de base', broken: 'Avariada', resting: 'Equipa em descanso', uncrewed: 'Sem equipa' };
 export const ServiceIcon = ({ service, size = 18, ...props }) => { const Icon = SERVICE[service]?.icon || Shield; return <Icon size={size} {...props} />; };
 export function beep(enabled, frequency = 660) { if (enabled) ambientAudio.beep(frequency); }
