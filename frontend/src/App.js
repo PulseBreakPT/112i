@@ -89,7 +89,7 @@ function GameApp() {
   const closeCall = () => { setCallId(null); setPanel('dispatch'); };
   const focusIncident = () => { setPanel(null); setFocusKey(k => k + 1); };
   const openPanel = value => { setMenuOpen(false); setCentralWidget(null); setPanel(value); if (!isCentral) navigate('/'); };
-  const toggleCentralWidget = value => { setMenuOpen(false); setPanel(null); setCentralWidget(current => current === value ? null : value); };
+  const toggleCentralWidget = value => { setPanel(null); setCentralWidget(current => current === value ? null : value); };
 
   if (!game || !world) return <div className="loading-screen" data-testid="loading-screen"><Radio size={40} /><h1 className="brand-wordmark" aria-label={APP_NAME}>{BRAND_WORD}{' '}<span>{BRAND_NUMBER}</span></h1>{error ? <><p data-testid="loading-error">{error}</p><button data-testid="retry-connection" className="primary-button" onClick={retry}>Voltar a ligar</button></> : <><LoaderCircle className="spinner" size={20} /><p>A estabelecer ligação à central…</p></>}</div>;
   const incident = game.incidents.find(i => i.id === selected);
@@ -113,20 +113,6 @@ function GameApp() {
         <button title="Frota" aria-label="Abrir frota" onClick={() => navigate('/frota')}><CarFront size={17}/><span>Frota</span></button>
         <button title="Funcionários" aria-label="Abrir funcionários" onClick={() => navigate('/funcionarios')}><Users size={17}/><span>Funcionários</span></button>
       </nav>
-      {centralWidget && <aside className="central-glance-panel" aria-label={centralWidget === 'info' ? 'Informação da central' : 'Estatísticas da central'}>
-        <header><span>{centralWidget === 'info' ? 'INFORMAÇÃO DA CENTRAL' : 'ESTATÍSTICAS RÁPIDAS'}</span><button aria-label="Fechar painel" onClick={() => setCentralWidget(null)}><X size={15}/></button></header>
-        {centralWidget === 'info' ? <div className="central-glance-grid">
-          <div><small>CONDIÇÕES</small><strong>{game.conditions?.weather_label || 'Céu limpo'}</strong><span>{game.conditions?.traffic_label || 'Trânsito fluido'}{game.conditions?.night ? ' · Noite' : ''}</span></div>
-          <div><small>OPERADOR</small><strong>Nível {game.level}</strong><span>{game.xp % 200}/200 XP</span></div>
-          <div><small>ORÇAMENTO</small><strong>{money(game.money)}</strong><span>Disponível</span></div>
-          <div><small>COMANDO ATIVO</small><strong>{game.command_centers?.find(center => center.id === game.active_command_center_id)?.name || game.command_centers?.[0]?.name || 'Sem comando'}</strong><span>{game.city}</span></div>
-        </div> : <div className="central-glance-grid">
-          <div><small>OCORRÊNCIAS</small><strong>{game.incidents.length}</strong><span>{waitingIncidents.length} a aguardar</span></div>
-          <div><small>VIATURAS</small><strong>{game.units.filter(unit => unit.status === 'available').length}/{game.units.length}</strong><span>Disponíveis</span></div>
-          <div><small>EFETIVO</small><strong>{(game.personnel || []).filter(person => !person.unit_id && person.status === 'available').length}</strong><span>Elementos livres</span></div>
-          <div><small>CONFIANÇA</small><strong>{game.trust}%</strong><span>{game.bases.length} bases · {(game.facilities || []).length} instalações</span></div>
-        </div>}
-      </aside>}
     </>}
     {menuOpen && <>
       <div className="menu-dismiss" data-testid="menu-dismiss" onClick={() => setMenuOpen(false)} />
@@ -135,8 +121,20 @@ function GameApp() {
         <Sidebar onNavigate={() => setMenuOpen(false)} onHelp={() => { setMenuOpen(false); setHelp(true); }} />
         {isCentral && <div className="menu-context-tools" aria-label="Informação rápida">
           <div className="menu-context-heading">CENTRAL</div>
-          <button className={centralWidget === 'info' ? 'active' : ''} aria-label="Informação da central" onClick={() => toggleCentralWidget('info')}><Info size={16}/><span>Informação</span></button>
-          <button className={centralWidget === 'stats' ? 'active' : ''} aria-label="Estatísticas da central" onClick={() => toggleCentralWidget('stats')}><BarChart3 size={16}/><span>Estatísticas</span></button>
+          <button className={centralWidget === 'info' ? 'active' : ''} aria-label="Informação da central" aria-expanded={centralWidget === 'info'} onClick={() => toggleCentralWidget('info')}><Info size={16}/><span>Informação</span></button>
+          {centralWidget === 'info' && <div className="menu-context-summary" aria-label="Resumo da central">
+            <div><small>Condições</small><strong>{game.conditions?.weather_label || 'Céu limpo'}</strong><span>{game.conditions?.traffic_label || 'Trânsito fluido'}{game.conditions?.night ? ' · Noite' : ''}</span></div>
+            <div><small>Operador</small><strong>Nível {game.level}</strong><span>{game.xp % 200}/200 XP</span></div>
+            <div><small>Orçamento</small><strong>{money(game.money)}</strong><span>Disponível</span></div>
+            <div><small>Comando</small><strong>{game.command_centers?.find(center => center.id === game.active_command_center_id)?.name || game.command_centers?.[0]?.name || 'Sem comando'}</strong><span>{game.city}</span></div>
+          </div>}
+          <button className={centralWidget === 'stats' ? 'active' : ''} aria-label="Estatísticas da central" aria-expanded={centralWidget === 'stats'} onClick={() => toggleCentralWidget('stats')}><BarChart3 size={16}/><span>Estatísticas</span></button>
+          {centralWidget === 'stats' && <div className="menu-context-summary" aria-label="Estatísticas rápidas">
+            <div><small>Ocorrências</small><strong>{game.incidents.length}</strong><span>{waitingIncidents.length} a aguardar</span></div>
+            <div><small>Viaturas</small><strong>{game.units.filter(unit => unit.status === 'available').length}/{game.units.length}</strong><span>Disponíveis</span></div>
+            <div><small>Efetivo</small><strong>{(game.personnel || []).filter(person => !person.unit_id && person.status === 'available').length}</strong><span>Elementos livres</span></div>
+            <div><small>Confiança</small><strong>{game.trust}%</strong><span>{game.bases.length} bases · {(game.facilities || []).length} instalações</span></div>
+          </div>}
           <button data-tone={queueTone} aria-label={`${game.incidents.length} ocorrências, ${waitingIncidents.length} a aguardar mobilização`} onClick={() => openPanel(panel === 'incidents' ? null : 'incidents')}><Bell size={16}/><span>Alertas e ocorrências</span><b>{game.incidents.length}</b></button>
         </div>}
       </div>
