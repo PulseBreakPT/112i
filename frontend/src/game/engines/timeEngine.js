@@ -1,3 +1,5 @@
+import { isSolarNight } from './solarEngine';
+
 export const PORTUGAL_TIME_ZONE = 'Europe/Lisbon';
 
 const asDate = value => {
@@ -41,10 +43,7 @@ export const portugalHour = value => Number(new Intl.DateTimeFormat('en-GB', {
   hourCycle: 'h23',
 }).format(asDate(value)));
 
-export const isPortugalNight = value => {
-  const hour = portugalHour(value);
-  return hour >= 20 || hour < 7;
-};
+export const isPortugalNight = (value, location = null) => isSolarNight(asDate(value), location || { lat: 39.5, lng: -8, land: 'mainland' });
 
 export const legacyRealTime = (savedAt, gameElapsed=0, eventElapsed=gameElapsed) => {
   const anchor = asDate(savedAt).getTime();
