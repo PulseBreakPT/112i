@@ -11,6 +11,7 @@ import { PortugalMap as CityMap } from './game/PortugalMap';
 import { CallModal, HelpModal } from './game/Modals';
 import Management from './game/Management';
 import Operations from './game/Operations';
+import Personnel from './game/Personnel';
 import Reports from './game/Reports';
 import Settings from './game/Settings';
 import Privacy from './game/Privacy';
@@ -90,7 +91,7 @@ function GameApp() {
   const incident = game.incidents.find(i => i.id === selected);
   const waitingIncidents = game.incidents.filter(item => item.status === 'waiting');
   const queueTone = waitingIncidents.some(item => item.priority === 1) ? 'danger' : waitingIncidents.length ? 'warning' : game.incidents.length ? 'active' : 'success';
-  const workspaceName = { '/comando':'Áreas operacionais', '/estrategia':'Estratégia operacional', '/alianca':'Aliança operacional', '/bases': 'Rede de bases', '/frota': 'Frota de emergência', '/operacoes': 'Operações e apoio', '/relatorios': 'Relatório do turno', '/definicoes': 'Definições', '/privacidade': 'Privacidade' }[location.pathname] || 'Setor não encontrado';
+  const workspaceName = { '/comando':'Áreas operacionais', '/estrategia':'Estratégia operacional', '/alianca':'Aliança operacional', '/bases': 'Rede de bases', '/frota': 'Frota de emergência', '/funcionarios': 'Funcionários', '/operacoes': 'Operações e apoio', '/relatorios': 'Relatório do turno', '/definicoes': 'Definições', '/privacidade': 'Privacidade' }[location.pathname] || 'Setor não encontrado';
 
   return <div className={`app-shell immersive-shell minimal-shell distrito-interface dark ${isCentral ? 'central-open' : 'workspace-open'} ${panel && isCentral ? `panel-open panel-${panel}` : ''}`}>
     <main className="world-stage" aria-label="Mapa operacional" inert={!isCentral || menuOpen}>
@@ -126,6 +127,7 @@ function GameApp() {
           <Route path="/alianca" element={<Cooperation game={game} world={world} act={act} busy={busy} />} />
           <Route path="/bases" element={<Management key="bases" game={game} world={world} act={act} busy={busy} mode="bases" />} />
           <Route path="/frota" element={<Management key="fleet" game={game} world={world} act={act} busy={busy} mode="fleet" />} />
+          <Route path="/funcionarios" element={<Personnel game={game} world={world} act={act} busy={busy} />} />
           <Route path="/operacoes" element={<Operations game={game} world={world} act={act} busy={busy} />} />
           <Route path="/relatorios" element={<Reports game={game} />} />
           <Route path="/definicoes" element={<Settings game={game} act={act} sound={sound} setSound={setSound} onSave={save} onHelp={() => setHelp(true)} busy={busy} />} />
