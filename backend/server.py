@@ -385,27 +385,37 @@ async def leaderboard(limit: int = Query(default=25, ge=1, le=100), player_count
 async def online_tick_loop():
     while True:
         try:
-            rooms = db.online_rooms.find({'status': 'active'}, {'_id': 0})
-            async for room in rooms:
-                room_id = room['id']
-                lock = room_locks.setdefault(room_id, asyncio.Lock())
-                if lock.locked():
+            now = utcnow()
+            query = {'status': 'active', '$or': [{'next_tick_at': {'$lte': now}}, {'next_tick_at': {'$exists': False}}]}
+            rooms = db.online_rooms.find(query, {'id': 1, '_id': 0}).limit(100)
+            async for candidate in rooms:
+                room_id = candidate['id']
+                claim_id = str(uuid4())
+                claimed = await db.online_rooms.find_one_and_update(
+                    {'id': room_id, 'status': 'active', '$or': [{'next_tick_at': {'$lte': now}}, {'next_tick_at': {'$exists': False}}]},
+                    {'$set': {'next_tick_at': now + timedelta(seconds=2), 'tick_claim_id': claim_id}},
+                    projection={'_id': 0},
+                    return_document=ReturnDocument.AFTER,
+                )
+                if not claimed:
                     continue
-                async with lock:
-                    latest = await db.online_rooms.find_one({'id': room_id, 'status': 'active'}, {'_id': 0})
-                    if not latest:
-                        continue
-                    game = latest['game']
-                    geo_engine.tick(game, 2)
-                    expected = latest.get('revision', 0)
-                    latest['revision'] = expected + 1
-                    latest['updated_at'] = utcnow()
-                    await db.online_rooms.replace_one({'id': room_id, 'revision': expected}, latest)
+                expires_at = claimed.get('expires_at')
+                if expires_at and expires_at <= now:
+                    await db.online_rooms.update_one({'id': room_id, 'tick_claim_id': claim_id}, {'$set': {'status': 'expired', 'updated_at': now}, '$unset': {'tick_claim_id': ''}})
+                    continue
+                expected = claimed.get('revision', 0)
+                last_tick = claimed.get('last_tick_at')
+                seconds = max(0.1, min(3.0, (now - last_tick).total_seconds())) if isinstance(last_tick, datetime) else 2.0
+                geo_engine.tick(claimed['game'], seconds)
+                claimed['revision'] = expected + 1
+                claimed['updated_at'] = now
+                claimed['last_tick_at'] = now
+                claimed['expires_at'] = expires_at or (now + timedelta(hours=24))
+                claimed.pop('tick_claim_id', None)
+                await db.online_rooms.replace_one({'id': room_id, 'status': 'active', 'revision': expected, 'tick_claim_id': claim_id}, claimed)
         except Exception:
-            # One bad room or transient database error must not stop the simulation loop.
             pass
-        await asyncio.sleep(2)
-
+        await asyncio.sleep(0.5)
 
 app.include_router(api)
 app.add_middleware(
