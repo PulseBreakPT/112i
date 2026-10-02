@@ -133,6 +133,7 @@ const assignedPersonnel=(g,baseId)=>g.personnel?.length?g.personnel.filter(perso
 const trainingPersonnel=(g,baseId)=>g.personnel?.length?g.personnel.filter(person=>person.base_id===baseId&&person.status==='training').length:(g.trainings||[]).filter(t=>t.base_id===baseId&&t.status==='active').reduce((sum,t)=>sum+t.count,0);
 const freePeople=(g,base,training=null)=>(g.personnel||[]).filter(person=>person.base_id===base.id&&!person.unit_id&&person.status==='available'&&(!training||(person.qualifications||[]).includes(training)));
 const freePersonnel=(g,base)=>g.personnel?.length?freePeople(g,base).length:Math.max(0,(base.personnel||0)-assignedPersonnel(g,base.id)-trainingPersonnel(g,base.id));
+const reservedStaff=(g,baseId)=>(g.recruitment_queue||[]).filter(item=>item.base_id===baseId&&item.status==='pending').reduce((sum,item)=>sum+(item.amount||0),0)+g.units.filter(unit=>unit.status==='base_transfer'&&unit.fixed_crew&&unit.transfer_target_base_id===baseId).reduce((sum,unit)=>sum+(unit.personnel_ids?.length||0),0);
 const addPersonnel=(g,base,count)=>{g.personnel=g.personnel||[];const start=g.personnel.length;for(let index=0;index<count;index++)g.personnel.push({id:uid(),name:PERSONNEL_NAMES[(start+index)%PERSONNEL_NAMES.length],service:base.service,base_id:base.id,unit_id:null,status:'available',qualifications:[],fatigue:0,recruited_at:g.elapsed});};
 const assignUnitCrew=(g,unit,definition)=>{if(!g.personnel?.length)return;const base=g.bases.find(item=>item.id===unit.base_id);const candidates=freePeople(g,base,definition.training||null).slice(0,definition.crew);candidates.forEach(person=>{person.unit_id=unit.id;person.status='assigned';});unit.personnel_ids=candidates.map(person=>person.id);unit.crew_assigned=candidates.length;unit.status=candidates.length>=definition.crew?'available':'uncrewed';};
 const operationalFacility=(g,facility)=>facility&&(!facility.operational_at||facility.operational_at<=g.elapsed);
@@ -464,7 +465,7 @@ export function applyAction(input,kind,data={}){
   }
   else if(kind==='recruit_personnel'){
     const base=g.bases.find(b=>b.id===data.base_id);requireValue(base,'Base inválida.');
-    const amount=Math.max(1,Math.min(5,Number(data.amount)||2));requireValue((base.personnel||0)+amount<=(base.staff_capacity||14),'Capacidade de pessoal atingida.');
+    const amount=Math.max(1,Math.min(5,Number(data.amount)||2));requireValue((base.personnel||0)+reservedStaff(g,base.id)+amount<=(base.staff_capacity||14),'Capacidade de pessoal atingida ou já reservada.');
     const price=amount*650;requireValue(g.money>=price,'Orçamento insuficiente.');
     g.money-=price;g.expenses+=price;base.personnel=(base.personnel||0)+amount;addPersonnel(g,base,amount);log(g,`${amount} novos elementos recrutados para ${base.name}.`,'success');
   }
@@ -605,7 +606,7 @@ export function applyAction(input,kind,data={}){
     requireValue(g.units.filter(item=>item.base_id===target.id||item.transfer_target_base_id===target.id).length<(target.capacity||2),'Garagem de destino cheia.');
     const crew=(unit.personnel_ids||[]).map(id=>g.personnel.find(item=>item.id===id)).filter(Boolean),distance=distanceMeters(current,target),fuel=Math.max(1,distance/1000*.42),duration=Math.max(60,Math.min(1800,Math.round(distance/18)));
     requireValue((unit.resources?.fuel??100)>=fuel,'Combustível insuficiente para a transferência.');
-    if(unit.fixed_crew)requireValue((target.personnel||0)+crew.length<=(target.staff_capacity||14),'A base de destino não tem capacidade para a tripulação fixa.');
+    if(unit.fixed_crew)requireValue((target.personnel||0)+reservedStaff(g,target.id)+crew.length<=(target.staff_capacity||14),'A base de destino não tem capacidade disponível para a tripulação fixa.');
     else{crew.forEach(person=>{person.unit_id=null;person.status='available';});unit.personnel_ids=[];unit.crew_assigned=0;}
     if(unit.resources)unit.resources.fuel=Math.max(0,(unit.resources.fuel??100)-fuel);
     unit.status='base_transfer';unit.transfer_from_base_id=current.id;unit.transfer_target_base_id=target.id;unit.transfer_until=g.elapsed+duration;
