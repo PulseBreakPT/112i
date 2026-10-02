@@ -50,6 +50,10 @@ class GameResponse(BaseModel):
     completed: int
     failed: int
     earned: int
+    expenses: int = 0
+    public_funding: int = 0
+    operating_debt: int = 0
+    next_public_funding: float = 600
     next_spawn: float
     sequence: int
     incidents: list[dict[str, Any]]
