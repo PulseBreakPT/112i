@@ -6,33 +6,6 @@ import { toast } from 'sonner';
 import { SERVICE, ServiceIcon, money, STATUS, duration } from './common';
 import { vehicleImage, VehicleThumbnail } from './vehicleMedia';
 import { fetchRoadRoute } from './localGame';
-import { PERSONNEL_ATLAS } from './personnelAtlas';
-
-const PersonnelAvatar = ({ person, size = 42 }) => {
-  const index = Math.max(0, Math.min(99, Number(person?.avatar_index ?? person?.profile_index ?? 0)));
-  const col = index % 10;
-  const row = Math.floor(index / 10);
-  return <span
-    className="personnel-avatar"
-    role="img"
-    aria-label={`Retrato de ${person?.name || 'elemento'}`}
-    style={{
-      width: size,
-      height: size,
-      minWidth: size,
-      display: 'inline-block',
-      flex: '0 0 auto',
-      borderRadius: '50%',
-      backgroundImage: `url(${PERSONNEL_ATLAS})`,
-      backgroundSize: `${size * 10}px ${size * 10}px`,
-      backgroundPosition: `-${col * size}px -${row * size}px`,
-      backgroundRepeat: 'no-repeat',
-      backgroundColor: 'rgba(255,255,255,.06)',
-      boxShadow: '0 0 0 1px rgba(255,255,255,.12)',
-    }}
-  />;
-};
-
 const VehicleArt = ({ service, vehicleType, name }) => {
   const [failed, setFailed] = useState(false);
   const label = name || (service === 'fire' ? 'Viatura dos bombeiros' : service === 'medical' ? 'Viatura médica' : 'Viatura da polícia');
@@ -254,10 +227,10 @@ export default function Management({ game, world, act, busy, mode }) {
             <header><Users size={15} /><div><h3>Tripulação</h3><p>{selectedCrew.length}/{crewLimit} lugares ocupados{requiredTrainingName ? ` · requer ${requiredTrainingName}` : ''}.</p></div></header>
             {!canManageCrew && selectedUnit.status !== 'base_transfer' && <p className="vehicle-command-warning">A gestão da equipa só está disponível com a viatura parada na sua base.</p>}
             <div className="crew-columns">
-              <div><h4>ATRIBUÍDOS</h4><div className="crew-list">{selectedCrew.length ? selectedCrew.map(person => <div className="crew-row" key={person.id}><PersonnelAvatar person={person} /><span><b>{person.name}</b><small>{person.rank || 'Operacional'} · fadiga {Math.round(person.fatigue || 0)}%</small></span><button aria-label={`Remover ${person.name}`} disabled={busy || !canManageCrew} onClick={() => removePerson(person.id)}><UserMinus size={14} /> Remover</button></div>) : <p className="crew-empty">Sem elementos atribuídos.</p>}</div></div>
+              <div><h4>ATRIBUÍDOS</h4><div className="crew-list">{selectedCrew.length ? selectedCrew.map(person => <div className="crew-row" key={person.id}><span><b>{person.name}</b><small>{person.rank || 'Operacional'} · fadiga {Math.round(person.fatigue || 0)}%</small></span><button aria-label={`Remover ${person.name}`} disabled={busy || !canManageCrew} onClick={() => removePerson(person.id)}><UserMinus size={14} /> Remover</button></div>) : <p className="crew-empty">Sem elementos atribuídos.</p>}</div></div>
               <div><h4>DISPONÍVEIS NA BASE</h4><div className="crew-list">{freeBaseCrew.length ? freeBaseCrew.map(person => {
                 const qualified = !requiredTraining || (person.qualifications || []).includes(requiredTraining);
-                return <div className="crew-row" key={person.id}><PersonnelAvatar person={person} /><span><b>{person.name}</b><small>{person.rank || 'Operacional'}{qualified ? ' · disponível' : ` · falta ${requiredTrainingName}`}</small></span><button aria-label={`Atribuir ${person.name}`} disabled={busy || !canManageCrew || selectedCrew.length >= crewLimit || !qualified} onClick={() => assignPerson(person.id)}><UserPlus size={14} /> Atribuir</button></div>;
+                return <div className="crew-row" key={person.id}><span><b>{person.name}</b><small>{person.rank || 'Operacional'}{qualified ? ' · disponível' : ` · falta ${requiredTrainingName}`}</small></span><button aria-label={`Atribuir ${person.name}`} disabled={busy || !canManageCrew || selectedCrew.length >= crewLimit || !qualified} onClick={() => assignPerson(person.id)}><UserPlus size={14} /> Atribuir</button></div>;
               }) : <p className="crew-empty">Não há elementos livres nesta base.</p>}</div></div>
             </div>
           </section>
