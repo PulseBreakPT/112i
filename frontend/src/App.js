@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { HashRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
-import { Radio, LoaderCircle, X, Menu, PanelsTopLeft, Info, BarChart3, Bell, Building2, CarFront, Users } from 'lucide-react';
+import { Radio, LoaderCircle, X, Menu, PanelsTopLeft, Info, BarChart3, Building2, CarFront, Users } from 'lucide-react';
 import { Toaster, toast } from './components/ui/sonner';
 import { useGame } from './game/useGame';
 import { Sidebar, Footer } from './game/Shell';
@@ -98,14 +98,23 @@ function GameApp() {
   const workspaceMeta = { '/gestao':['GESTÃO','Gestão'], '/comando':['GESTÃO','Comandos'], '/bases':['GESTÃO','Bases'], '/frota':['GESTÃO','Frota'], '/funcionarios':['GESTÃO','Funcionários'], '/infraestruturas':['GESTÃO','Infraestruturas'], '/operacoes':['OPERAÇÕES','Operações'], '/estrategia':['ESTRATÉGIA','Planeamento'], '/alianca':['ALIANÇA','Aliança operacional'], '/relatorios':['RELATÓRIOS','Desempenho'], '/carreira':['PERFIL','Carreira'], '/definicoes':['SISTEMA','Definições'], '/privacidade':['SISTEMA','Privacidade'] }[location.pathname] || ['SISTEMA','Setor não encontrado'];
   const [workspaceSection, workspaceName] = workspaceMeta;
 
-  return <div className={`app-shell immersive-shell minimal-shell distrito-interface dark ${isCentral ? 'central-open' : 'workspace-open'} ${panel && isCentral ? `panel-open panel-${panel}` : ''}`}>
+  return <div className={`app-shell immersive-shell minimal-shell distrito-interface dark ${isCentral ? 'central-open' : 'workspace-open'} ${panel && isCentral ? `panel-open panel-${panel}` : ''} ${menuOpen ? 'menu-open' : ''}`}>
     <main className="world-stage" aria-label="Mapa operacional" inert={!isCentral || menuOpen}>
-      <CityMap world={world} game={game} selected={selected} onSelect={selectIncident} onCall={call} focusKey={focusKey} active={isCentral && !menuOpen} />
+      <CityMap world={world} game={game} selected={selected} onSelect={selectIncident} focusKey={focusKey} active={isCentral && !menuOpen} />
     </main>
     <GameHUD game={game} act={act} sound={sound} setSound={setSound} onSave={save} error={error} />
     <div className="menu-launcher">
       <button className={menuOpen ? 'active' : ''} data-testid="game-menu-toggle" aria-label={menuOpen ? 'Fechar menu do jogo' : 'Abrir menu do jogo'} aria-expanded={menuOpen} aria-controls="game-menu" onClick={() => { setMenuOpen(value => !value); setPanel(null); setCentralWidget(null); }}>{menuOpen ? <X size={17} /> : <Menu size={17} />}<span>Menu</span></button>
     </div>
+    {isCentral && <button
+      className={`central-incidents-launcher ${panel === 'incidents' ? 'active' : ''}`}
+      data-tone={queueTone}
+      data-testid="central-incidents-button"
+      aria-label={`${game.incidents.length} ocorrências, ${waitingIncidents.length} a aguardar mobilização — abrir fila`}
+      aria-expanded={panel === 'incidents'}
+      aria-controls="incident-drawer"
+      onClick={() => openPanel(panel === 'incidents' ? null : 'incidents')}
+    ><Radio size={18}/><span>Ocorrências</span><b>{game.incidents.length}</b></button>}
     {isCentral && <>
       <nav className="central-quick-rail central-management-rail" aria-label="Gestão rápida">
         <button title="Gestão" aria-label="Abrir gestão" onClick={() => navigate('/gestao')}><PanelsTopLeft size={17}/><span>Gestão</span></button>
@@ -135,7 +144,6 @@ function GameApp() {
             <div><small>Efetivo</small><strong>{(game.personnel || []).filter(person => !person.unit_id && person.status === 'available').length}</strong><span>Elementos livres</span></div>
             <div><small>Confiança</small><strong>{game.trust}%</strong><span>{game.bases.length} bases · {(game.facilities || []).length} instalações</span></div>
           </div>}
-          <button data-tone={queueTone} aria-label={`${game.incidents.length} ocorrências, ${waitingIncidents.length} a aguardar mobilização`} onClick={() => openPanel(panel === 'incidents' ? null : 'incidents')}><Bell size={16}/><span>Alertas e ocorrências</span><b>{game.incidents.length}</b></button>
         </div>}
       </div>
     </>}
