@@ -138,6 +138,30 @@ const freePersonnel=(g,base)=>g.personnel?.length?freePeople(g,base).length:Math
 const reservedStaff=(g,baseId)=>(g.recruitment_queue||[]).filter(item=>item.base_id===baseId&&item.status==='pending').reduce((sum,item)=>sum+(item.amount||0),0)+g.units.filter(unit=>unit.status==='base_transfer'&&unit.fixed_crew&&unit.transfer_target_base_id===baseId).reduce((sum,unit)=>sum+(unit.personnel_ids?.length||0),0);
 const addPersonnel=(g,base,count)=>{g.personnel=g.personnel||[];const start=g.personnel.length;for(let index=0;index<count;index++)g.personnel.push({id:uid(),name:PERSONNEL_NAMES[(start+index)%PERSONNEL_NAMES.length],service:base.service,base_id:base.id,unit_id:null,status:'available',qualifications:[],fatigue:0,recruited_at:g.elapsed});};
 const assignUnitCrew=(g,unit,definition)=>{if(!g.personnel?.length)return;const base=g.bases.find(item=>item.id===unit.base_id);const candidates=freePeople(g,base,definition.training||null).slice(0,definition.crew);candidates.forEach(person=>{person.unit_id=unit.id;person.status='assigned';});unit.personnel_ids=candidates.map(person=>person.id);unit.crew_assigned=candidates.length;unit.status=candidates.length>=definition.crew?'available':'uncrewed';};
+const completeUnitTransfer=(g,unit)=>{
+  const target=g.bases.find(base=>base.id===unit.transfer_target_base_id),origin=g.bases.find(base=>base.id===unit.transfer_from_base_id);
+  const crew=(unit.personnel_ids||[]).map(id=>g.personnel.find(person=>person.id===id)).filter(Boolean);
+  if(target){
+    if(unit.fixed_crew){
+      crew.forEach(person=>{person.base_id=target.id;person.unit_id=unit.id;person.status='assigned';});
+      if(origin)origin.personnel=Math.max(0,(origin.personnel||0)-crew.length);
+      target.personnel=(target.personnel||0)+crew.length;
+    }else{
+      crew.forEach(person=>{person.unit_id=null;person.status='available';});
+      unit.personnel_ids=[];unit.crew_assigned=0;
+    }
+    unit.base_id=target.id;unit.node=target.node;unit.lng=target.lng;unit.lat=target.lat;unit.x=target.lng;unit.y=target.lat;unit.land=target.land;
+    if(!unit.fixed_crew)assignUnitCrew(g,unit,vehicleDefinition(unit.service,unit.vehicle_type));
+    else unit.status=(unit.crew_assigned||0)>=(unit.crew_required||1)?'available':'uncrewed';
+    log(g,unit.name+' concluiu a transferência para '+target.name+'.','success');
+  }else if(origin){
+    unit.base_id=origin.id;unit.node=origin.node;unit.lng=origin.lng;unit.lat=origin.lat;unit.x=origin.lng;unit.y=origin.lat;unit.land=origin.land;
+    unit.status=(unit.crew_assigned||0)>=(unit.crew_required||1)?'available':'uncrewed';
+    log(g,unit.name+' regressou à base de origem porque o destino deixou de estar disponível.','alert');
+  }else unit.status='uncrewed';
+  unit.route=[];unit.route_times=[];unit.travel=0;unit.travel_total=0;unit.route_distance=0;delete unit.destination;
+  delete unit.transfer_target_base_id;delete unit.transfer_from_base_id;delete unit.transfer_until;
+};
 const operationalFacility=(g,facility)=>facility&&(!facility.operational_at||facility.operational_at<=g.elapsed);
 const makeFacility=(type,point)=>({id:uid(),type,node:point.id,name:`${FACILITY_CATALOG[type].name} · ${point.name}`,city:point.city,land:point.land,lng:point.lng,lat:point.lat,level:1,capacity:FACILITY_CATALOG[type].capacity,specialties:type==='hospital'?['urgency']:[],specialty_capacity:type==='hospital'?{urgency:FACILITY_CATALOG[type].capacity}:{}});
 const vehicleDefinition=(service,type)=>VEHICLE_CATALOG[service]?.find(v=>v.id===type)||VEHICLE_CATALOG[service]?.[0];
@@ -299,18 +323,7 @@ export function tickGame(input,seconds){
     log(g,`${waveType}: cadeia de ocorrências prevista pela central.`,'alert');
   }
   g.units.forEach(u=>{
-    if(u.status==='base_transfer'&&g.elapsed>=u.transfer_until){
-      const target=g.bases.find(base=>base.id===u.transfer_target_base_id),origin=g.bases.find(base=>base.id===u.transfer_from_base_id);
-      if(target){
-        const crew=(u.personnel_ids||[]).map(id=>g.personnel.find(person=>person.id===id)).filter(Boolean);
-        if(u.fixed_crew){crew.forEach(person=>{person.base_id=target.id;person.unit_id=u.id;person.status='assigned';});if(origin)origin.personnel=Math.max(0,(origin.personnel||0)-crew.length);target.personnel=(target.personnel||0)+crew.length;}
-        u.base_id=target.id;u.node=target.node;u.lng=target.lng;u.lat=target.lat;u.x=target.lng;u.y=target.lat;u.land=target.land;
-        if(!u.fixed_crew){u.personnel_ids=[];u.crew_assigned=0;assignUnitCrew(g,u,vehicleDefinition(u.service,u.vehicle_type));}
-        else u.status=(u.crew_assigned||0)>=(u.crew_required||1)?'available':'uncrewed';
-        log(g,u.name+' concluiu a transferência para '+target.name+'.','success');
-      }else u.status='available';
-      delete u.transfer_target_base_id;delete u.transfer_from_base_id;delete u.transfer_until;return;
-    }
+    if(u.status==='base_transfer'&&!u.route?.length&&g.elapsed>=u.transfer_until){completeUnitTransfer(g,u);return;}
     if(u.status==='transporting'&&!u.route?.length&&u.transport_until&&g.elapsed>=u.transport_until){
       const facility=g.facilities.find(f=>f.id===u.transport_facility_id);
       if(u.transport_kind==='patient'){const patient=g.patients.find(p=>p.id===u.task_id);if(patient){patient.status='admitted';patient.specialty_matched=facility?.specialties?.includes(patient.specialty)||false;patient.needs_specialist_transfer=!patient.specialty_matched&&patient.severity>=3;patient.admitted_at=g.elapsed;patient.discharge_at=g.elapsed+(patient.specialty_matched?240:360)+patient.severity*120;if(!patient.specialty_matched&&patient.severity>=2)g.trust=Math.max(0,g.trust-1);g.operations_metrics.transported++;log(g,`Vítima admitida em ${facility?.name||'hospital'}.`,'success');}}
@@ -321,11 +334,12 @@ export function tickGame(input,seconds){
     if(u.status==='broken'&&g.elapsed>=u.repair_until){const base=g.bases.find(b=>b.id===u.base_id);u.status='available';u.node=base.node;u.lng=base.lng;u.lat=base.lat;u.condition=75;log(g,`${u.name} reparada e novamente disponível.`,'success');return;}
     if(u.status==='resting'&&g.elapsed>=u.rest_until){u.status='available';u.fatigue=0;(u.personnel_ids||[]).forEach(personId=>{const person=g.personnel.find(item=>item.id===personId);if(person)person.fatigue=0;});log(g,`Tripulação da ${u.name} terminou o descanso.`);return;}
     if(['available','staged','patrol','offshift','uncrewed'].includes(u.status)){const offDuty=['offshift','uncrewed'].includes(u.status);u.fatigue=Math.max(0,(u.fatigue||0)-dt/(offDuty?60:120));(u.personnel_ids||[]).forEach(personId=>{const person=g.personnel.find(item=>item.id===personId);if(person)person.fatigue=Math.max(0,(person.fatigue||0)-dt/(offDuty?80:160));});}
-    if(!['enroute','returning','transporting','patrol','staging_enroute'].includes(u.status))return;
+    if(!['enroute','returning','transporting','patrol','staging_enroute','base_transfer'].includes(u.status))return;
     u.travel=Math.min(u.travel_total,u.travel+dt);locate(u);
     if(u.status==='enroute'&&(u.condition||100)<45&&gameRandom(g)<dt/900){u.status='broken';u.repair_until=g.elapsed+120;u.incident_id=null;u.route=[];u.route_times=[];const cost=300;payCost(g,cost,{label:'reparação de avaria',log});log(g,`Avaria na ${u.name}. Reparação iniciada (-${cost} €).`,'alert');return;}
     if(u.travel<u.travel_total)return;u.node=u.destination;
-    if(u.status==='returning'){if((u.fatigue||0)>=70){u.status='resting';u.rest_until=g.elapsed+90;}else u.status='available';u.incident_id=null;u.route=[];u.route_times=[];}
+    if(u.status==='base_transfer'){completeUnitTransfer(g,u);}
+    else if(u.status==='returning'){if((u.fatigue||0)>=70){u.status='resting';u.rest_until=g.elapsed+90;}else u.status='available';u.incident_id=null;u.route=[];u.route_times=[];}
     else if(u.status==='staging_enroute'){u.status='staged';u.staging_area_id=u.destination;u.route=[];u.route_times=[];const staging=(g.staging_areas||[]).find(item=>item.id===u.destination);if(staging){u.node=staging.node;u.lng=staging.lng;u.lat=staging.lat;}log(g,`${u.name} posicionada na zona de concentração.`,'success');}
     else if(u.status==='transporting'){
       if(u.transport_phase==='pickup'){u.transport_phase='delivery';startRoute(u,u.transport_delivery_plan,'transporting',u.transport_facility_node);log(g,`${u.name} recolheu ${u.transport_kind==='patient'?'a vítima':u.transport_kind==='transfer'?'o doente crítico':'o detido'} e segue para a instalação.`);}
@@ -596,19 +610,39 @@ export function applyAction(input,kind,data={}){
   else if(kind==='rest_unit'){
     const unit=g.units.find(item=>item.id===data.unit_id);requireValue(unit&&['available','staged'].includes(unit.status),'A equipa tem de estar disponível para entrar em descanso.');unit.status='resting';unit.rest_until=g.elapsed+Math.max(90,Math.round((unit.fatigue||30)*2));log(g,`Equipa da ${unit.name} entrou em descanso operacional.`);
   }
+  else if(kind==='assign_unit_personnel'){
+    const unit=g.units.find(item=>item.id===data.unit_id),person=g.personnel.find(item=>item.id===data.person_id),base=unit&&g.bases.find(item=>item.id===unit.base_id);
+    requireValue(unit&&person&&base&&person.service===unit.service&&person.base_id===base.id,'Elemento incompatível com esta viatura.');
+    requireValue(['available','uncrewed'].includes(unit.status)&&unit.node===base.node,'A viatura tem de estar parada na base para alterar a equipa.');
+    requireValue(!person.unit_id&&person.status==='available','Este elemento não está disponível.');
+    const definition=vehicleDefinition(unit.service,unit.vehicle_type),training=definition.training||vehicleTraining(definition.id),limit=Math.max(unit.crew_required||1,unit.max_crew||unit.crew_required||1);
+    requireValue((unit.personnel_ids||[]).length<limit,'A viatura já atingiu a lotação definida.');
+    if(training)requireValue((person.qualifications||[]).includes(training),'Este elemento não possui a formação exigida para esta viatura.');
+    person.unit_id=unit.id;person.status='assigned';unit.personnel_ids=[...(unit.personnel_ids||[]),person.id];unit.crew_assigned=unit.personnel_ids.length;
+    unit.status=unit.crew_assigned>=(unit.crew_required||1)?'available':'uncrewed';log(g,person.name+' atribuído à '+(unit.callsign||unit.name)+'.','success');
+  }
+  else if(kind==='remove_unit_personnel'){
+    const unit=g.units.find(item=>item.id===data.unit_id),person=g.personnel.find(item=>item.id===data.person_id),base=unit&&g.bases.find(item=>item.id===unit.base_id);
+    requireValue(unit&&person&&base&&person.unit_id===unit.id,'Este elemento não pertence à equipa da viatura.');
+    requireValue(['available','uncrewed'].includes(unit.status)&&unit.node===base.node,'A viatura tem de estar parada na base para alterar a equipa.');
+    person.unit_id=null;person.status='available';unit.personnel_ids=(unit.personnel_ids||[]).filter(id=>id!==person.id);unit.crew_assigned=unit.personnel_ids.length;
+    unit.status=unit.crew_assigned>=(unit.crew_required||1)?'available':'uncrewed';log(g,person.name+' removido da '+(unit.callsign||unit.name)+'.');
+  }
   else if(kind==='transfer_unit'){
     const unit=g.units.find(item=>item.id===data.unit_id),target=g.bases.find(item=>item.id===data.base_id),current=unit&&g.bases.find(item=>item.id===unit.base_id);
     requireValue(unit&&target&&current&&unit.service===target.service&&target.id!==current.id,'Seleciona uma base de destino compatível.');
     requireValue(unit.status==='available'&&unit.node===current.node,'A viatura tem de estar disponível na base de origem.');
+    requireValue(target.enabled!==false&&(!target.operational_at||target.operational_at<=g.elapsed),'A base de destino ainda não está operacional.');
     requireValue(current.land===target.land,'A transferência entre regiões insulares/continente requer logística externa não disponível.');
     requireValue(g.units.filter(item=>item.base_id===target.id||item.transfer_target_base_id===target.id).length<(target.capacity||2),'Garagem de destino cheia.');
-    const crew=(unit.personnel_ids||[]).map(id=>g.personnel.find(item=>item.id===id)).filter(Boolean),distance=distanceMeters(current,target),fuel=Math.max(1,distance/1000*.42),duration=Math.max(60,Math.min(1800,Math.round(distance/18)));
+    const crew=(unit.personnel_ids||[]).map(id=>g.personnel.find(item=>item.id===id)).filter(Boolean),plan=data.route,roadReady=plan?.coordinates?.length>1&&plan?.times?.length===plan.coordinates.length&&Number.isFinite(Number(plan.distance))&&Number.isFinite(Number(plan.duration));
+    const distance=roadReady?Math.max(0,Number(plan.distance)):distanceMeters(current,target),duration=roadReady?Math.max(1,Number(plan.duration)):Math.max(60,Math.min(1800,Math.round(distance/18))),fuel=Math.max(.2,distance/1000*.42);
     requireValue((unit.resources?.fuel??100)>=fuel,'Combustível insuficiente para a transferência.');
     if(unit.fixed_crew)requireValue((target.personnel||0)+reservedStaff(g,target.id)+crew.length<=(target.staff_capacity||14),'A base de destino não tem capacidade disponível para a tripulação fixa.');
-    else{crew.forEach(person=>{person.unit_id=null;person.status='available';});unit.personnel_ids=[];unit.crew_assigned=0;}
-    if(unit.resources)unit.resources.fuel=Math.max(0,(unit.resources.fuel??100)-fuel);
-    unit.status='base_transfer';unit.transfer_from_base_id=current.id;unit.transfer_target_base_id=target.id;unit.transfer_until=g.elapsed+duration;
-    log(g,'Transferência de '+unit.name+' para '+target.name+' iniciada · '+Math.ceil(duration/60)+' min.','success');
+    unit.transfer_from_base_id=current.id;unit.transfer_target_base_id=target.id;unit.transfer_until=g.elapsed+duration;
+    if(roadReady)startRoute(unit,plan,'base_transfer',target.node);
+    else{if(unit.resources)unit.resources.fuel=Math.max(0,(unit.resources.fuel??100)-fuel);unit.status='base_transfer';unit.route_distance=distance;unit.travel=0;unit.travel_total=duration;}
+    log(g,'Transferência de '+(unit.callsign||unit.name)+' para '+target.name+' iniciada · '+(distance/1000).toFixed(1)+' km · '+Math.ceil(duration/60)+' min.','success');
   }
   else if(kind==='new_incident'){refreshProgression(g);requireValue(g.incidents.length<g.progression.mission_cap,`Limite de ${g.progression.mission_cap} ocorrências ativas atingido.`);spawn(g);}
   else if(kind!=='save'&&!applyAdvancedAction(g,kind,data,log))throw new Error('Ação desconhecida.');
