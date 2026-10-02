@@ -37,15 +37,20 @@ export const MISSION_CATEGORIES = {
 
 const VEHICLE_TRAINING = {
   'wildfire-unit':'wildfire',
+  'light-wildfire':'wildfire',
   tanker:'wildfire',
   'heavy-rescue':'rescue',
   'command-unit':'command',
   'hazmat-unit':'hazmat',
   vmer:'advanced-care',
+  siv:'advanced-care',
+  umipe:'psychology',
+  tip:'pediatric-transport',
   'medical-helicopter':'aeromedical',
   'mass-casualty-unit':'triage',
   'canine-unit':'canine',
   'traffic-unit':'traffic',
+  'investigation-unit':'investigation',
   'prisoner-van':'custody',
   'riot-unit':'public-order',
   'tactical-unit':'public-order',
@@ -95,6 +100,7 @@ function requirementSets(definition,scenario,category,rarity){
   if(category==='wildfire'){
     if(rarity>=2)mandatory.push('wildfire-unit');else recommended.push('wildfire-unit');
     recommended.push('tanker');
+    support.push('light-wildfire');
     if(rarity>=5)mandatory.push('command-unit');else if(rarity>=3)recommended.push('command-unit');
   }
   if(category==='hazmat'){
@@ -107,7 +113,7 @@ function requirementSets(definition,scenario,category,rarity){
       if(rarity>=4||(definition.vehicle||[]).includes('heavy-rescue'))mandatory.push('heavy-rescue');else recommended.push('heavy-rescue');
     }
     recommended.push('traffic-unit');
-    if((scenario.needs?.medical||0)>0)recommended.push(rarity>=4?'vmer':'ambulance');
+    if((scenario.needs?.medical||0)>0)recommended.push(rarity>=4?'vmer':rarity>=2?'siv':'ambulance');
     if(rarity>=5)recommended.push('command-unit');
   }
   if(category==='rescue'){
@@ -121,9 +127,12 @@ function requirementSets(definition,scenario,category,rarity){
   }
   if(category==='medical'){
     mandatory.push('ambulance');
+    if(rarity>=2)recommended.push('siv');
     if(has(text,['inconsciente','toracica','cardiorrespiratoria','pediatrica grave','queimadura','parto','avc','enfarte'])){
       if(rarity>=4||(definition.vehicle||[]).includes('vmer'))mandatory.push('vmer');else recommended.push('vmer');
     }
+    if(has(text,['psicolog','traumatico']))recommended.push('umipe');
+    if(has(text,['pediatr','neonatal']))support.push('tip');
     if(rarity>=5)mandatory.push('mass-casualty-unit');else if(rarity>=4)recommended.push('mass-casualty-unit');
     if(rarity>=5)support.push('medical-helicopter');
   }
@@ -134,6 +143,7 @@ function requirementSets(definition,scenario,category,rarity){
   if(category==='crime'){
     mandatory.push('patrol');
     if(has(text,['mao armada','refem','sequestro','barricad','alto risco']))mandatory.push('tactical-unit');
+    if(has(text,['investigacao','cena de crime']))recommended.push('investigation-unit');
     if((definition.prisoners?.[1]||0)>0)recommended.push('prisoner-van');
   }
   if(category==='public_order'){

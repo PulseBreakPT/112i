@@ -41,16 +41,16 @@ export const SPECIALIZATIONS = {
 
 const RAW_VEHICLE_CATALOG = {
   fire: [
-    { id: 'fire-engine', name: 'VFCI', level: 1, price: 5000, crew: 5 },
-    { id: 'ladder', name: 'Auto-Escada', level: 2, price: 8500, crew: 3, extension: 'aerial' },
-    { id: 'wildfire-unit', name: 'VLCI', level: 2, price: 7000, crew: 5, extension: 'wildfire' },
-    { id: 'hazmat-unit', name: 'Matérias Perigosas', level: 3, price: 11000, crew: 4, extension: 'hazmat', training: 'hazmat' },
+    { id: 'fire-engine', name: 'VUCI · Combate Urbano', level: 1, price: 5000, crew: 5 },
+    { id: 'ladder', name: 'VE · Auto-Escada', level: 2, price: 8500, crew: 3, extension: 'aerial' },
+    { id: 'wildfire-unit', name: 'VFCI · Combate Florestal', level: 2, price: 7000, crew: 5, extension: 'wildfire', training: 'wildfire' },
+    { id: 'hazmat-unit', name: 'VECI · Risco Industrial', level: 3, price: 11000, crew: 4, extension: 'hazmat', training: 'hazmat' },
     ...NEW_VEHICLES.fire,
   ],
   medical: [
-    { id: 'ambulance', name: 'ABSC', level: 1, price: 4000, crew: 2 },
+    { id: 'ambulance', name: 'AEM / ABSC', level: 1, price: 4000, crew: 2 },
     { id: 'vmer', name: 'VMER', level: 2, price: 9000, crew: 2, extension: 'advanced-care', training: 'advanced-care' },
-    { id: 'mass-casualty-unit', name: 'Posto Médico Avançado', level: 4, price: 14000, crew: 6, extension: 'mass-casualty', training: 'triage' },
+    { id: 'mass-casualty-unit', name: 'VIC · Intervenção em Catástrofe', level: 4, price: 14000, crew: 6, extension: 'mass-casualty', training: 'triage' },
     ...NEW_VEHICLES.medical,
   ],
   police: [

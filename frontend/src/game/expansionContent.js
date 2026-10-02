@@ -1,18 +1,23 @@
 export const NEW_VEHICLES = {
   fire: [
-    { id:'command-unit', name:'Veículo de Comando', level:2, price:7800, crew:3 },
-    { id:'tanker', name:'Veículo Tanque', level:2, price:8200, crew:3 },
-    { id:'heavy-rescue', name:'Veículo de Desencarceramento', level:3, price:9800, crew:5 },
-    { id:'aerial-platform', name:'Plataforma Elevatória', level:3, price:11500, crew:3, extension:'aerial' },
+    { id:'command-unit', name:'VCOT · Comando Tático', level:2, price:7800, crew:3, training:'command' },
+    { id:'tanker', name:'VTTF · Tanque Tático Florestal', level:2, price:8200, crew:3, extension:'wildfire', training:'wildfire' },
+    { id:'light-wildfire', name:'VLCI · Combate Ligeiro', level:2, price:6200, crew:3, extension:'wildfire', training:'wildfire' },
+    { id:'heavy-rescue', name:'VSAT · Salvamento e Desencarceramento', level:3, price:9800, crew:5, training:'rescue' },
+    { id:'aerial-platform', name:'VE · Plataforma Elevatória', level:3, price:11500, crew:3, extension:'aerial' },
   ],
   medical: [
     { id:'patient-transport', name:'Ambulância de Transporte', level:1, price:3500, crew:2 },
-    { id:'medical-motorcycle', name:'Motociclo de Emergência', level:2, price:5200, crew:1, extension:'advanced-care', training:'advanced-care' },
-    { id:'medical-helicopter', name:'Helicóptero de Emergência Médica', level:4, price:18000, crew:4, extension:'advanced-care', training:'advanced-care' },
+    { id:'siv', name:'SIV · Suporte Imediato de Vida', level:2, price:7600, crew:2, extension:'advanced-care', training:'advanced-care' },
+    { id:'medical-motorcycle', name:'MEM · Motociclo de Emergência Médica', level:2, price:5200, crew:1, extension:'advanced-care', training:'advanced-care' },
+    { id:'umipe', name:'UMIPE · Intervenção Psicológica', level:3, price:8400, crew:2, training:'psychology' },
+    { id:'tip', name:'TIP · Transporte Pediátrico', level:3, price:9600, crew:3, training:'pediatric-transport' },
+    { id:'medical-helicopter', name:'HEM · Helicóptero de Emergência Médica', level:4, price:18000, crew:4, extension:'advanced-care', training:'aeromedical' },
   ],
   police: [
-    { id:'traffic-unit', name:'Unidade de Trânsito', level:1, price:4200, crew:2 },
-    { id:'prisoner-van', name:'Carrinha de Transporte de Detidos', level:2, price:6200, crew:3 },
+    { id:'traffic-unit', name:'Unidade de Trânsito', level:1, price:4200, crew:2, training:'traffic' },
+    { id:'investigation-unit', name:'Investigação Criminal', level:2, price:5400, crew:2, training:'investigation' },
+    { id:'prisoner-van', name:'Transporte de Detidos', level:2, price:6200, crew:3, training:'custody' },
     { id:'tactical-unit', name:'Unidade Tática', level:3, price:12000, crew:6, extension:'public-order', training:'public-order' },
   ],
 };
@@ -96,14 +101,14 @@ const VEHICLES = {
   },
   medical: {
     1: [],
-    2: ['patient-transport','medical-motorcycle','vmer'],
-    3: ['vmer','medical-motorcycle','mass-casualty-unit'],
+    2: ['patient-transport','siv','medical-motorcycle','vmer'],
+    3: ['siv','vmer','umipe','tip','mass-casualty-unit'],
     4: ['medical-helicopter','mass-casualty-unit','vmer'],
   },
   police: {
     1: [],
-    2: ['traffic-unit','prisoner-van','canine-unit'],
-    3: ['riot-unit','tactical-unit','canine-unit'],
+    2: ['traffic-unit','investigation-unit','prisoner-van','canine-unit'],
+    3: ['riot-unit','tactical-unit','canine-unit','investigation-unit'],
     4: ['tactical-unit','riot-unit','prisoner-van'],
   },
   multi: {
@@ -116,10 +121,13 @@ const VEHICLES = {
 
 const EXTENSION_FOR = {
   'wildfire-unit':'wildfire',
+  'light-wildfire':'wildfire',
+  tanker:'wildfire',
   ladder:'aerial',
   'aerial-platform':'aerial',
   'hazmat-unit':'hazmat',
   vmer:'advanced-care',
+  siv:'advanced-care',
   'medical-motorcycle':'advanced-care',
   'medical-helicopter':'advanced-care',
   'mass-casualty-unit':'mass-casualty',

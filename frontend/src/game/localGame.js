@@ -36,6 +36,8 @@ const TRAINING_CATALOG = [
   {id:'advanced-care',name:'Suporte avançado de vida',service:'medical',duration:360,cost:800},
   {id:'triage',name:'Triagem e catástrofe',service:'medical',duration:480,cost:900},
   {id:'aeromedical',name:'Evacuação aeromédica',service:'medical',duration:540,cost:1100},
+  {id:'psychology',name:'Intervenção psicológica de emergência',service:'medical',duration:420,cost:760},
+  {id:'pediatric-transport',name:'Transporte pediátrico crítico',service:'medical',duration:480,cost:900},
   {id:'canine',name:'Unidade cinotécnica',service:'police',duration:360,cost:650},
   {id:'traffic',name:'Trânsito e cortes de via',service:'police',duration:300,cost:550},
   {id:'custody',name:'Transporte de detidos',service:'police',duration:300,cost:500},
