@@ -1,4 +1,4 @@
-import { applyAction, newGame, tickGame } from './localGame';
+import { applyAction, newGame, tickGame, selectRecommendedUnitIds } from './localGame';
 import { eligibleMissions, progressionSnapshot } from './progression';
 
 test('new careers start with one command center and all resources assigned to it', () => {
@@ -125,4 +125,49 @@ test('custom coordinate POIs are accepted and preserved', () => {
   let game=newGame();const center=game.command_centers[0];
   game=applyAction(game,'create_player_poi',{name:'PDI Faro',type:'stadium',custom:true,lng:-7.93,lat:37.02,city:'Faro',command_center_id:center.id});
   expect(game.player_pois[0]).toMatchObject({name:'PDI Faro',lng:-7.93,lat:37.02,city:'Faro'});
+});
+
+
+test('triage and alliance sharing do not extend the response deadline', () => {
+  let game=newGame();
+  const incident=game.incidents[0],deadline=incident.response_deadline;
+  game=applyAction(game,'answer',{incident_id:incident.id,choice:game.incidents[0].scenario===0?0:0});
+  expect(game.incidents.find(item=>item.id===incident.id).response_deadline).toBe(deadline);
+  game=applyAction(game,'share_incident_to_alliance',{incident_id:incident.id});
+  expect(game.incidents.find(item=>item.id===incident.id).response_deadline).toBe(deadline);
+});
+
+test('recommended dispatch respects the configured maximum response distance', () => {
+  let game=newGame();
+  const incident=game.incidents[0];
+  game.dispatch_policy.max_response_km=.01;
+  game.units.forEach(unit=>{unit.max_response_km=.01;});
+  expect(()=>selectRecommendedUnitIds(game,incident.id,'minimum')).toThrow(/raio|disponíveis|compatíveis/i);
+});
+
+test('base stock is consumed when an idle vehicle is resupplied', () => {
+  let game=newGame();
+  const unit=game.units.find(item=>item.service==='fire'),base=game.bases.find(item=>item.id===unit.base_id);
+  unit.resources.water=1000;
+  const before=base.supply_reserve.water;
+  game=tickGame(game,10);
+  const afterUnit=game.units.find(item=>item.id===unit.id),afterBase=game.bases.find(item=>item.id===base.id);
+  expect(afterUnit.resources.water).toBeGreaterThan(1000);
+  expect(afterBase.supply_reserve.water).toBeLessThan(before);
+});
+
+test('unpaid operating costs create debt instead of disappearing', () => {
+  let game=newGame();
+  game.money=0;
+  game.next_upkeep=game.elapsed;
+  game=tickGame(game,1);
+  expect(game.operating_debt).toBeGreaterThan(0);
+});
+
+test('seeded simulation state advances deterministically', () => {
+  const game=newGame();
+  const a=JSON.parse(JSON.stringify(game)),b=JSON.parse(JSON.stringify(game));
+  const ta=tickGame(a,220),tb=tickGame(b,220);
+  expect(ta.rng_state).toBe(tb.rng_state);
+  expect(ta.incidents.map(item=>[item.scenario,item.node,item.false_alarm])).toEqual(tb.incidents.map(item=>[item.scenario,item.node,item.false_alarm]));
 });
