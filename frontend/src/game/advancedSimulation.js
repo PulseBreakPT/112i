@@ -95,7 +95,7 @@ export function initializeAdvancedState(game) {
     unit.fixed_crew=unit.fixed_crew===true;
     unit.resources={...resourceState(unit.service),...(unit.resources||{})};
   });
-  (game.personnel||[]).forEach(person=>{person.experience=person.experience||0;person.rank=person.rank||'Operacional';person.leave_until=person.leave_until||0;});
+  game.personnel=(game.personnel||[]).map((person,index)=>({...normalizePersonnelProfile(person,index),leave_until:person.leave_until||0}));
   (game.complexes||[]).forEach(complex=>{complex.shared_services=complex.shared_services!==false;complex.operating_cost_discount=complex.operating_cost_discount||.08;});
   refreshNetworkSupport(game);
   return game;
