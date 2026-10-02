@@ -147,7 +147,7 @@ export function useGame() {
     const patientSource=patient&&gamePoint(patient.source_node);
     const hospital=patient&&patientSource&&snapshot.facilities?.filter(item=>{
       const bonus=item.network_capacity_bonus||0,capacity=(item.capacity||0)+bonus,queue=(item.queue_limit||item.capacity||0)+bonus;
-      const occupancy=(snapshot.patients||[]).filter(candidate=>candidate.hospital_id===item.id&&['transporting','admitted','transfer_scheduled','transfer_transporting'].includes(candidate.status)).length;
+      const occupancy=(snapshot.patients||[]).filter(candidate=>(candidate.hospital_id===item.id&&['transporting','admitted'].includes(candidate.status))||(candidate.reserved_hospital_id===item.id&&['transfer_scheduled','transfer_transporting'].includes(candidate.status))).length;
       const specialtyOccupancy=(snapshot.patients||[]).filter(candidate=>candidate.hospital_id===item.id&&['transporting','admitted'].includes(candidate.status)&&(candidate.specialty===patient.specialty||patient.specialty==='urgency')).length;
       const specialtyCapacity=(item.specialty_capacity?.[patient.specialty]||0)+(patient.specialty==='urgency'?capacity:0);
       return item.type==='hospital'&&item.enabled!==false&&(!item.operational_at||item.operational_at<=snapshot.elapsed)&&item.land===patientSource.land&&occupancy<Math.min(capacity,queue)&&(specialtyCapacity>specialtyOccupancy||(item.specialties||[]).includes('urgency'));
