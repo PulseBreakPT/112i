@@ -181,11 +181,11 @@ export function recordAchievementTransport(game,kind,count=1){
   if(kind==='prisoner')metrics.prisoners_transported+=value;
 }
 
-export function achievementMetricValue(game,metric){
+export function achievementMetricSnapshot(game){
   const m=ensureAchievementMetrics(game);
   const category=id=>m.category_completed?.[id]||0;
   const service=id=>m.service_completed?.[id]||0;
-  const values={
+  return {
     completed:game.completed||0,
     service_fire:service('fire'),
     service_medical:service('medical'),
@@ -237,6 +237,10 @@ export function achievementMetricValue(game,metric){
     complexes:(game.complexes||[]).length,
     cooperation:game.cooperation?.contribution||0,
   };
+}
+
+export function achievementMetricValue(game,metric,snapshot=null){
+  const values=snapshot||achievementMetricSnapshot(game);
   return Math.max(0,Number(values[metric])||0);
 }
 
@@ -245,11 +249,12 @@ export function syncAchievements(game){
   const previous=game.achievement_state||{};
   const unlocked={...(previous.unlocked||{})};
   const newlyUnlocked=[];
-  const snapshotXp=Math.max(0,(game.xp||0)-(previous.xp_awarded||0));
+  const metricSnapshot=achievementMetricSnapshot(game);
+  const snapshotXp=metricSnapshot.operational_xp;
 
   for(const achievement of ACHIEVEMENT_CATALOG){
     if(unlocked[achievement.id])continue;
-    const value=achievement.metric==='operational_xp'?snapshotXp:achievementMetricValue(game,achievement.metric);
+    const value=achievement.metric==='operational_xp'?snapshotXp:achievementMetricValue(game,achievement.metric,metricSnapshot);
     if(value<achievement.target)continue;
     unlocked[achievement.id]={unlocked_at:game.elapsed||0};
     newlyUnlocked.push(achievement);
@@ -284,7 +289,7 @@ export function achievementSummary(game){
   };
 }
 
-export function achievementProgress(game,achievement){
-  const value=achievementMetricValue(game,achievement.metric);
+export function achievementProgress(game,achievement,snapshot=null){
+  const value=achievementMetricValue(game,achievement.metric,snapshot);
   return {value,target:achievement.target,ratio:Math.min(1,value/Math.max(1,achievement.target)),unlocked:!!game.achievement_state?.unlocked?.[achievement.id]};
 }
