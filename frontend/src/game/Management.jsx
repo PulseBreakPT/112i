@@ -9,9 +9,8 @@ import { vehicleImage } from './vehicleMedia';
 const VehicleArt = ({ service, vehicleType, name }) => {
   const [failed, setFailed] = useState(false);
   const label = name || (service === 'fire' ? 'Viatura dos bombeiros' : service === 'medical' ? 'Viatura médica' : 'Viatura da polícia');
-  return <div className={`vehicle-art vehicle-photo ${service}`} role="img" aria-label={`${label}, imagem recortada`}>
+  return <div className={`vehicle-art vehicle-photo ${service}`} role="img" aria-label={`${label}, imagem completa`}>
     {!failed ? <img src={vehicleImage(vehicleType)} alt="" loading="lazy" decoding="async" draggable="false" onError={() => setFailed(true)} /> : <ServiceIcon service={service} size={56} color={SERVICE[service].color} />}
-    <span>ARTE ORIGINAL</span>
   </div>;
 };
 

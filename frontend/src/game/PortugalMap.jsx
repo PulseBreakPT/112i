@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import { Plus, Minus, LocateFixed, Layers3, ArrowUpRight, PhoneIncoming } from 'lucide-react';
 import { SERVICE } from './common';
+import { vehicleImage } from './vehicleMedia';
 import { IconButton } from './Shell';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import './PortugalMap.css';
@@ -100,19 +101,24 @@ function markerElement(kind, item) {
   } else {
     el.dataset.service = item.service;
     el.dataset.status = item.status;
-    const shadow = document.createElement('span');
-    shadow.className = 'geo-vehicle-shadow';
-    const body = document.createElement('span');
-    body.className = 'geo-vehicle-body';
-    ['windscreen', 'roof', 'mark', 'lightbar', 'bumper'].forEach(part => {
-      const piece = document.createElement('i');
-      piece.className = `geo-vehicle-${part}`;
-      body.append(piece);
-    });
+    const visual = document.createElement('span');
+    visual.className = 'geo-vehicle-visual';
+    const image = document.createElement('img');
+    image.className = 'geo-vehicle-image';
+    image.src = vehicleImage(item.vehicle_type);
+    image.alt = '';
+    image.draggable = false;
+    image.decoding = 'async';
+    const fallback = document.createElement('span');
+    fallback.className = 'geo-vehicle-fallback';
+    fallback.textContent = { fire: 'B', medical: '+', police: 'P' }[item.service];
+    fallback.hidden = true;
+    image.addEventListener('error', () => { image.hidden = true; fallback.hidden = false; });
+    visual.append(image, fallback);
     const label = document.createElement('span');
     label.className = 'geo-vehicle-label';
     label.textContent = item.name;
-    el.append(shadow, body, label);
+    el.append(visual, label);
   }
   return el;
 }
@@ -213,6 +219,9 @@ export const PortugalMap = ({ world, game, selected, onSelect, onCall, focusKey,
       if (kind === 'vehicle') {
         element.dataset.status = item.status;
         element.dataset.service = item.service;
+        const image = element.querySelector('.geo-vehicle-image');
+        const source = vehicleImage(item.vehicle_type);
+        if (image && image.getAttribute('src') !== source) image.setAttribute('src', source);
         const { bearing } = positionAt(item, item.travel || 0);
         element.style.setProperty('--vehicle-heading', `${bearing}deg`);
       }

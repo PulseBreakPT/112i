@@ -21,4 +21,6 @@ const VEHICLE_MEDIA = {
   'tactical-unit': 'tactical-unit',
 };
 
-export const vehicleImage = vehicleType => `${process.env.PUBLIC_URL}/assets/vehicles/${VEHICLE_MEDIA[vehicleType] || 'patrol'}.webp`;
+export const VEHICLE_MEDIA_VERSION = '2026-10-02-2';
+
+export const vehicleImage = vehicleType => `${process.env.PUBLIC_URL}/assets/vehicles/${VEHICLE_MEDIA[vehicleType] || 'patrol'}.webp?v=${VEHICLE_MEDIA_VERSION}`;
