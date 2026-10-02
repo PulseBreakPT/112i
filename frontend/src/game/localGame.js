@@ -242,7 +242,7 @@ const resolveIncident=(g,incident,success)=>{
   const medicalUnits=g.units.filter(unit=>unit.incident_id===incident.id&&unit.service==='medical'&&unit.status==='onscene');
   const medicalPeople=medicalUnits.flatMap(unit=>unit.personnel_ids||[]).map(id=>g.personnel.find(person=>person.id===id)).filter(Boolean);
   const advancedCare=medicalPeople.some(person=>(person.qualifications||[]).includes('advanced-care'));
-  const careQuality=medicalUnits.length?Math.min(1.5,.65+medicalUnits.length*.15+(advancedCare?.25:0)):0.35;
+  const careQuality=medicalUnits.length?Math.min(1.5,.65+medicalUnits.length*.15+(advancedCare ? .25 : 0)):0.35;
   const trustFactor=.8+g.trust/500;
   const seasonal=(g.seasonal_events||[]).filter(event=>event.status==='active').reduce((factor,event)=>factor*(event.reward_multiplier||1),1);
   const payout=success?(incident.false_alarm?Math.round(incident.reward*.25):Math.round(incident.reward*trustFactor*seasonal)):0;
