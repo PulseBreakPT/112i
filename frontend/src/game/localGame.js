@@ -106,6 +106,7 @@ export const WORLD = {
   specializations:SPECIALIZATIONS,
   vehicle_catalog:VEHICLE_CATALOG,
   mission_definitions:MISSION_DEFINITIONS,
+  scenarios:SCENARIOS,
   facility_catalog:FACILITY_CATALOG,
   training_catalog:TRAINING_CATALOG,
   hospital_specialties:HOSPITAL_SPECIALTIES,
