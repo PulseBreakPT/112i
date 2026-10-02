@@ -10,12 +10,11 @@ describe('missionDoctrine', () => {
     expect(doctrine.mandatory_vehicle_types).toEqual(expect.arrayContaining(['command-unit','mass-casualty-unit']));
   });
 
-  test('encarceramento exige desencarceramento e recomenda trânsito', () => {
+  test('encarceramento intermédio recomenda desencarceramento e trânsito sem bloquear early game', () => {
     const scenario={title:'Despiste com vítima encarcerada',service:'fire',priority:2,needs:{fire:2,medical:1,police:1}};
     const doctrine=buildIncidentDoctrine({name:scenario.title,tier:2,vehicle:[]},scenario);
     expect(doctrine.category).toBe('road');
-    expect(doctrine.mandatory_vehicle_types).toContain('heavy-rescue');
-    expect(doctrine.recommended_vehicle_types).toContain('traffic-unit');
+    expect(doctrine.recommended_vehicle_types).toEqual(expect.arrayContaining(['heavy-rescue','traffic-unit']));
   });
 
   test('deterioração conserva o número de vítimas e aumenta a gravidade', () => {
