@@ -2,11 +2,12 @@
 Game API Sanity Tests for Distrito 112
 Tests basic game operations: create, pause, tick, speed changes, persistence
 """
+import os
 import requests
 import time
 import json
 
-BACKEND_URL = "https://menu-standardization.preview.emergentagent.com/api"
+BACKEND_URL = os.environ.get("BACKEND_URL", "http://127.0.0.1:8000/api").rstrip("/")
 
 test_results = {
     "passed": [],
