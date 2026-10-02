@@ -1,0 +1,81 @@
+/* Distrito 112 — permanent dark operations mode.
+   Dark gray/navy surfaces preserve depth without using pure black.
+   The interface keeps semantic colours for meaning and reserves brightness
+   for content, focus and critical operational state. */
+
+:root,
+html,
+body,
+#root {
+  color-scheme: dark;
+  background: var(--theme-page-bg, #070b12);
+}
+
+body {
+  accent-color: var(--theme-accent);
+}
+
+/* There is no theme transition anymore, so surface changes should feel stable. */
+.minimal-shell.distrito-interface {
+  transition: none;
+}
+
+/* Native controls must belong to the same dark environment as custom UI. */
+.minimal-shell.distrito-interface :is(input, select, textarea),
+.game-modal :is(input, select, textarea) {
+  color-scheme: dark;
+  caret-color: var(--theme-accent);
+}
+
+/* Quiet surfaces create hierarchy. Large saturated fills are deliberately avoided. */
+.minimal-shell.distrito-interface :is(
+  .game-menu,
+  .hud-options,
+  .game-workspace,
+  .tactical-drawer > .incident-panel,
+  .tactical-drawer > .dispatch-panel
+),
+.game-modal {
+  border-color: var(--distrito-edge);
+}
+
+/* Focus must not rely on colour alone and must remain obvious on every surface. */
+.minimal-shell.distrito-interface :is(button, a, input, select, textarea):focus-visible,
+.game-modal :is(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid var(--theme-accent) !important;
+  outline-offset: 3px;
+}
+
+/* Selection stays readable without producing a bright full-screen flash. */
+::selection {
+  background: color-mix(in srgb, var(--theme-accent) 48%, var(--theme-surface));
+  color: var(--distrito-text);
+}
+
+/* Users asking the OS for more contrast still get one dark mode, just with
+   stronger separators and secondary ink. */
+@media (prefers-contrast: more) {
+  :root {
+    --distrito-secondary: #d4dae2 !important;
+    --distrito-muted: #bcc5d0 !important;
+    --distrito-edge: #ffffff45 !important;
+    --distrito-divider: #ffffff2d !important;
+  }
+
+  .minimal-shell.distrito-interface :is(button, a, input, select, textarea):focus-visible,
+  .game-modal :is(button, a, input, select, textarea):focus-visible {
+    outline-width: 3px !important;
+  }
+}
+
+/* Let Windows/OS high-contrast mode take control instead of fighting it. */
+@media (forced-colors: active) {
+  :root,
+  html,
+  body,
+  #root,
+  .minimal-shell.distrito-interface,
+  .game-modal {
+    forced-color-adjust: auto;
+  }
+}
