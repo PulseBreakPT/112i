@@ -19,13 +19,13 @@ const RESOURCE_PROFILE = {
 const SUPPLY_CAPACITY={fuel:1200,medical:700,water:24000,foam:2600,equipment:700,oxygen:700};
 const SUPPLY_COST={fuel:.55,medical:1.2,water:.018,foam:.28,equipment:.6,oxygen:.8};
 const DAILY_TASKS = [
-  {metric:'completed',title:'Resolver 4 ocorrências',target:4,reward:1100},
-  {metric:'transported',title:'Concluir 2 transportes',target:2,reward:800},
-  {metric:'trained',title:'Formar 2 elementos',target:2,reward:700},
+  {metric:'completed',title:'Resolver 4 ocorrências',target:4,reward:1600},
+  {metric:'transported',title:'Concluir 2 transportes',target:2,reward:1100},
+  {metric:'trained',title:'Formar 2 elementos',target:2,reward:1000},
 ];
 const WEEKLY_TASKS = [
-  {metric:'completed',title:'Resolver 20 ocorrências',target:20,reward:5000},
-  {metric:'trust_hold',title:'Manter confiança ≥95% durante 1 hora',threshold:95,target:3600,reward:2200},
+  {metric:'completed',title:'Resolver 20 ocorrências',target:20,reward:7000},
+  {metric:'trust_hold',title:'Manter confiança ≥95% durante 1 hora',threshold:95,target:3600,reward:3200},
 ];
 
 const resourceState = service => Object.fromEntries(Object.entries(RESOURCE_PROFILE[service] || {}).map(([key,value]) => [key,value.capacity]));
