@@ -2,14 +2,32 @@
 import bisect
 import copy
 import random
+import secrets
 from datetime import datetime, timezone
 from engine import uid, log, require, action as common_action, add_unit
 from geo_world import MODE, POINTS, PLACES, SITES
 from world import SCENARIOS, SERVICES
 
 
+def game_random(g):
+    x = int(g.get('rng_state') or g.get('rng_seed') or 1) & 0xFFFFFFFF
+    x ^= (x << 13) & 0xFFFFFFFF
+    x ^= (x >> 17)
+    x ^= (x << 5) & 0xFFFFFFFF
+    g['rng_state'] = x & 0xFFFFFFFF or 1
+    g['rng_counter'] = int(g.get('rng_counter', 0)) + 1
+    return g['rng_state'] / 4294967296.0
+
+
+def game_choice(g, values):
+    if not values:
+        raise ValueError('Cannot choose from an empty sequence')
+    return values[min(len(values) - 1, int(game_random(g) * len(values)))]
+
+
 def new_game():
-    g = {'id': uid(), 'mode': MODE, 'city': 'Porto', 'money': 24500, 'xp': 0, 'level': 1,
+    seed = secrets.randbits(32) or 1
+    g = {'id': uid(), 'mode': MODE, 'rng_seed': seed, 'rng_state': seed, 'rng_counter': 0, 'city': 'Porto', 'money': 24500, 'xp': 0, 'level': 1,
          'trust': 98, 'elapsed': 0, 'speed': 1, 'completed': 0, 'failed': 0, 'earned': 0,
          'next_spawn': 180, 'sequence': 101, 'incidents': [], 'units': [], 'bases': [],
          'logs': [], 'history': [], 'saved_at': datetime.now(timezone.utc).isoformat()}
@@ -35,14 +53,14 @@ def spawn(g, scenario=None, node=None):
     if node is None:
         # Incidents stay around the network the player has actually built, not anywhere in Portugal.
         cities = list({b['city'] for b in g['bases']})
-        city = random.choice(cities)
+        city = game_choice(g, cities)
         candidates = [p for p in PLACES if p['city'] == city]
         occupied = {i['node'] for i in g['incidents']}
         candidates = [p for p in candidates if p['id'] not in occupied] or candidates
-        point = random.choice(candidates)
+        point = game_choice(g, candidates)
         coverage = {b['service'] for b in g['bases'] if b['city'] == city}
         available = [i for i, s in enumerate(SCENARIOS) if set(s['needs']).issubset(coverage)]
-        scenario = random.choice(available) if available else 4
+        scenario = game_choice(g, available) if available else 4
     else:
         point = POINTS[node]
     scenario = 0 if scenario is None else scenario
@@ -52,7 +70,10 @@ def spawn(g, scenario=None, node=None):
                      'node': point['id'], 'lng': point['lng'], 'lat': point['lat'],
                      'x': point['lng'], 'y': point['lat'], 'land': point['land'],
                      'address': point['name'], 'district': point['city'], 'status': 'waiting',
-                     'created': g['elapsed'], 'deadline': g['elapsed'] + {1: 900, 2: 1200, 3: 1500}[source['priority']],
+                     'created': g['elapsed'],
+                     'response_deadline': g['elapsed'] + {1: 900, 2: 1200, 3: 1500}[source['priority']],
+                     'resolution_deadline': g['elapsed'] + {1: 1800, 2: 2250, 3: 2700}[source['priority']],
+                     'deadline': g['elapsed'] + {1: 900, 2: 1200, 3: 1500}[source['priority']],
                      'assigned': [], 'progress': 0, 'call_answered': False,
                      'call': {'text': source['caller'], 'choices': source['choices']}})
     g['incidents'].append(incident)
@@ -127,8 +148,11 @@ def tick(g, seconds):
         ready = all(sum(u['service'] == service and u['status'] == 'onscene' for u in assigned) >= count
                     for service, count in incident['needs'].items())
         if ready:
+            incident.setdefault('response_arrived_at', g['elapsed'])
             incident['status'] = 'onscene'
             incident['progress'] = min(100, incident['progress'] + dt * (100 / (120 if any(u['advanced'] for u in assigned) else 180)))
+        response_deadline = incident.get('response_deadline', incident['deadline'])
+        resolution_deadline = incident.get('resolution_deadline', response_deadline + 900)
         if incident['progress'] >= 100:
             g['money'] += incident['reward']
             g['earned'] += incident['reward']
@@ -136,7 +160,7 @@ def tick(g, seconds):
             g['completed'] += 1
             g['trust'] = min(100, g['trust'] + 1)
             resolve(g, incident, True)
-        elif g['elapsed'] >= incident['deadline'] and not ready:
+        elif (g['elapsed'] >= response_deadline and not incident.get('response_arrived_at')) or g['elapsed'] >= resolution_deadline:
             g['failed'] += 1
             g['trust'] = max(0, g['trust'] - 6)
             resolve(g, incident, False)
@@ -172,7 +196,6 @@ async def action(g, kind, data, router):
             unit.update(incident_id=incident['id'], return_plan=inward)
             incident['assigned'].append(unit['id'])
         incident['status'] = 'enroute'
-        incident['deadline'] = max(incident['deadline'], g['elapsed'] + max(p[1]['duration'] for p in plans) + 180)
         log(g, f"{len(units)} unidade(s) mobilizada(s) por estrada. Tempos estimados OSRM; sem trânsito em direto.")
     elif kind == 'build_base':
         service = data.get('service')
