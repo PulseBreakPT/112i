@@ -11,6 +11,7 @@ export const IncidentPanel = ({ game, selected, onSelect, act, busy, onClose }) 
   const virtual = useVirtualList(ordered.length);
   const waiting = game.incidents.filter(item => item.status === 'waiting').length;
   const atCapacity = game.incidents.length >= (game.progression?.mission_cap || 3);
+  const canManuallySpawn = process.env.NODE_ENV !== 'production';
 
   return <section className="incident-panel" aria-label="Fila de ocorrências">
     <div className="panel-heading">
@@ -27,7 +28,8 @@ export const IncidentPanel = ({ game, selected, onSelect, act, busy, onClose }) 
     <div className="incidents-scroll" ref={virtual.containerRef} onScroll={virtual.onScroll}>
       {!!virtual.paddingTop && <div style={{ height: virtual.paddingTop, flex: '0 0 auto' }} />}
       {ordered.slice(virtual.start, virtual.end).map(inc => {
-        const remaining = inc.deadline - game.elapsed;
+        const activeDeadline = inc.response_arrived_at ? (inc.resolution_deadline || inc.deadline) : (inc.response_deadline || inc.deadline);
+        const remaining = activeDeadline - game.elapsed;
         return <button className={`incident-card ${selected === inc.id ? 'selected' : ''}`} key={inc.id} data-priority={inc.priority} data-testid={`incident-${inc.number}`} onClick={() => onSelect(inc.id)} style={{ '--service-color': SERVICE[inc.service].color }}>
           <div className="incident-top">
             <span className={`priority p${inc.priority}`} data-testid={`priority-${inc.number}`}>P{inc.priority} · {inc.priority === 1 ? 'CRÍTICA' : inc.priority === 2 ? 'URGENTE' : 'MODERADA'}</span>
@@ -45,6 +47,6 @@ export const IncidentPanel = ({ game, selected, onSelect, act, busy, onClose }) 
       {!!virtual.paddingBottom && <div style={{ height: virtual.paddingBottom, flex: '0 0 auto' }} />}
       {!ordered.length && <div className="empty-state" data-testid="incidents-empty"><CheckCheck size={30} /><strong>{game.incidents.length ? 'Sem ocorrências deste serviço' : 'Sem ocorrências pendentes'}</strong><p>{game.incidents.length ? 'Seleciona Todas para consultar a fila completa.' : 'A central está pronta para a próxima chamada.'}</p></div>}
     </div>
-    <button className="new-incident" data-testid="new-incident-button" disabled={busy || atCapacity} onClick={() => act('new_incident')}><Plus size={16} />{atCapacity ? 'Limite de ocorrências atingido' : 'Receber ocorrência'}</button>
+    {canManuallySpawn && <button className="new-incident" data-testid="new-incident-button" disabled={busy || atCapacity} onClick={() => act('new_incident')}><Plus size={16} />{atCapacity ? 'Limite de ocorrências atingido' : 'Gerar ocorrência de teste'}</button>}
   </section>;
 };
