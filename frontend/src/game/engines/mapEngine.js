@@ -28,7 +28,7 @@ const WEATHER_TRANSITIONS = {
   fog:['fog','clear','rain','fog'],
 };
 
-export const freshConditions = (elapsed, previous = null, random = Math.random) => {
+export const freshConditions = (elapsed, previous = null, random = Math.random, location = null) => {
   const previousWeather=previous?.weather||'clear';
   const options=WEATHER_TRANSITIONS[previousWeather]||WEATHER_TRANSITIONS.clear;
   const weatherId=options[Math.floor(random()*options.length)];
@@ -43,7 +43,7 @@ export const freshConditions = (elapsed, previous = null, random = Math.random) 
     weather:weather.id,weather_label:weather.label,weather_factor:weather.factor,
     traffic:traffic.id,traffic_label:traffic.label,traffic_factor:traffic.factor,
     roadworks:previous?.roadworks?(random()<.72):(random()<.16),
-    night:isPortugalNight(new Date()),updated_at:elapsed,next_change_at:elapsed+duration,
+    night:isPortugalNight(new Date(), location),updated_at:elapsed,next_change_at:elapsed+duration,
   };
 };
 
