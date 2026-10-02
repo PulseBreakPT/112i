@@ -4,6 +4,7 @@ import random
 import uuid
 from datetime import datetime, timezone
 from fastapi import HTTPException
+from economy import STARTING_CASH, FUNDING_INTERVAL, ensure_reserve, pay_cost, apply_periodic_funding, mission_payout
 from world import NODES, SCENARIOS, SERVICES, SITES, district_name, route
 
 def uid():
@@ -27,7 +28,7 @@ def spawn(g, scenario=None, node=None):
     log(g, f'Nova ocorrência: {s["title"]}.', 'alert')
 
 def new_game(game_id=None):
-    g = {'id': game_id or uid(), 'money': 24500, 'xp': 0, 'level': 1, 'trust': 98, 'elapsed': 0, 'speed': 1, 'completed': 0, 'failed': 0, 'earned': 0, 'next_spawn': 100, 'sequence': 101, 'incidents': [], 'units': [], 'bases': [], 'logs': [], 'history': [], 'saved_at': datetime.now(timezone.utc).isoformat()}
+    g = {'id': game_id or uid(), 'money': STARTING_CASH, 'xp': 0, 'level': 1, 'trust': 98, 'elapsed': 0, 'speed': 1, 'completed': 0, 'failed': 0, 'earned': 0, 'expenses': 0, 'public_funding': 0, 'operating_debt': 0, 'next_public_funding': FUNDING_INTERVAL, 'next_spawn': 100, 'sequence': 101, 'incidents': [], 'units': [], 'bases': [], 'logs': [], 'history': [], 'saved_at': datetime.now(timezone.utc).isoformat()}
     for service, node, name in [('fire', '4-4', 'Quartel da Baixa'), ('medical', '9-3', 'Posto INEM · Santa Clara'), ('police', '4-7', 'Esquadra de São Vicente')]:
         base = {'id': uid(), 'service': service, 'node': node, 'name': name, 'x': NODES[node]['x'], 'y': NODES[node]['y']}
         g['bases'].append(base)
@@ -37,6 +38,7 @@ def new_game(game_id=None):
     spawn(g, 1, '6-3')
     spawn(g, 2, '5-7')
     log(g, 'Central operacional. Início do turno da tarde.', 'success')
+    ensure_reserve(g, log, 'reserva operacional protegida')
     return g
 
 def add_unit(g, base, advanced=False):
@@ -80,8 +82,10 @@ def tick(g, seconds):
             inc['status'] = 'onscene'
             inc['progress'] = min(100, inc['progress'] + dt * (5 if any(u['advanced'] for u in assigned) else 3.4))
         if inc['progress'] >= 100:
-            g['money'] += inc['reward']
-            g['earned'] += inc['reward']
+            payout = mission_payout(g, inc, inc['reward'])
+            inc['final_reward'] = payout
+            g['money'] += payout
+            g['earned'] += payout
             g['xp'] += inc['xp']
             g['completed'] += 1
             g['trust'] = min(100, g['trust'] + 1)
@@ -95,6 +99,8 @@ def tick(g, seconds):
             g['trust'] = max(0, g['trust'] - 6)
             resolve(g, inc, False)
     g['level'] = 1 + g['xp'] // 200
+    apply_periodic_funding(g, log)
+    ensure_reserve(g, log, 'garantia mínima de continuidade operacional')
     if g['elapsed'] >= g['next_spawn']:
         if len(g['incidents']) < 7:
             spawn(g)
@@ -156,8 +162,7 @@ def action(g, kind, data):
         require(not advanced or g['level'] >= 2, 'Unidades especializadas disponíveis no nível 2.')
         require(sum(u['base_id'] == base['id'] for u in g['units']) < 6, 'Garagem cheia. Construa outra base.')
         price = SERVICES[base['service']]['price'] * (2 if advanced else 1)
-        require(g['money'] >= price, 'Orçamento insuficiente.')
-        g['money'] -= price
+        pay_cost(g, price, 'aquisição de viatura', log)
         add_unit(g, base, advanced)
         log(g, f'Nova unidade adquirida: {base["name"]}.', 'success')
     elif kind == 'build_base':
@@ -166,9 +171,8 @@ def action(g, kind, data):
         require(service in SERVICES and site is not None, 'Selecione um serviço e um local válidos.')
         require(not any(b['node'] == site['node'] for b in g['bases']), 'Este terreno já está ocupado.')
         price = SERVICES[service]['base_price']
-        require(g['money'] >= price, 'Orçamento insuficiente.')
         n = NODES[site['node']]
-        g['money'] -= price
+        pay_cost(g, price, 'construção de base', log)
         g['bases'].append({'id': uid(), 'service': service, 'node': site['node'], 'name': f'{SERVICES[service]["name"]} · {site["name"]}', 'x': n['x'], 'y': n['y']})
         log(g, f'Nova base construída em {site["name"]}.', 'success')
     elif kind == 'new_incident':
