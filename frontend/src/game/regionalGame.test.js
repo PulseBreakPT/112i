@@ -235,3 +235,49 @@ test('cooperative academy capacity can support training', () => {
   game=applyAction(game,'start_training',{base_id:base.id,course:'advanced-care',count:1});
   expect(game.trainings.some(item=>item.base_id===base.id&&item.status==='active')).toBe(true);
 });
+
+
+test('empty command centers do not increase global incident capacity', () => {
+  let game=newGame();game.money=100000;
+  const before=progressionSnapshot(game,{fire:{base_price:10000},medical:{base_price:8000},police:{base_price:8000}}).mission_cap;
+  game=applyAction(game,'create_command_center',{name:'Comando vazio',site_id:'faro',radius_km:45});
+  const after=progressionSnapshot(game,{fire:{base_price:10000},medical:{base_price:8000},police:{base_price:8000}}).mission_cap;
+  expect(after).toBe(before);
+});
+
+test('career task rewards do not count as operational revenue', () => {
+  let game=newGame();
+  const task=game.tasks.find(item=>item.type==='completed'),earned=game.earned;
+  game.completed=(task.baseline||0)+task.target;
+  game=applyAction(game,'claim_task',{task_id:task.id});
+  expect(game.earned).toBe(earned);
+  expect(game.task_rewards).toBe(task.reward);
+});
+
+test('response preparation delay affects recommended dispatch order', () => {
+  const game=newGame();
+  const incident=game.incidents.find(item=>item.service==='fire');
+  incident.needs={fire:1};incident.required_vehicle_types=[];incident.required_trainings=[];incident.required_personnel=1;
+  const fire=game.units.filter(item=>item.service==='fire');
+  fire[0].response_delay=120;fire[1].response_delay=0;
+  const selected=selectRecommendedUnitIds(game,incident.id,'minimum');
+  expect(selected[0]).toBe(fire[1].id);
+});
+
+test('critical transfer cancellation releases the reserved destination bed', () => {
+  let game=newGame();game.money=100000;
+  const center=game.command_centers[0];
+  game=applyAction(game,'build_facility',{type:'hospital',site_id:'porto-campanha',command_center_id:center.id});
+  game=applyAction(game,'build_facility',{type:'hospital',site_id:'porto-foz',command_center_id:center.id});
+  game=tickGame(game,181);
+  const [origin,target]=game.facilities.filter(item=>item.type==='hospital');
+  game.patients.push({id:'test-patient',status:'admitted',hospital_id:origin.id,severity:3,specialty:'urgency',incident:'Teste',source_node:origin.node,city:origin.city});
+  game=applyAction(game,'schedule_critical_transfer',{patient_id:'test-patient',facility_id:target.id});
+  const transfer=game.medical_transfers.find(item=>item.patient_id==='test-patient');
+  expect(game.patients.find(item=>item.id==='test-patient').reserved_hospital_id).toBe(target.id);
+  game=applyAction(game,'cancel_medical_transfer',{transfer_id:transfer.id});
+  const patient=game.patients.find(item=>item.id==='test-patient');
+  expect(patient.status).toBe('admitted');
+  expect(patient.reserved_hospital_id).toBeUndefined();
+  expect(game.medical_transfers.find(item=>item.id===transfer.id).status).toBe('cancelled');
+});
