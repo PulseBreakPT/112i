@@ -141,14 +141,14 @@ export function eligibleMissions(game, commandCenterId = null) {
   });
 }
 
-export function weightedMission(game, commandCenterId = null) {
+export function weightedMission(game, commandCenterId = null, random = Math.random) {
   const pool = eligibleMissions(game, commandCenterId);
   if (!pool.length) return MISSION_DEFINITIONS[1];
   // Specialising a base improves the response to matching incidents; it must
   // not make those incidents artificially more likely to occur.
   const weight = item => item.weight;
   const total = pool.reduce((sum, item) => sum + weight(item), 0);
-  let roll = Math.random() * total;
+  let roll = random() * total;
   return pool.find(item => (roll -= weight(item)) <= 0) || pool[pool.length - 1];
 }
 
