@@ -90,6 +90,7 @@ function GameApp() {
   const focusIncident = () => { setPanel(null); setFocusKey(k => k + 1); };
   const openPanel = value => { setMenuOpen(false); setCentralWidget(null); setPanel(value); if (!isCentral) navigate('/'); };
   const toggleCentralWidget = value => { setPanel(null); setCentralWidget(current => current === value ? null : value); };
+  const quickNavigate = path => { setMenuOpen(false); setPanel(null); setCentralWidget(null); navigate(path); };
 
   if (!game || !world) return <div className="loading-screen" data-testid="loading-screen"><Radio size={40} /><h1 className="brand-wordmark" aria-label={APP_NAME}>{BRAND_WORD}{' '}<span>{BRAND_NUMBER}</span></h1>{error ? <><p data-testid="loading-error">{error}</p><button data-testid="retry-connection" className="primary-button" onClick={retry}>Voltar a ligar</button></> : <><LoaderCircle className="spinner" size={20} /><p>A estabelecer ligação à central…</p></>}</div>;
   const incident = game.incidents.find(i => i.id === selected);
@@ -117,10 +118,10 @@ function GameApp() {
     ><Radio size={18}/><span>Ocorrências</span><b>{game.incidents.length}</b></button>
     <>
       <nav className="central-quick-rail central-management-rail" aria-label="Gestão rápida">
-        <button title="Gestão" aria-label="Abrir gestão" onClick={() => navigate('/gestao')}><PanelsTopLeft size={17}/><span>Gestão</span></button>
-        <button title="Bases" aria-label="Abrir bases" onClick={() => navigate('/bases')}><Building2 size={17}/><span>Bases</span></button>
-        <button title="Frota" aria-label="Abrir frota" onClick={() => navigate('/frota')}><CarFront size={17}/><span>Frota</span></button>
-        <button title="Funcionários" aria-label="Abrir funcionários" onClick={() => navigate('/funcionarios')}><Users size={17}/><span>Funcionários</span></button>
+        <button title="Gestão" aria-label="Abrir gestão" onClick={() => quickNavigate('/gestao')}><PanelsTopLeft size={17}/><span>Gestão</span></button>
+        <button title="Bases" aria-label="Abrir bases" onClick={() => quickNavigate('/bases')}><Building2 size={17}/><span>Bases</span></button>
+        <button title="Frota" aria-label="Abrir frota" onClick={() => quickNavigate('/frota')}><CarFront size={17}/><span>Frota</span></button>
+        <button title="Funcionários" aria-label="Abrir funcionários" onClick={() => quickNavigate('/funcionarios')}><Users size={17}/><span>Funcionários</span></button>
       </nav>
     </>
     {menuOpen && <>
