@@ -197,7 +197,7 @@ const incidentSpecialty=(incident,state='moderate')=>{
 };
 const promoteIncidentRarity=(incident,steps=1)=>{
   const level=Math.max(1,Math.min(6,(incident.rarity_level||1)+Math.max(1,steps))),rarity=RARITY_LEVELS[level]||RARITY_LEVELS[1];
-  incident.rarity_level=level;incident.rarity_id=rarity.id;incident.rarity_label=rarity.label;
+  incident.rarity_level=level;incident.rarity_id=rarity.id;incident.rarity_label=rarity.label;incident.reputation_reward=Math.max(incident.reputation_reward||0,level*3);
   incident.risk_score=Math.min(100,Math.max(incident.risk_score||0,10+level*12+Object.values(incident.needs||{}).reduce((sum,count)=>sum+(Number(count)||0),0)*4));
   incident.doctrine={...(incident.doctrine||{}),rarity_level:level,rarity_id:rarity.id,rarity_label:rarity.label,rarity_frequency:rarity.frequency,clinical_interval:rarity.clinical_interval,first_escalation_ratio:rarity.first_escalation_ratio,second_escalation_ratio:rarity.second_escalation_ratio,risk_score:incident.risk_score};
   incident.next_clinical_update=Math.min(incident.next_clinical_update||Infinity,(incident.created||0)+rarity.clinical_interval);
