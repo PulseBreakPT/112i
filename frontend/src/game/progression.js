@@ -103,8 +103,14 @@ export function buildingCounts(game, commandCenterId = null) {
 }
 
 export function missionCap(game, commandCenterId = null) {
-  const counts = Object.values(buildingCounts(game, commandCenterId));
-  return Math.max(3, Math.max(1, ...(counts.length ? counts : [0])) + 1);
+  const areaBases = basesForCommand(game, commandCenterId);
+  const coveredCities = new Set(areaBases.map(base => base.city)).size;
+  const levelPressure = Math.floor(Math.max(0, (game.level || 1) - 1) / 3);
+  const territoryPressure = Math.floor(Math.max(0, coveredCities - 1) / 2);
+  // Capacity pressure is driven by territory and career progression, not by
+  // repeatedly building the same service. Expansion should help the player
+  // respond, not automatically punish them with one extra incident per base.
+  return Math.max(3, Math.min(8, 3 + levelPressure + territoryPressure));
 }
 
 export function nextBuildingCost(game, service, basePrice) {
@@ -120,24 +126,27 @@ export function activeExtensions(game, commandCenterId = null) {
 export function eligibleMissions(game, commandCenterId = null) {
   const areaBases = basesForCommand(game, commandCenterId);
   const counts = buildingCounts(game, commandCenterId);
-  const extensions = activeExtensions(game, commandCenterId);
-  const vehicleTypes = new Set(unitsForCommand(game, commandCenterId).map(unit => unit.vehicle_type));
   const coveredCities = new Set(areaBases.map(base => base.city));
   const pois = [...POIS, ...(game.player_pois || [])];
   return MISSION_DEFINITIONS.filter(def => {
-    const enoughBuildings = Object.entries(def.min || {}).every(([service, count]) => (counts[service] || 0) >= count);
-    const hasExtensions = (def.extension || []).every(id => extensions.has(id));
-    const hasVehicles = (def.vehicle || []).every(id => vehicleTypes.has(id));
+    // A player must have a presence for every involved service, but is no longer
+    // able to suppress an incident forever simply by refusing to buy the exact
+    // specialist extension/vehicle that would make it easy.
+    const servicePresence = Object.keys(def.min || {}).every(service => (counts[service] || 0) >= 1);
+    const complexity = Object.values(def.min || {}).reduce((sum, count) => sum + count, 0);
+    const specialist = (def.extension || []).length + (def.vehicle || []).length;
+    const requiredLevel = Math.max(1, Math.min(6, Math.ceil(complexity / 2) + (specialist ? 1 : 0)));
     const hasPoi = !def.poi || pois.some(poi => poi.type === def.poi && (poi.command_center_id ? poi.command_center_id === commandCenterId : coveredCities.has(poi.city)));
-    return enoughBuildings && hasExtensions && hasVehicles && hasPoi;
+    return servicePresence && (game.level || 1) >= requiredLevel && hasPoi;
   });
 }
 
 export function weightedMission(game, commandCenterId = null) {
   const pool = eligibleMissions(game, commandCenterId);
   if (!pool.length) return MISSION_DEFINITIONS[1];
-  const areaBases = basesForCommand(game, commandCenterId);
-  const weight = item => item.weight * (item.specialization && areaBases.some(base => base.specialization === item.specialization) ? 2.25 : 1);
+  // Specialising a base improves the response to matching incidents; it must
+  // not make those incidents artificially more likely to occur.
+  const weight = item => item.weight;
   const total = pool.reduce((sum, item) => sum + weight(item), 0);
   let roll = Math.random() * total;
   return pool.find(item => (roll -= weight(item)) <= 0) || pool[pool.length - 1];
