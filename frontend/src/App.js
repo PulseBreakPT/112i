@@ -56,8 +56,7 @@ function GameApp() {
   const [sound, setSoundState] = useState(() => localStorage.getItem(SOUND_PREFERENCE_KEY) !== 'false');
   const sequence = useRef(null);
   const audioActive = !!game && !!game.speed && isCentral;
-  const themeLocation = game?.command_centers?.find(center => center.id === game.active_command_center_id && center.active !== false) || game?.command_centers?.find(center => center.active !== false) || game?.bases?.[0] || { lat: 39.5, lng: -8, city: 'Portugal', land: 'mainland' };
-  const { themeMode, setThemeMode, theme } = useTimeTheme(themeLocation);
+  const { theme } = useTimeTheme();
   useAmbientAudio(sound, audioActive);
   const setSound = value => {
     setSoundState(value);
@@ -106,11 +105,11 @@ function GameApp() {
   const workspaceMeta = { '/gestao':['GESTÃO','Gestão'], '/comando':['GESTÃO','Comandos'], '/bases':['GESTÃO','Bases'], '/frota':['GESTÃO','Frota'], '/funcionarios':['GESTÃO','Funcionários'], '/infraestruturas':['GESTÃO','Infraestruturas'], '/operacoes':['OPERAÇÕES','Operações'], '/estrategia':['ESTRATÉGIA','Planeamento'], '/alianca':['ALIANÇA','Aliança operacional'], '/relatorios':['RELATÓRIOS','Desempenho'], '/carreira':['PERFIL','Carreira'], '/definicoes':['SISTEMA','Definições'], '/privacidade':['SISTEMA','Privacidade'] }[location.pathname] || ['SISTEMA','Setor não encontrado'];
   const [workspaceSection, workspaceName] = workspaceMeta;
 
-  return <div data-time-theme={theme.phase} data-time-theme-mode={themeMode} className={`app-shell immersive-shell minimal-shell distrito-interface ${theme.dark ? 'dark' : ''} ${isCentral ? 'central-open' : 'workspace-open'} ${panel && isCentral ? `panel-open panel-${panel}` : ''} ${menuOpen ? 'menu-open' : ''}`}>
+  return <div data-time-theme="night" data-time-theme-mode="night" className={`app-shell immersive-shell minimal-shell distrito-interface dark ${isCentral ? 'central-open' : 'workspace-open'} ${panel && isCentral ? `panel-open panel-${panel}` : ''} ${menuOpen ? 'menu-open' : ''}`}>
     <main className="world-stage" aria-label="Mapa operacional" inert={!isCentral || menuOpen}>
       <CityMap theme={theme} world={world} game={game} selected={selected} onSelect={selectIncident} focusKey={focusKey} active={isCentral && !menuOpen} />
     </main>
-    <GameHUD game={game} act={act} sound={sound} setSound={setSound} onSave={save} error={error} themeMode={themeMode} setThemeMode={setThemeMode} theme={theme} />
+    <GameHUD game={game} act={act} sound={sound} setSound={setSound} onSave={save} error={error} />
     <div className="menu-launcher">
       <button className={menuOpen ? 'active' : ''} data-testid="game-menu-toggle" aria-label={menuOpen ? 'Fechar menu do jogo' : 'Abrir menu do jogo'} aria-expanded={menuOpen} aria-controls="game-menu" onClick={() => { setMenuOpen(value => !value); setPanel(null); setCentralWidget(null); }}>{menuOpen ? <X size={17} /> : <Menu size={17} />}<span>Menu</span></button>
     </div>
@@ -189,7 +188,7 @@ function GameApp() {
     <CallModal incident={game.incidents.find(i => i.id === callId)} open={!!callId} onClose={closeCall} act={act} busy={busy} />
     <HelpModal open={help} onClose={() => setHelp(false)} />
     <EventEffects event={feedback} onDone={clearFeedback} />
-    <Toaster theme={theme.dark ? 'dark' : 'light'} position="top-center" richColors />
+    <Toaster theme="dark" position="top-center" richColors />
   </div>;
 }
 export default function App() { return <HashRouter><GameApp /></HashRouter>; }
