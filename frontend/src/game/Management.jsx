@@ -20,6 +20,18 @@ const VehicleArt = ({ service, vehicleType, name }) => {
 const installed = (base, id) => (base.extensions || []).find(extension => extension.id === id);
 const upgradeCost = base => Math.round(1800 * Math.pow(base.level || 1, 1.35));
 
+const VEHICLE_CAPABILITY_LABELS = {
+  'fire-response':'Resposta a incêndio','urban-fire':'Incêndio urbano','rescue-basic':'Salvamento básico','water-supply':'Abastecimento de água',
+  aerial:'Trabalho em altura',wildfire:'Incêndio rural',offroad:'Todo-o-terreno',hazmat:'Matérias perigosas',decontamination:'Descontaminação',
+  command:'Comando',communications:'Comunicações',rescue:'Salvamento',extrication:'Desencarceramento',
+  'medical-response':'Emergência médica',bls:'Suporte básico de vida','patient-transport':'Transporte de vítimas','advanced-care':'Suporte avançado',
+  'rapid-response':'Resposta rápida',triage:'Triagem','mass-casualty':'Múltiplas vítimas','field-care':'Posto médico',aeromedical:'Aeromédica',
+  'police-response':'Resposta policial',patrol:'Patrulhamento','first-response':'Primeira resposta',canine:'Cinotécnica',search:'Busca',
+  'public-order':'Ordem pública',traffic:'Trânsito',custody:'Custódia','prisoner-transport':'Transporte de detidos',tactical:'Tática'
+};
+const vehicleCapabilityLabel = value => VEHICLE_CAPABILITY_LABELS[value] || String(value || '').replaceAll('-', ' ');
+const technicalRatingLabels = {response:'Resposta',robustness:'Robustez',capacity:'Capacidade',specialization:'Especialização',efficiency:'Eficiência',reliability:'Fiabilidade'};
+
 export default function Management({ game, world, act, busy, mode }) {
   const [buildOpen, setBuildOpen] = useState(false);
   const [service, setService] = useState('fire');
@@ -53,6 +65,9 @@ export default function Management({ game, world, act, busy, mode }) {
   const selectedMaintenance = selectedUnit ? maintenanceQuote(selectedUnit, selectedDefinition || selectedUnit) : null;
   const selectedResale = selectedUnit ? resaleValue(selectedUnit, selectedDefinition || selectedUnit, game.elapsed) : 0;
   const transferVehiclePlan = selectedUnit && transferEstimate?.route ? adjustedRoutePlan(selectedUnit, transferEstimate.route, 'base_transfer') : null;
+  const selectedAutonomy = selectedUnit ? Math.round((((selectedUnit.resources?.fuel ?? 0) / 100) * (selectedUnit.fuel_capacity_l || 0)) / Math.max(.1, (selectedUnit.fuel_consumption_l_100km || 1) / 100)) : 0;
+  const selectedLifeProgress = selectedUnit ? Math.min(100, Math.max(0, (selectedUnit.mileage_km || 0) / Math.max(1, selectedUnit.service_life_km || 180000) * 100)) : 0;
+  const selectedRevisionProgress = selectedUnit ? Math.min(100, Math.max(0, ((selectedUnit.mileage_km || 0) - (selectedUnit.last_maintenance_km || 0)) / Math.max(1, (selectedUnit.next_maintenance_km || 5000) - (selectedUnit.last_maintenance_km || 0)) * 100)) : 0;
   const requiredTrainingName = requiredTraining ? world.training_catalog?.find(course => course.id === requiredTraining)?.name || requiredTraining : null;
   const selectedCrew = selectedUnit ? (selectedUnit.personnel_ids || []).map(id => (game.personnel || []).find(person => person.id === id)).filter(Boolean) : [];
   const freeBaseCrew = selectedUnit && selectedBase ? (game.personnel || []).filter(person => person.base_id === selectedBase.id && person.service === selectedUnit.service && !person.unit_id && person.status === 'available') : [];
@@ -234,37 +249,90 @@ export default function Management({ game, world, act, busy, mode }) {
           </section>
 
 
-          <section className="vehicle-command-section vehicle-technical-section">
-            <header><Wrench size={15} /><div><h3>Ficha técnica e ciclo de vida</h3><p>Os valores abaixo entram realmente no despacho, deslocação, consumo, desgaste, avarias e manutenção.</p></div></header>
+          <section className="vehicle-command-section vehicle-technical-section" style={{ '--service-color': SERVICE[selectedUnit.service].ink }}>
+            <header className="vehicle-tech-heading">
+              <div className="vehicle-tech-icon"><Wrench size={16} /></div>
+              <div><h3>Ficha técnica</h3><p>Desempenho, logística e ciclo de vida desta viatura.</p></div>
+              <div className="vehicle-tech-status">
+                <span data-tone={selectedUnit.maintenance_due ? 'warning' : 'good'}>{selectedUnit.maintenance_due ? 'Revisão necessária' : 'Operacional'}</span>
+                {selectedUnit.operational_reserve && <span>Reserva</span>}
+                {selectedUnit.auto_dispatch === false && <span>Manual</span>}
+              </div>
+            </header>
+
             <div className="vehicle-rating-grid">
-              {Object.entries(selectedRatings || {}).map(([key,value]) => <div key={key}><small>{{response:'RESPOSTA',robustness:'ROBUSTEZ',capacity:'CAPACIDADE',specialization:'ESPECIALIZAÇÃO',efficiency:'EFICIÊNCIA',reliability:'FIABILIDADE'}[key] || key.toUpperCase()}</small><strong>{value}</strong><div className="vehicle-rating-track"><i style={{width:`${value}%`}} /></div></div>)}
+              {Object.entries(selectedRatings || {}).map(([key,value]) => <div className="vehicle-rating-card" key={key}>
+                <div><small>{technicalRatingLabels[key] || key}</small><strong>{value}<em>/100</em></strong></div>
+                <div className="vehicle-rating-track"><i style={{width:`${value}%`}} /></div>
+              </div>)}
             </div>
-            <div className="vehicle-spec-grid">
-              <span><small>CLASSE</small><b>{selectedUnit.vehicle_class || '—'} · {selectedUnit.size_class || '—'}</b></span>
-              <span><small>VELOCIDADE OPERACIONAL</small><b>×{Number(selectedUnit.speed_multiplier || 1).toFixed(2)}</b></span>
-              <span><small>PREPARAÇÃO</small><b>{Math.round(selectedUnit.preparation_time || 0)} s</b></span>
-              <span><small>MANOBRABILIDADE</small><b>{Math.round(selectedUnit.maneuverability || 0)}/100</b></span>
-              <span><small>TODO-O-TERRENO</small><b>{Math.round(selectedUnit.offroad || 0)}/100</b></span>
-              <span><small>MAU TEMPO</small><b>{Math.round(selectedUnit.weather_resistance || 0)}/100</b></span>
-              <span><small>COMBUSTÍVEL</small><b>{Math.round(selectedUnit.resources?.fuel ?? 0)}% · {Math.round(selectedUnit.fuel_capacity_l || 0)} L</b></span>
-              <span><small>CONSUMO</small><b>{Number(selectedUnit.fuel_consumption_l_100km || 0).toFixed(1)} L/100 km · {money(selectedUnit.operating_cost_per_km || 0)}/km</b></span>
-              <span><small>QUILOMETRAGEM</small><b>{Math.round(selectedUnit.mileage_km || 0).toLocaleString('pt-PT')} / {Math.round(selectedUnit.service_life_km || 180000).toLocaleString('pt-PT')} km</b></span>
-              <span><small>HORAS OPERACIONAIS</small><b>{Number(selectedUnit.operating_hours || 0).toFixed(1)} h</b></span>
-              <span><small>PRÓXIMA REVISÃO</small><b>{Math.round(selectedUnit.next_maintenance_km || 5000).toLocaleString('pt-PT')} km{selectedUnit.maintenance_due ? ' · ATRASADA' : ''}</b></span>
-              <span><small>TRANSPORTE</small><b>{selectedUnit.patient_capacity || 0} vítima(s) · {selectedUnit.detainee_capacity || 0} detido(s)</b></span>
-              <span><small>CARGA</small><b>{Math.round(selectedUnit.cargo_capacity || 0)} kg · {selectedUnit.equipment_slots || 0} slots</b></span>
-              <span><small>RAIO / AUTONOMIA</small><b>{selectedUnit.recommended_response_km || 0} km · máx. {selectedUnit.max_response_km || 0} km · autonomia ~{Math.round((((selectedUnit.resources?.fuel ?? 0)/100)*(selectedUnit.fuel_capacity_l || 0))/Math.max(.1,(selectedUnit.fuel_consumption_l_100km || 1)/100))} km</b></span>
-              <span><small>MISSÕES</small><b>{selectedUnit.missions_success || 0}/{selectedUnit.missions_total || 0} sucesso · {selectedUnit.critical_incidents || 0} críticas</b></span>
-              <span><small>AVARIAS / DESPACHO</small><b>{selectedUnit.breakdowns || 0} · prioridade {selectedUnit.dispatch_priority ?? 50}{selectedUnit.operational_reserve ? ' · RESERVA' : ''}{selectedUnit.auto_dispatch===false ? ' · MANUAL' : ''}</b></span>
+
+            <div className="vehicle-tech-dashboard">
+              <section className="vehicle-tech-panel">
+                <div className="vehicle-tech-panel-title"><span>Performance</span><small>Mobilidade e resposta</small></div>
+                <div className="vehicle-tech-rows">
+                  <div><span>Classe</span><b>{selectedUnit.vehicle_class || '—'} · {selectedUnit.size_class || '—'}</b></div>
+                  <div><span>Velocidade operacional</span><b>×{Number(selectedUnit.speed_multiplier || 1).toFixed(2)}</b></div>
+                  <div><span>Tempo de preparação</span><b>{Math.round(selectedUnit.preparation_time || 0)} s</b></div>
+                  <div><span>Manobrabilidade</span><b>{Math.round(selectedUnit.maneuverability || 0)}<small>/100</small></b></div>
+                  <div><span>Todo-o-terreno</span><b>{Math.round(selectedUnit.offroad || 0)}<small>/100</small></b></div>
+                  <div><span>Resistência meteorológica</span><b>{Math.round(selectedUnit.weather_resistance || 0)}<small>/100</small></b></div>
+                </div>
+              </section>
+
+              <section className="vehicle-tech-panel">
+                <div className="vehicle-tech-panel-title"><span>Operação</span><small>Alcance e capacidade</small></div>
+                <div className="vehicle-tech-rows">
+                  <div><span>Combustível</span><b>{Math.round(selectedUnit.resources?.fuel ?? 0)}% <small>· {Math.round(selectedUnit.fuel_capacity_l || 0)} L</small></b></div>
+                  <div><span>Consumo</span><b>{Number(selectedUnit.fuel_consumption_l_100km || 0).toFixed(1)} <small>L/100 km</small></b></div>
+                  <div><span>Autonomia estimada</span><b>~{selectedAutonomy.toLocaleString('pt-PT')} <small>km</small></b></div>
+                  <div><span>Raio recomendado</span><b>{selectedUnit.recommended_response_km || 0} <small>km · máx. {selectedUnit.max_response_km || 0}</small></b></div>
+                  <div><span>Carga / equipamento</span><b>{Math.round(selectedUnit.cargo_capacity || 0)} <small>kg · {selectedUnit.equipment_slots || 0} slots</small></b></div>
+                  <div><span>Transporte</span><b>{selectedUnit.patient_capacity || 0} <small>vítimas · {selectedUnit.detainee_capacity || 0} detidos</small></b></div>
+                </div>
+              </section>
             </div>
-            <div className="vehicle-tags"><strong>Capacidades</strong>{(selectedUnit.capabilities || []).map(item => <span key={item}>{item}</span>)}</div>
-            <div className="vehicle-tags"><strong>Equipamento</strong>{(selectedUnit.equipment_installed || []).map(item => <span key={item}>{item}</span>)}</div>
-            <div className="vehicle-resource-grid">{Object.entries(selectedUnit.resources || {}).map(([key,value]) => <span key={key}><small>{key.toUpperCase()}</small><b>{Math.round(value)} / {Math.round(selectedUnit.resource_capacity?.[key] ?? 100)}</b></span>)}</div>
+
+            <section className="vehicle-health-panel">
+              <div className="vehicle-tech-panel-title"><span>Ciclo de vida</span><small>Estado mecânico e utilização</small></div>
+              <div className="vehicle-health-layout">
+                <div className="vehicle-health-gauges">
+                  <div className="vehicle-health-gauge" style={{'--gauge-value': Math.round(selectedUnit.condition ?? 100)}}><div><strong>{Math.round(selectedUnit.condition ?? 100)}%</strong><small>Condição</small></div></div>
+                  <div className="vehicle-health-gauge wear" style={{'--gauge-value': Math.round(selectedUnit.wear || 0)}}><div><strong>{Math.round(selectedUnit.wear || 0)}%</strong><small>Desgaste</small></div></div>
+                </div>
+                <div className="vehicle-life-meters">
+                  <div className="vehicle-life-meter"><div><span>Vida útil</span><b>{Math.round(selectedUnit.mileage_km || 0).toLocaleString('pt-PT')} / {Math.round(selectedUnit.service_life_km || 180000).toLocaleString('pt-PT')} km</b></div><div className="vehicle-life-track"><i style={{width:`${selectedLifeProgress}%`}} /></div></div>
+                  <div className="vehicle-life-meter"><div><span>Próxima revisão</span><b>{Math.round(selectedUnit.next_maintenance_km || 5000).toLocaleString('pt-PT')} km{selectedUnit.maintenance_due ? ' · atrasada' : ''}</b></div><div className="vehicle-life-track"><i style={{width:`${selectedRevisionProgress}%`}} /></div></div>
+                  <div className="vehicle-life-mini">
+                    <span><small>Horas</small><b>{Number(selectedUnit.operating_hours || 0).toFixed(1)} h</b></span>
+                    <span><small>Missões</small><b>{selectedUnit.missions_success || 0}/{selectedUnit.missions_total || 0}</b></span>
+                    <span><small>Críticas</small><b>{selectedUnit.critical_incidents || 0}</b></span>
+                    <span><small>Avarias</small><b>{selectedUnit.breakdowns || 0}</b></span>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section className="vehicle-resource-panel">
+              <div className="vehicle-tech-panel-title"><span>Recursos a bordo</span><small>Stock operacional atual</small></div>
+              <div className="vehicle-resource-list">{Object.entries(selectedUnit.resources || {}).map(([key,value]) => {
+                const maximum = Number(selectedUnit.resource_capacity?.[key] ?? 100) || 100;
+                const pct = Math.max(0, Math.min(100, Number(value || 0) / maximum * 100));
+                return <div key={key}><div><span>{({water:'Água',foam:'Espuma',fuel:'Combustível',oxygen:'Oxigénio',medical:'Material clínico',equipment:'Equipamento'}[key] || key)}</span><b>{Math.round(value)} <small>/ {Math.round(maximum)}</small></b></div><div className="vehicle-resource-track"><i style={{width:`${pct}%`}} /></div></div>;
+              })}</div>
+            </section>
+
+            <div className="vehicle-tech-meta">
+              <section><div className="vehicle-tech-panel-title"><span>Capacidades</span><small>{(selectedUnit.capabilities || []).length} especializações</small></div><div className="vehicle-tags">{(selectedUnit.capabilities || []).map(item => <span key={item}>{vehicleCapabilityLabel(item)}</span>)}</div></section>
+              <section><div className="vehicle-tech-panel-title"><span>Equipamento</span><small>{(selectedUnit.equipment_installed || []).length}/{selectedUnit.equipment_slots || 0} slots</small></div><div className="vehicle-tags">{(selectedUnit.equipment_installed || []).map(item => <span key={item}>{item}</span>)}</div></section>
+            </div>
+
             <div className="vehicle-lifecycle-actions">
-              <div><small>MANUTENÇÃO ESTIMADA</small><strong>{money(selectedMaintenance?.cost || 0)} · {duration(selectedMaintenance?.duration || 0)}</strong></div>
-              <div><small>VALOR DE REVENDA</small><strong>{money(selectedResale)}</strong></div>
-              <Button className="outline-button" disabled={busy || !['available','uncrewed','offshift'].includes(selectedUnit.status) || selectedUnit.node !== selectedBase?.node} onClick={() => run('repair_unit',{unit_id:selectedUnit.id},'Manutenção iniciada.')}>Manutenção</Button>
-              <Button className="outline-button" disabled={busy || !['available','uncrewed','offshift'].includes(selectedUnit.status) || selectedUnit.node !== selectedBase?.node} onClick={sellSelectedUnit}>Vender viatura</Button>
+              <div className="vehicle-lifecycle-summary"><span><small>Manutenção estimada</small><strong>{money(selectedMaintenance?.cost || 0)}</strong><em>{duration(selectedMaintenance?.duration || 0)}</em></span><span><small>Valor de revenda</small><strong>{money(selectedResale)}</strong><em>{Number(selectedUnit.operating_cost_per_km || 0).toFixed(2).replace('.', ',')} €/km</em></span></div>
+              <div className="vehicle-lifecycle-buttons">
+                <Button className="outline-button" disabled={busy || !['available','uncrewed','offshift'].includes(selectedUnit.status) || selectedUnit.node !== selectedBase?.node} onClick={() => run('repair_unit',{unit_id:selectedUnit.id},'Manutenção iniciada.')}><Wrench size={13}/> Manutenção</Button>
+                <Button className="outline-button vehicle-sell-button" disabled={busy || !['available','uncrewed','offshift'].includes(selectedUnit.status) || selectedUnit.node !== selectedBase?.node} onClick={sellSelectedUnit}>Vender viatura</Button>
+              </div>
             </div>
           </section>
 
