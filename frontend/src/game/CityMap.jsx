@@ -1,7 +1,8 @@
 import { useRef, useState, useEffect } from 'react';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { Plus, Minus, LocateFixed, Layers3, Navigation, Sun, Radio, PhoneIncoming, ArrowUpRight, Building2 } from 'lucide-react';
-import { SERVICE, ServiceIcon, clock } from './common';
+import { SERVICE, ServiceIcon } from './common';
+import { portugalShortTime, recordRealTime } from './engines/timeEngine';
 import { IconButton } from './Shell';
 import CityTerrain from './CityTerrain';
 import { UrbanLife, AtmosphericWeather, useSceneActivity } from './CityAtmosphere';
@@ -63,8 +64,7 @@ export const CityMap = ({ world, game, selected, onSelect, onCall, focusKey, act
     <div className="map-compass"><Navigation size={22} /><span>N</span></div>
     <div className="map-zoom"><IconButton icon={Plus} label="Aproximar mapa" testId="map-zoom-in" onClick={() => controls.current?.zoomIn()} /><IconButton icon={Minus} label="Afastar mapa" testId="map-zoom-out" onClick={() => controls.current?.zoomOut()} /><span /><IconButton icon={LocateFixed} label="Ver cidade inteira" testId="map-reset" onClick={() => controls.current?.centerView(fit, 450)} /></div>
     <div className="map-legend" aria-label="Legenda dos serviços">{Object.entries(SERVICE).map(([k, s]) => <span key={k}><ServiceIcon service={k} color={s.color} size={13} />{s.name === 'Emergência médica' ? 'INEM' : s.name}</span>)}<span><i className="base-dot" />Bases</span></div>
-    <div className="map-scale"><span />200 m</div>
-    <div className="map-bottom"><div className="radio-feed"><div className="radio-feed-heading"><Radio size={14} /><strong>REDE RÁDIO</strong><span className="radio-bars"><i /><i /><i /><i /></span><span>CANAL 01</span></div>{game.logs.slice(0, 2).map(l => <div key={l.id} className="radio-log" data-testid={`radio-log-${l.id}`}><time>{clock(l.time).slice(0, 5)}</time><span className={l.kind}>{l.text}</span></div>)}</div>{call && <button className="incoming-call" data-testid="incoming-call-button" onClick={() => onCall(call.id)}><span className="incoming-icon"><PhoneIncoming size={20} /></span><span><small>LINHA 112 · CHAMADA EM ESPERA</small><strong>Atender 112</strong></span><ArrowUpRight size={19} /></button>}</div>
+        <div className="map-bottom"><div className="radio-feed"><div className="radio-feed-heading"><Radio size={14} /><strong>REDE RÁDIO</strong><span className="radio-bars"><i /><i /><i /><i /></span><span>CANAL 01</span></div>{game.logs.slice(0, 2).map(l => <div key={l.id} className="radio-log" data-testid={`radio-log-${l.id}`}><time>{portugalShortTime(recordRealTime(l, game))}</time><span className={l.kind}>{l.text}</span></div>)}</div>{call && <button className="incoming-call" data-testid="incoming-call-button" onClick={() => onCall(call.id)}><span className="incoming-icon"><PhoneIncoming size={20} /></span><span><small>LINHA 112 · CHAMADA EM ESPERA</small><strong>Atender 112</strong></span><ArrowUpRight size={19} /></button>}</div>
     {!game.speed && <div className="paused-label" data-testid="game-paused-indicator">SIMULAÇÃO EM PAUSA</div>}
   </section>;
 };
