@@ -90,7 +90,7 @@ const updateComplexes = game => (game.complexes||[]).forEach(complex=>{
   complex.shared={garage_capacity:bases.reduce((sum,base)=>sum+(base.capacity||0),0),garage_used:units.length,personnel:(game.personnel||[]).filter(person=>bases.some(base=>base.id===person.base_id)).length,beds:facilities.filter(item=>item.type==='hospital').reduce((sum,item)=>sum+(item.capacity||0),0),cells:facilities.filter(item=>item.type==='prison').reduce((sum,item)=>sum+(item.capacity||0),0)};
 });
 
-export function tickAdvancedState(game,dt,log=()=>{}) {
+export function tickAdvancedState(game,dt,log=()=>{},random=Math.random) {
   initializeAdvancedState(game);
   const previousDay=Math.floor(((game.elapsed||0)-dt)/86400),currentDay=Math.floor((game.elapsed||0)/86400);
   if(currentDay>previousDay){
@@ -98,8 +98,8 @@ export function tickAdvancedState(game,dt,log=()=>{}) {
     log(game,'Novos objetivos operacionais disponíveis.','success');
   }
   if(game.elapsed>=game.next_auto_planned&&(game.command_centers||[]).length){
-    const center=game.command_centers[Math.floor(Math.random()*game.command_centers.length)],events=['Evento desportivo','Festival municipal','Manifestação anunciada','Exercício de proteção civil'];
-    game.planned_missions.push({id:id(),title:events[Math.floor(Math.random()*events.length)],scenario:[3,5,10][Math.floor(Math.random()*3)],node:center.center_node,command_center_id:center.id,starts_at:game.elapsed+600,status:'scheduled',created_at:game.elapsed,system_generated:true});
+    const center=game.command_centers[Math.floor(random()*game.command_centers.length)],events=['Evento desportivo','Festival municipal','Manifestação anunciada','Exercício de proteção civil'];
+    game.planned_missions.push({id:id(),title:events[Math.floor(random()*events.length)],scenario:[3,5,10][Math.floor(random()*3)],node:center.center_node,command_center_id:center.id,starts_at:game.elapsed+600,status:'scheduled',created_at:game.elapsed,system_generated:true});
     game.next_auto_planned=game.elapsed+1800;log(game,'Novo evento futuro anunciado pelo sistema.','alert');
   }
   (game.recruitment_queue||[]).forEach(entry=>{
@@ -147,7 +147,7 @@ export function tickAdvancedState(game,dt,log=()=>{}) {
     }
     if(patient.treatment_progress>=100&&!patient.treatment_complete){
       patient.treatment_complete=true;
-      patient.transport_required=patient.transport_required??(patient.severity>1||Math.random()<.58);
+      patient.transport_required=patient.transport_required??(patient.severity>1||random()<.58);
       if(!patient.transport_required){patient.status='treated';patient.closed_at=game.elapsed;game.trust=Math.min(100,(game.trust||0)+1);log(game,'Vítima tratada no local sem necessidade de transporte.','success');}
       else log(game,'Vítima estabilizada e pronta para transporte.');
     }
