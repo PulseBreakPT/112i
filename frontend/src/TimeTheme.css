@@ -165,3 +165,148 @@ html, body, #root {
     transition: none !important;
   }
 }
+
+
+/* Cross-module material normalization.
+   Legacy modules may still carry historical green/blue/gold fills. They keep
+   semantic colours in text, dots and borders, never as full card materials. */
+.minimal-shell.distrito-interface .game-workspace :is(
+  .personnel-overview > article,
+  .employee-card,
+  .report-metric,
+  .base-card,
+  .vehicle-card,
+  .fleet-card,
+  .facility-card,
+  .career-rank,
+  .settings-section,
+  .expansion-strip,
+  .specialist-strip,
+  .command-card,
+  .command-overview,
+  .strategy-hero,
+  .strategy-panel,
+  .training-console,
+  .arr-builder,
+  .training-list article,
+  .qualification-grid article,
+  .patrol-list article,
+  .arr-list article,
+  .case-list article,
+  .personnel-grid article,
+  .poi-board article,
+  .unit-control-grid article,
+  .cooperation-card,
+  .task-list article,
+  .complex-grid article
+) {
+  background: var(--distrito-card) !important;
+  border-color: var(--distrito-edge) !important;
+  box-shadow: var(--distrito-card-shadow) !important;
+}
+
+.minimal-shell.distrito-interface .game-workspace :is(
+  .personnel-toolbar,
+  .employee-location,
+  .employee-key-stats > div,
+  .employee-assignment,
+  .strategy-list article,
+  .recruitment-grid article,
+  .policy-grid label,
+  .hospital-specialties,
+  .arr-vehicle-builder,
+  .fleet-card-base,
+  .requirements,
+  .dispatch-bottom,
+  .shift-overview
+) {
+  background: var(--distrito-inset) !important;
+  border-color: var(--distrito-divider) !important;
+}
+
+/* Status and service colours remain informative but cannot recolour a card. */
+.minimal-shell.distrito-interface .game-workspace :is(
+  [data-tone="positive"],
+  [data-tone="success"],
+  [data-state="completed"],
+  [data-service]
+) {
+  --semantic-material: transparent;
+}
+
+/* Permanent HUD: optical separation only, never neon. */
+.minimal-shell.distrito-interface :is(
+  .minimal-brand > .brand-wordmark,
+  .minimal-brand > .brand-wordmark > span,
+  .minimal-budget,
+  .hud-time b,
+  .minimal-options-toggle > span,
+  .menu-launcher > button > span,
+  .queue-count,
+  .incoming-call strong,
+  .incoming-call small,
+  .paused-label,
+  .central-incidents-launcher,
+  .central-management-rail > button > span,
+  .map-layer-button > span
+) {
+  text-shadow: 0 1px 2px rgba(0,0,0,.88), 0 0 1px rgba(0,0,0,.35) !important;
+}
+
+.minimal-shell.distrito-interface :is(
+  .minimal-brand > svg,
+  .minimal-readout > .icon-btn > svg,
+  .minimal-options-toggle > svg,
+  .menu-launcher > button > svg,
+  .map-layer-button > svg,
+  .map-zoom > .icon-btn > svg,
+  .incoming-call > svg,
+  .incoming-icon > svg,
+  .central-incidents-launcher > svg,
+  .central-management-rail > button > svg
+) {
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,.82)) !important;
+}
+
+/* Rails are deliberately quieter than content. */
+.minimal-shell.distrito-interface :is(
+  .central-management-rail > button,
+  .map-layer-button,
+  .map-zoom > .icon-btn,
+  .menu-launcher > button,
+  .minimal-options-toggle
+) {
+  opacity: .9 !important;
+}
+.minimal-shell.distrito-interface :is(
+  .central-management-rail > button:hover,
+  .central-management-rail > button:focus-visible,
+  .map-layer-button:hover,
+  .map-layer-button:focus-visible,
+  .map-zoom > .icon-btn:hover,
+  .map-zoom > .icon-btn:focus-visible,
+  .menu-launcher > button:hover,
+  .menu-launcher > button:focus-visible,
+  .minimal-options-toggle:hover,
+  .minimal-options-toggle:focus-visible
+) {
+  opacity: 1 !important;
+}
+.minimal-shell.distrito-interface :is(
+  .central-management-rail > button,
+  .map-layer-button,
+  .menu-launcher > button,
+  .minimal-options-toggle
+)::after {
+  box-shadow: none !important;
+}
+
+/* Map labels/controls should never inherit a light card from old CSS. */
+.minimal-shell.distrito-interface .portugal-map :is(
+  .maplibregl-ctrl-attrib,
+  .maplibregl-ctrl-scale
+) {
+  background: transparent !important;
+  color: #fff !important;
+  text-shadow: 0 1px 2px rgba(0,0,0,.88) !important;
+}
