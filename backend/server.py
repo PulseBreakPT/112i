@@ -126,9 +126,14 @@ def server_score(game: dict[str, Any]) -> int:
     failed = int(game.get('failed', 0))
     earned = int(game.get('earned', 0))
     trust = int(game.get('trust', 0))
-    elapsed = max(1.0, float(game.get('elapsed', 0)))
-    # Server-only score: rewards effective response, not raw client-submitted XP.
-    value = completed * 1000 + earned / 10 + trust * 20 - failed * 750 - elapsed / 5
+    history = game.get('history', [])
+    successful = [item for item in history if item.get('success')]
+    response_bonus = sum(max(0.0, 900.0 - float(item.get('response_time', 900))) / 3 for item in successful)
+    triage_bonus = sum(150 for item in successful if item.get('triage_correct'))
+    waste_penalty = sum(max(0, int(item.get('units_used', 0)) - int(item.get('required_units', 0))) * 90 for item in successful)
+    failure_penalty = failed * 900
+    # Score is calculated exclusively from authoritative server state.
+    value = completed * 900 + earned / 12 + trust * 18 + response_bonus + triage_bonus - waste_penalty - failure_penalty
     return max(0, int(round(value)))
 
 
@@ -385,6 +390,7 @@ async def startup():
     await db.online_players.create_index('id', unique=True)
     await db.online_players.create_index('token_hash', unique=True)
     await db.online_rooms.create_index('id', unique=True)
+    await db.leaderboard.create_index('room_id', unique=True)
     await db.leaderboard.create_index([('score', -1), ('elapsed', 1)])
     app.state.online_tick_task = asyncio.create_task(online_tick_loop())
 
