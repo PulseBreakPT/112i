@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { renderToStaticMarkup } from 'react-dom/server';
 import * as maplibregl from 'maplibre-gl';
-import { Plus, Minus, LocateFixed, Layers3, ArrowUpRight, Flame, TreePine, CarFront, HeartPulse, Wind, Handcuffs, Search, ShieldAlert, Waves, FlaskConical, Bomb, CloudLightning, Baby, Brain, HardHat, BusFront, Bike, TrainFront, Plane, Users, CircleAlert } from 'lucide-react';
+import { Plus, Minus, LocateFixed, Layers3, ArrowUpRight } from 'lucide-react';
 import { getMapThemePalette } from './timeTheme';
 import { SERVICE } from './common';
 import { vehicleImage } from './vehicleMedia';
@@ -100,39 +99,37 @@ function positionAt(unit, travel) {
     bearing: Math.atan2((b[0] - a[0]) * Math.cos(a[1] * Math.PI / 180), b[1] - a[1]) * 180 / Math.PI };
 }
 
-const INCIDENT_ICONS = {
-  fire: Flame,
-  wildfire: TreePine,
-  road: CarFront,
-  medical: HeartPulse,
-  asphyxia: Wind,
-  cardiac: HeartPulse,
-  neurology: Brain,
-  obstetric: Baby,
-  custody: Handcuffs,
-  search: Search,
-  police: ShieldAlert,
-  'public-order': Users,
-  water: Waves,
-  hazmat: FlaskConical,
-  explosives: Bomb,
-  weather: CloudLightning,
-  rescue: HardHat,
-  rail: TrainFront,
-  air: Plane,
-  bus: BusFront,
-  motorcycle: Bike,
-  disaster: CircleAlert,
-  multi: CircleAlert,
-  fireService: Flame,
-  medicalService: HeartPulse,
-  policeService: ShieldAlert,
+const incidentSvg = body => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${body}</svg>`;
+
+const INCIDENT_ICON_SVG = {
+  fire: incidentSvg('<path d="M12 22c4 0 7-2.7 7-6.5 0-4.8-3.8-7.6-6.7-11.5.1 3.5-2.1 5.2-3.5 6.7C7.5 12 6 13.6 6 16c0 3.4 2.6 6 6 6Z"/><path d="M10 18c0-1.5 1.2-2.6 2.3-3.8.1 1.6 1.7 2.4 1.7 4 0 1.1-.8 2-2 2s-2-.9-2-2.2Z"/>'),
+  wildfire: incidentSvg('<path d="M7 20h10"/><path d="M12 20v-5"/><path d="M8 15h8l-2-3h2l-4-7-4 7h2Z"/><path d="M17.5 18.5c1.7-.9 2.5-2 2.5-3.4 0-1.7-1.3-2.8-2.2-4.1 0 1.2-.8 1.8-1.4 2.4-.5.5-1.1 1.2-1.1 2.2 0 1.4.9 2.5 2.2 2.9Z"/>'),
+  road: incidentSvg('<path d="M5 17h14l-1-5-2-3H8l-2 3-1 5Z"/><path d="M7 17v2M17 17v2M6 13h12"/><circle cx="8" cy="16" r="1"/><circle cx="16" cy="16" r="1"/>'),
+  medical: incidentSvg('<path d="M3 12h4l2-4 3 8 2-4h7"/><path d="M12 21s-7-4.4-7-10a4 4 0 0 1 7-2 4 4 0 0 1 7 2c0 5.6-7 10-7 10Z"/>'),
+  asphyxia: incidentSvg('<path d="M10 20c-3 0-5-2.2-5-5.2 0-2.5 1.2-6.2 3.8-8.8.8-.8 1.2-.5 1.2.7V12"/><path d="M14 20c3 0 5-2.2 5-5.2 0-2.5-1.2-6.2-3.8-8.8-.8-.8-1.2-.5-1.2.7V12"/><path d="M10 12c-1.7 0-3 1.3-3 3M14 12c1.7 0 3 1.3 3 3M12 4v11"/>'),
+  cardiac: incidentSvg('<path d="M12 21s-7-4.4-7-10a4 4 0 0 1 7-2 4 4 0 0 1 7 2c0 5.6-7 10-7 10Z"/><path d="M7 13h3l1.5-3 2 6 1.5-3h2"/>'),
+  neurology: incidentSvg('<path d="M9 5a3 3 0 0 0-3 3c0 .4.1.8.2 1.1A3.5 3.5 0 0 0 7 16a3 3 0 0 0 4 2.8V5.5A2.5 2.5 0 0 0 9 5Z"/><path d="M15 5a3 3 0 0 1 3 3c0 .4-.1.8-.2 1.1A3.5 3.5 0 0 1 17 16a3 3 0 0 1-4 2.8V5.5A2.5 2.5 0 0 1 15 5Z"/><path d="M8 10h3M13 9h3M8 15h3M13 14h3"/>'),
+  obstetric: incidentSvg('<circle cx="12" cy="8" r="3"/><path d="M7 15c1.3-2.3 3-3.5 5-3.5s3.7 1.2 5 3.5"/><path d="M8 15c0 3 1.8 5 4 5s4-2 4-5"/><path d="M10 17h4"/>'),
+  custody: incidentSvg('<circle cx="7.5" cy="12" r="3.5"/><circle cx="16.5" cy="12" r="3.5"/><path d="M11 12h2M4 9l-1-2M20 9l1-2"/>'),
+  search: incidentSvg('<circle cx="10.5" cy="10.5" r="5.5"/><path d="M15 15l5 5"/>'),
+  police: incidentSvg('<path d="M12 3 19 6v5c0 4.6-2.8 8-7 10-4.2-2-7-5.4-7-10V6l7-3Z"/><path d="M9 12h6M12 9v6"/>'),
+  'public-order': incidentSvg('<path d="M12 3 19 6v5c0 4.6-2.8 8-7 10-4.2-2-7-5.4-7-10V6l7-3Z"/><circle cx="12" cy="9" r="2"/><path d="M8.5 15c.8-1.8 2-2.7 3.5-2.7s2.7.9 3.5 2.7"/>'),
+  water: incidentSvg('<path d="M3 9c2 0 2 2 4 2s2-2 4-2 2 2 4 2 2-2 4-2 2 2 2 2"/><path d="M3 15c2 0 2 2 4 2s2-2 4-2 2 2 4 2 2-2 4-2 2 2 2 2"/>'),
+  hazmat: incidentSvg('<path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4A2 2 0 0 0 19 18l-5-9V3"/><path d="M8 15h8"/><path d="M10 18h.01M14 18h.01"/>'),
+  explosives: incidentSvg('<circle cx="11" cy="13" r="6"/><path d="M15 8l2-2 2 2M18 6V3"/><path d="M8 13h6M11 10v6"/>'),
+  weather: incidentSvg('<path d="M6 17h11a4 4 0 0 0 .5-8A6 6 0 0 0 6.4 7.5 4.5 4.5 0 0 0 6 17Z"/><path d="M13 13l-2 4h3l-2 4"/>'),
+  rescue: incidentSvg('<path d="M5 14a7 7 0 0 1 14 0"/><path d="M3 14h18M8 14v-3M16 14v-3M6 18h12"/>'),
+  rail: incidentSvg('<rect x="6" y="3" width="12" height="15" rx="3"/><path d="M8 8h8M9 18l-2 3M15 18l2 3"/><circle cx="9" cy="14" r="1"/><circle cx="15" cy="14" r="1"/>'),
+  air: incidentSvg('<path d="M3 14l18-5-7 7-1 5-2-4-5 1 2-4-5 0Z"/>'),
+  bus: incidentSvg('<rect x="5" y="3" width="14" height="16" rx="3"/><path d="M7 8h10M7 13h10M8 19v2M16 19v2"/><circle cx="8" cy="16" r="1"/><circle cx="16" cy="16" r="1"/>'),
+  motorcycle: incidentSvg('<circle cx="7" cy="17" r="3"/><circle cx="17" cy="17" r="3"/><path d="M9 17l3-6 2 6M10 13h5l2-3h2M12 11l-2-2H8"/>'),
+  disaster: incidentSvg('<path d="M12 3 22 20H2L12 3Z"/><path d="M12 9v5M12 17h.01"/>'),
+  multi: incidentSvg('<circle cx="8" cy="8" r="3"/><circle cx="16" cy="8" r="3"/><circle cx="12" cy="16" r="3"/><path d="M10 9.5l1 4M14 9.5l-1 4M10.5 15h-2M13.5 15h2"/>'),
 };
 
 function iconMarkup(kind, service) {
-  const fallback = service === 'medical' ? INCIDENT_ICONS.medicalService : service === 'police' ? INCIDENT_ICONS.policeService : INCIDENT_ICONS.fireService;
-  const Icon = INCIDENT_ICONS[kind] || fallback;
-  return renderToStaticMarkup(<Icon size={18} strokeWidth={2.2} aria-hidden="true" focusable="false" />);
+  if (INCIDENT_ICON_SVG[kind]) return INCIDENT_ICON_SVG[kind];
+  return service === 'medical' ? INCIDENT_ICON_SVG.medical : service === 'police' ? INCIDENT_ICON_SVG.police : INCIDENT_ICON_SVG.fire;
 }
 
 function updateIncidentMarker(el, item) {
