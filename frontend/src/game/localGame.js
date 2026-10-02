@@ -125,6 +125,9 @@ export const fetchRoadRoute = (originId,destinationId,conditions=null) => fetchR
 const makeBase=(service,point)=>({...point,id:uid(),service,node:point.id,name:`${SERVICES[service].name} · ${point.name}`,level:1,capacity:2,staff_capacity:14,personnel:service==='fire'?10:6,extensions:[],specialization:'general'});
 const makeCommandCenter=(name,point,radius=35)=>({id:uid(),name,center_node:point.id,city:point.city,land:point.land,lng:point.lng,lat:point.lat,radius_km:radius,active:true,created_at:new Date().toISOString()});
 const commandCenterFor=(g,id)=>g.command_centers?.find(center=>center.id===id&&center.active!==false);
+const withinCommandArea=(center,point)=>!!(center&&point&&center.land===point.land&&distanceMeters(center,point)<=Math.max(5,Number(center.radius_km)||35)*1000);
+const routeFuelRequired=(...plans)=>plans.filter(Boolean).reduce((sum,plan)=>sum+Math.max(0,Number(plan.distance)||0),0)/1000*.42+1;
+const unitBaseOperational=(g,unit)=>g.bases.find(base=>base.id===unit.base_id)?.enabled!==false;
 const assignedPersonnel=(g,baseId)=>g.personnel?.length?g.personnel.filter(person=>person.base_id===baseId&&person.unit_id).length:g.units.filter(u=>u.base_id===baseId).reduce((sum,u)=>sum+(u.crew_assigned||0),0);
 const trainingPersonnel=(g,baseId)=>g.personnel?.length?g.personnel.filter(person=>person.base_id===baseId&&person.status==='training').length:(g.trainings||[]).filter(t=>t.base_id===baseId&&t.status==='active').reduce((sum,t)=>sum+t.count,0);
 const freePeople=(g,base,training=null)=>(g.personnel||[]).filter(person=>person.base_id===base.id&&!person.unit_id&&person.status==='available'&&(!training||(person.qualifications||[]).includes(training)));
@@ -184,8 +187,10 @@ const allowedBySpawnZones=(center,service,point)=>{
   return !zones.length||zones.some(zone=>pointInPolygon(point,zone.points));
 };
 const spawn=(g,scenarioIndex=null,nodeId=null,requestedCommandCenterId=null)=>{
-  const availableCenters=(g.command_centers||[]).filter(center=>center.active!==false&&g.bases.some(base=>base.command_center_id===center.id&&base.mission_generation_enabled!==false)).filter(center=>g.incidents.filter(incident=>incident.command_center_id===center.id).length<(g.progression?.command_centers?.[center.id]?.mission_cap||3));
-  const commandCenter=commandCenterFor(g,requestedCommandCenterId)||availableCenters[Math.floor(gameRandom(g)*Math.max(1,availableCenters.length))]||commandCenterFor(g,g.active_command_center_id)||g.command_centers?.[0];
+  const availableCenters=(g.command_centers||[]).filter(center=>center.active!==false&&g.bases.some(base=>base.command_center_id===center.id&&base.mission_generation_enabled!==false&&base.enabled!==false)).filter(center=>g.incidents.filter(incident=>incident.command_center_id===center.id).length<(g.progression?.command_centers?.[center.id]?.mission_cap||3));
+  const requestedCenter=commandCenterFor(g,requestedCommandCenterId);
+  if(!requestedCenter&&!availableCenters.length)return null;
+  const commandCenter=requestedCenter||availableCenters[Math.floor(gameRandom(g)*availableCenters.length)];
   const definition=scenarioIndex===null?weightedMission(g,commandCenter?.id,()=>gameRandom(g)):MISSION_DEFINITIONS.find(item=>item.scenario===scenarioIndex);
   const choice=definition?.scenario??1;
   const s=SCENARIOS[choice]||SCENARIOS[1];
@@ -204,10 +209,10 @@ const spawn=(g,scenarioIndex=null,nodeId=null,requestedCommandCenterId=null)=>{
     const withinRadius=point=>!commandCenter||distanceMeters(commandCenter,point)<=specificRange*1000;
     const candidates=places.filter(p=>withinRadius(p)&&allowedBySpawnZones(commandCenter,s.service,p)&&!occupied.has(p.id)&&(p.city===city||cities.includes(p.city)));
     const fallback=places.filter(p=>withinRadius(p)&&allowedBySpawnZones(commandCenter,s.service,p)&&(p.city===city||cities.includes(p.city)));
-    point=(candidates.length?candidates:fallback)[Math.floor(gameRandom(g)*Math.max(1,(candidates.length||fallback.length)))]||POINTS['porto-aliados'];
+    point=(candidates.length?candidates:fallback)[Math.floor(gameRandom(g)*Math.max(1,(candidates.length||fallback.length)))]||POINTS[commandCenter?.center_node]||POINTS['porto-aliados'];
   }
   const requiredPersonnel=Object.values(s.needs).reduce((sum,n)=>sum+n*2,0);
-  const created={...clone(s),id:uid(),number:g.sequence++,scenario:choice,definition:definition?.name||s.title,difficulty:definition?.difficulty||({1:'Difícil',2:'Média',3:'Fácil'}[s.priority]),command_center_id:commandCenter?.id||null,evolution:clone(generatedEvolution(choice,s.service,s.priority)),operational_phases:operationalPhasesFor(s.service),phase_requirements_applied:[0],active_phase:0,transport_probability:s.service==='medical'?.86:.34,detention_probability:s.service==='police'?.62:.12,casualties:rollRange(g,definition?.victims),detainees:rollRange(g,definition?.prisoners),required_vehicle_types:[...(definition?.vehicle||[])],required_trainings:requiredTrainingsFor(definition),required_personnel:requiredPersonnel,node:point.id,lng:point.lng,lat:point.lat,x:point.lng,y:point.lat,land:point.land,address:point.name,district:point.city,status:'waiting',created:g.elapsed,response_deadline:g.elapsed+({1:900,2:1200,3:1500}[s.priority]),resolution_deadline:g.elapsed+({1:1800,2:2250,3:2700}[s.priority]),deadline:g.elapsed+({1:900,2:1200,3:1500}[s.priority]),assigned:[],progress:0,call_answered:false,escalated:false,false_alarm:gameRandom(g)<(definition?.false_alarm_chance??.08),call:{text:s.caller,choices:s.choices}};
+  const created={...clone(s),id:uid(),number:g.sequence++,scenario:choice,definition:definition?.name||s.title,specialization:definition?.specialization||null,difficulty:definition?.difficulty||({1:'Difícil',2:'Média',3:'Fácil'}[s.priority]),command_center_id:commandCenter?.id||null,evolution:clone(generatedEvolution(choice,s.service,s.priority)),operational_phases:operationalPhasesFor(s.service),phase_requirements_applied:[0],active_phase:0,transport_probability:s.service==='medical'?.86:.34,detention_probability:s.service==='police'?.62:.12,casualties:rollRange(g,definition?.victims),detainees:rollRange(g,definition?.prisoners),required_vehicle_types:[...(definition?.vehicle||[])],required_trainings:requiredTrainingsFor(definition),required_personnel:requiredPersonnel,node:point.id,lng:point.lng,lat:point.lat,x:point.lng,y:point.lat,land:point.land,address:point.name,district:point.city,status:'waiting',created:g.elapsed,response_deadline:g.elapsed+({1:900,2:1200,3:1500}[s.priority]),resolution_deadline:g.elapsed+({1:1800,2:2250,3:2700}[s.priority]),deadline:g.elapsed+({1:900,2:1200,3:1500}[s.priority]),assigned:[],progress:0,call_answered:false,escalated:false,false_alarm:gameRandom(g)<(definition?.false_alarm_chance??.08),call:{text:s.caller,choices:s.choices}};
   const risk=RISK_ZONES[point.id]?.[created.service]||RISK_ZONES[point.id]?.fire||1;
   created.zone_risk=RISK_ZONES[point.id]?.label||'normal';
   if(risk>1.1){created.reward=Math.round(created.reward*risk);created.response_deadline=Math.max(g.elapsed+420,created.response_deadline-Math.round((risk-1)*180));created.deadline=created.response_deadline;}
@@ -257,7 +262,7 @@ const resolveIncident=(g,incident,success)=>{
   g.incidents=g.incidents.filter(i=>i.id!==incident.id);
 };
 const mobilize=(g,incident,units,routes={},returnRoutes={})=>{
-  requireValue(units.length&&units.every(unit=>operationalUnit(unit,g.dispatch_policy?.allow_returning_redirect===true)),'Não existem meios disponíveis para este despacho.');
+  requireValue(units.length&&units.every(unit=>operationalUnit(unit,g.dispatch_policy?.allow_returning_redirect===true)&&unitBaseOperational(g,unit)),'Não existem meios disponíveis para este despacho.');
   requireValue(units.every(unit=>unit.land===incident.land),'Sem ligação rodoviária para esta ocorrência.');
   requireValue(units.every(unit=>(unit.condition||100)>20),'Uma das viaturas precisa de manutenção antes de sair.');
   requireValue(units.every(unit=>(unit.fatigue||0)<90),'Uma das equipas precisa de descanso antes de nova mobilização.');
@@ -278,7 +283,7 @@ export function tickGame(input,seconds){
   g.bases.forEach(base=>{if(base.operational_at&&g.elapsed>=base.operational_at){delete base.operational_at;log(g,`${base.name} entrou ao serviço.`,'success');}});
   g.facilities.forEach(facility=>{if(facility.operational_at&&g.elapsed>=facility.operational_at){delete facility.operational_at;log(g,`${facility.name} entrou ao serviço.`,'success');}});
   g.bases.forEach(base=>(base.extensions||[]).forEach(extension=>{if(!extension.active&&extension.completes_at&&g.elapsed>=extension.completes_at){extension.active=true;delete extension.completes_at;const definition=EXTENSIONS[base.service]?.find(item=>item.id===extension.id);log(g,`${definition?.name||extension.id} concluída em ${base.name}.`,'success');}}));
-  (g.planned_missions||[]).forEach(planned=>{if(planned.status==='scheduled'&&g.elapsed>=planned.starts_at){const incident=spawn(g,planned.scenario,planned.node,planned.command_center_id);if(incident){incident.planned_mission_id=planned.id;incident.title=planned.title||incident.title;planned.status='active';planned.incident_id=incident.id;log(g,`Operação planeada iniciada: ${incident.title}.`,'alert');}}if(planned.status==='active'&&!g.incidents.some(item=>item.id===planned.incident_id))planned.status='completed';});
+  (g.planned_missions||[]).forEach(planned=>{if(planned.status==='scheduled'&&g.elapsed>=planned.starts_at){const incident=spawn(g,planned.scenario,planned.node,planned.command_center_id);if(incident){incident.planned_mission_id=planned.id;incident.title=planned.title||incident.title;if(planned.player_created){incident.player_planned=true;incident.reward=Math.max(100,Math.round(incident.reward*.35));incident.xp=Math.max(10,Math.round(incident.xp*.5));}planned.status='active';planned.incident_id=incident.id;log(g,`Operação planeada iniciada: ${incident.title}.`,'alert');}}if(planned.status==='active'&&!g.incidents.some(item=>item.id===planned.incident_id))planned.status='completed';});
   (g.cooperation?.events||[]).forEach(event=>{if(event.status==='active'&&g.elapsed>=event.ends_at)event.status='completed';});
   (g.cooperation?.large_scale_missions||[]).forEach(mission=>{if(mission.status==='active'&&!g.incidents.some(item=>item.id===mission.incident_id))mission.status='completed';});
   if((g.conditions?.weather==='storm'||g.conditions?.traffic==='heavy')&&g.level>=3&&g.elapsed>=(g.next_crisis_wave||900)&&g.incidents.length<g.progression.mission_cap){
@@ -342,11 +347,13 @@ export function tickGame(input,seconds){
       const quality=crewPeople.length?crewPeople.reduce((sum,person)=>sum+rankValue(person.rank)+Math.min(.14,(person.experience||0)/4000)-Math.min(.28,(person.fatigue||0)/320),0)/crewPeople.length:0;
       const personnelBoost=Math.min(1.9,Math.max(.65,personnel/required+quality));
       const specialistBoost=(inc.required_vehicle_types||[]).filter(type=>onscene.some(unit=>unit.vehicle_type===type)).length*.18;
+      const specializationUnits=inc.specialization?onscene.filter(unit=>{const base=g.bases.find(item=>item.id===unit.base_id);return base?.specialization===inc.specialization&&(!base.specialization_ready_at||base.specialization_ready_at<=g.elapsed);}).length:0;
+      const specializationBoost=Math.min(.3,specializationUnits*.1);
       const requiredTrainingCount=(inc.required_trainings||[]).filter(training=>trainedOnScene(g,onscene,training)).length;
       const qualified=onscene.flatMap(unit=>unit.personnel_ids||[]).map(id=>g.personnel.find(person=>person.id===id)).filter(Boolean).filter(person=>(person.qualifications||[]).length).length;
       const qualificationBoost=Math.min(.35,(qualified/Math.max(1,personnel)*.2)+(requiredTrainingCount*.15));
       const commandBoost=inc.command_center_id&&g.command_centers.some(center=>center.id===inc.command_center_id&&center.active!==false)?.08:0;
-      const efficiency=Math.min(2.35,personnelBoost+specialistBoost+qualificationBoost+commandBoost);
+      const efficiency=Math.min(2.5,personnelBoost+specialistBoost+specializationBoost+qualificationBoost+commandBoost);
       const pace=(inc.false_alarm?45:180)/efficiency;
       inc.operational_efficiency=Number(efficiency.toFixed(2));
       inc.progress=Math.min(100,inc.progress+dt*(100/pace));
@@ -366,7 +373,7 @@ export function tickGame(input,seconds){
   });
   g.level=1+Math.floor(g.xp/200);
   if(g.elapsed>=g.next_upkeep){
-    const discountFor=(kind,id)=>Math.max(0,...(g.complexes||[]).filter(complex=>(complex[kind]||[]).includes(id)).map(complex=>complex.operating_cost_discount||0));
+    const discountFor=(kind,id)=>Math.max(0,...(g.complexes||[]).filter(complex=>complex.shared_services!==false&&(complex[kind]||[]).includes(id)).map(complex=>complex.operating_cost_discount||0));
     const maintenance=g.units.reduce((sum,unit)=>{const discount=discountFor('base_ids',unit.base_id);return sum+((unit.condition<60?45:0)+(unit.fatigue>60?25:0)+75)*(1-discount);},0);
     const infrastructure=g.bases.reduce((sum,base)=>sum+100*(1-discountFor('base_ids',base.id)),0)+g.facilities.reduce((sum,facility)=>sum+125*(1-discountFor('facility_ids',facility.id)),0);
     const debtInterest=Math.round((g.operating_debt||0)*.02),cost=Math.round(maintenance+infrastructure+debtInterest),paid=Math.min(g.money,cost),shortfall=cost-paid;
