@@ -1275,3 +1275,33 @@
   pointer-events: auto !important;
 }
 .minimal-shell.distrito-interface .menu-dismiss { z-index: 18 !important; }
+
+
+/* Persistent HUD means persistent interaction too: modal backdrops never steal
+   the operational shortcuts. These controls can be used to switch context directly. */
+.minimal-shell.distrito-interface :is(
+  .minimal-hud,
+  .central-management-rail,
+  .central-incidents-launcher,
+  .menu-launcher
+) {
+  pointer-events: auto !important;
+}
+.minimal-shell.distrito-interface .minimal-hud { z-index: 38 !important; }
+.minimal-shell.distrito-interface .central-management-rail { z-index: 37 !important; }
+.minimal-shell.distrito-interface .central-incidents-launcher { z-index: 37 !important; }
+.minimal-shell.distrito-interface .menu-launcher { z-index: 39 !important; }
+.minimal-shell.distrito-interface.menu-open :is(
+  .central-management-rail,
+  .central-incidents-launcher
+),
+.minimal-shell.distrito-interface.panel-open :is(
+  .central-management-rail,
+  .central-incidents-launcher
+),
+.minimal-shell.distrito-interface.workspace-open :is(
+  .central-management-rail,
+  .central-incidents-launcher
+) {
+  pointer-events: auto !important;
+}
