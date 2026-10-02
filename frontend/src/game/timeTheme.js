@@ -64,7 +64,6 @@ const mixPalette = (fromName, toName, amount) => {
   const from = PALETTES[fromName], to = PALETTES[toName], t = clamp(amount);
   const color = key => mixColor(from[key], to[key], t);
   const number = key => lerp(from[key], to[key], t);
-  const dark = number('brightness') < 0.9;
   return {
     '--theme-page-bg': color('page'),
     '--theme-shell-bg': color('shell'),
