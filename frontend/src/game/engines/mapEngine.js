@@ -1,3 +1,4 @@
+import { portugalHour, isPortugalNight } from './timeEngine';
 const WEATHER = [
   {id:'clear',label:'Céu limpo',factor:1},
   {id:'rain',label:'Chuva',factor:1.18},
@@ -32,7 +33,7 @@ export const freshConditions = (elapsed, previous = null, random = Math.random) 
   const options=WEATHER_TRANSITIONS[previousWeather]||WEATHER_TRANSITIONS.clear;
   const weatherId=options[Math.floor(random()*options.length)];
   const weather=WEATHER.find(item=>item.id===weatherId)||WEATHER[0];
-  const hour=(14+Math.floor((32*60+elapsed)/3600))%24;
+  const hour=portugalHour(new Date());
   const rushHour=(hour>=7&&hour<=9)||(hour>=16&&hour<=19);
   const trafficRoll=random();
   const trafficId=rushHour?(trafficRoll<.55?'heavy':trafficRoll<.9?'moderate':'light'):(trafficRoll<.15?'heavy':trafficRoll<.55?'moderate':'light');
@@ -42,7 +43,7 @@ export const freshConditions = (elapsed, previous = null, random = Math.random) 
     weather:weather.id,weather_label:weather.label,weather_factor:weather.factor,
     traffic:traffic.id,traffic_label:traffic.label,traffic_factor:traffic.factor,
     roadworks:previous?.roadworks?(random()<.72):(random()<.16),
-    night:hour>=20||hour<7,updated_at:elapsed,next_change_at:elapsed+duration,
+    night:isPortugalNight(new Date()),updated_at:elapsed,next_change_at:elapsed+duration,
   };
 };
 
