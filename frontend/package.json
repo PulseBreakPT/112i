@@ -68,7 +68,8 @@
     "prebuild": "node ./scripts/copy-maplibre-worker.mjs",
     "start": "craco start",
     "build": "craco build",
-    "test": "craco test"
+    "test": "craco test",
+    "check:theme": "node ./scripts/check-theme-colors.cjs"
   },
   "browserslist": {
     "production": [">0.2%", "not dead", "not op_mini all"],

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import { Plus, Minus, LocateFixed, Layers3, ArrowUpRight } from 'lucide-react';
+import { getMapThemePalette } from './timeTheme';
 import { SERVICE } from './common';
 import { vehicleImage } from './vehicleMedia';
 import { IconButton } from './Shell';
@@ -11,7 +12,7 @@ maplibregl.setWorkerUrl(`${process.env.PUBLIC_URL || ''}/maplibre/maplibre-gl-wo
 
 const EMPTY = { type: 'FeatureCollection', features: [] };
 
-function calmCartography(map, detailed = false) {
+function calmCartography(map, detailed = false, palette = getMapThemePalette()) {
   // Mantém a cartografia OpenStreetMap, mas trata-a como contexto operacional.
   if (!map.__distritoLayerState) {
     map.__distritoLayerState = Object.fromEntries(map.getStyle().layers.map(layer => [
@@ -19,7 +20,15 @@ function calmCartography(map, detailed = false) {
       { visibility: layer.layout?.visibility || 'visible', minzoom: layer.minzoom ?? 0, maxzoom: layer.maxzoom ?? 24 },
     ]));
   }
-  const safe = (method, ...args) => { try { map[method](...args); } catch (_) {} };
+  const duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 1200;
+  const safe = (method, ...args) => {
+    try {
+      if (method === 'setPaintProperty' && args[1].endsWith('-color')) {
+        map.setPaintProperty(args[0], args[1] + '-transition', { duration, delay: 0 });
+      }
+      map[method](...args);
+    } catch (_) {}
+  };
   for (const layer of map.getStyle().layers) {
     if (layer.source === 'operational-routes') continue;
     const name = layer.id.toLowerCase();
@@ -34,15 +43,15 @@ function calmCartography(map, detailed = false) {
     const hiddenInCleanMode = isPoi || isMinorLabel;
     safe('setLayoutProperty', layer.id, 'visibility', !detailed && hiddenInCleanMode ? 'none' : original.visibility);
 
-    if (layer.type === 'background') safe('setPaintProperty', layer.id, 'background-color', detailed ? '#142027' : '#101a20');
+    if (layer.type === 'background') safe('setPaintProperty', layer.id, 'background-color', palette.background);
     if (layer.type === 'fill') {
-      const color = /water/.test(name) ? '#102c39' : /building/.test(name) ? '#263238' : /park|wood|forest|landcover|grass/.test(name) ? '#193029' : /industrial/.test(name) ? '#242d32' : '#19242a';
+      const color = /water/.test(name) ? palette.water : /building/.test(name) ? palette.building : /park|wood|forest|landcover|grass/.test(name) ? palette.park : /industrial/.test(name) ? palette.industrial : palette.land;
       safe('setPaintProperty', layer.id, 'fill-color', color);
       safe('setPaintProperty', layer.id, 'fill-opacity', detailed ? (/building/.test(name) ? .58 : .82) : (/building/.test(name) ? .24 : .62));
-      if (/building/.test(name)) safe('setPaintProperty', layer.id, 'fill-outline-color', detailed ? '#39474d' : '#2a373d');
+      if (/building/.test(name)) safe('setPaintProperty', layer.id, 'fill-outline-color', palette.outline);
     }
     if (layer.type === 'line') {
-      const color = /water/.test(name) ? '#284957' : isBoundary ? '#52626a' : isMajorRoad ? '#66757a' : isMidRoad ? '#526269' : isMinorRoad ? '#3b4b52' : /rail/.test(name) ? '#405057' : '#44545b';
+      const color = /water/.test(name) ? palette.waterLine : isBoundary ? palette.boundary : isMajorRoad ? palette.major : isMidRoad ? palette.mid : isMinorRoad ? palette.minor : /rail/.test(name) ? palette.rail : palette.line;
       const opacity = detailed ? (isMajorRoad ? .88 : isMidRoad ? .68 : isMinorRoad ? .52 : .48) : (isMajorRoad ? .7 : isMidRoad ? .42 : isMinorRoad ? .2 : isBoundary ? .18 : .28);
       const width = isMajorRoad ? (detailed ? 2.5 : 1.7) : isMidRoad ? (detailed ? 1.8 : 1.1) : (detailed ? 1.15 : .72);
       safe('setPaintProperty', layer.id, 'line-color', color);
@@ -50,10 +59,10 @@ function calmCartography(map, detailed = false) {
       safe('setPaintProperty', layer.id, 'line-width', ['interpolate', ['linear'], ['zoom'], 5, width * .55, 12, width, 18, width * 1.65]);
     }
     if (layer.type === 'symbol' && layer.layout?.['text-field']) {
-      const labelColor = isPlace ? '#cbd4d6' : /road|highway/.test(name) ? '#829198' : '#91a0a6';
+      const labelColor = isPlace ? palette.label : /road|highway/.test(name) ? palette.roadLabel : palette.otherLabel;
       safe('setPaintProperty', layer.id, 'text-color', labelColor);
-      safe('setPaintProperty', layer.id, 'text-opacity', detailed ? (isPlace ? .9 : .72) : (isPlace ? .72 : .42));
-      safe('setPaintProperty', layer.id, 'text-halo-color', '#101a20');
+      safe('setPaintProperty', layer.id, 'text-opacity', detailed ? (isPlace ? 1 : .9) : (isPlace ? .95 : .78));
+      safe('setPaintProperty', layer.id, 'text-halo-color', palette.background);
       safe('setPaintProperty', layer.id, 'text-halo-width', detailed ? 1.4 : 1.8);
       safe('setLayoutProperty', layer.id, 'text-size', isPlace ? (detailed ? 14 : 12) : (detailed ? 11 : 9.5));
     }
@@ -82,7 +91,7 @@ function positionAt(unit, travel) {
 function markerElement(kind, item) {
   const el = document.createElement(kind === 'incident' ? 'button' : 'div');
   el.className = `geo-marker geo-${kind}`;
-  el.style.setProperty('--marker-color', SERVICE[item.service].color);
+  el.style.setProperty('--marker-color', SERVICE[item.service].ink);
   el.dataset.testid = kind === 'incident' ? `map-incident-${item.number}` : kind === 'base' ? `map-base-${item.service}-${item.id}` : `moving-unit-${item.name}`;
   el.title = item.title || item.callsign || item.name;
   if (kind === 'incident') {
@@ -123,7 +132,7 @@ function markerElement(kind, item) {
   return el;
 }
 
-export const PortugalMap = ({ world, game, selected, onSelect, focusKey, active = true }) => {
+export const PortugalMap = ({ world, game, selected, onSelect, focusKey, theme, active = true }) => {
   const container = useRef(null), mapRef = useRef(null);
   const markers = useRef(new Map());
   const latest = useRef({ game, selected, onSelect, received: performance.now() });
@@ -188,9 +197,17 @@ export const PortugalMap = ({ world, game, selected, onSelect, focusKey, active 
     }
   }, [world, retry]);
 
+  const themeFrom = theme?.from || 'night', themeTo = theme?.to || themeFrom, themeBlend = theme?.blend || 0;
   useEffect(() => {
-    if (loaded && mapRef.current) calmCartography(mapRef.current, detailed);
-  }, [loaded, detailed]);
+    if (loaded && mapRef.current) {
+      const map = mapRef.current;
+      const palette = getMapThemePalette(themeFrom, themeTo, themeBlend);
+      calmCartography(map, detailed, palette);
+      // Route outlines and direction halos follow the canvas while service ink stays semantic.
+      if (map.getLayer('route-casing')) map.setPaintProperty('route-casing', 'line-color', palette.background);
+      if (map.getLayer('route-direction')) map.setPaintProperty('route-direction', 'text-halo-color', palette.background);
+    }
+  }, [loaded, detailed, themeFrom, themeTo, themeBlend]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -227,8 +244,8 @@ export const PortugalMap = ({ world, game, selected, onSelect, focusKey, active 
       }
     }
     markers.current.forEach((marker, id) => { if (!keep.has(id)) { marker.remove(); markers.current.delete(id); } });
-    map.getSource('operational-routes')?.setData({ type: 'FeatureCollection', features: game.units.filter(u => u.route?.length > 1 && ['enroute', 'returning', 'base_transfer'].includes(u.status)).map(u => ({ type: 'Feature', properties: { color: SERVICE[u.service].color, service: u.service, status: u.status, selected: u.incident_id === selected }, geometry: { type: 'LineString', coordinates: u.route } })) });
-  }, [game, selected, loaded, unitsVisible]);
+    map.getSource('operational-routes')?.setData({ type: 'FeatureCollection', features: game.units.filter(u => u.route?.length > 1 && ['enroute', 'returning', 'base_transfer'].includes(u.status)).map(u => ({ type: 'Feature', properties: { color: theme?.cssVars?.['--service-' + u.service] || SERVICE[u.service].color, service: u.service, status: u.status, selected: u.incident_id === selected }, geometry: { type: 'LineString', coordinates: u.route } })) });
+  }, [game, selected, loaded, unitsVisible, theme?.cssVars]);
 
   useEffect(() => {
     if (!loaded || !active || !game.speed) return;

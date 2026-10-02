@@ -13,13 +13,13 @@
   padding: 12px 16px 18px;
   max-height: none !important;
   isolation: isolate;
-  border: 1px solid color-mix(in srgb, var(--service-color) 22%, #ffffff16);
+  border: 1px solid color-mix(in srgb, var(--service-color) 22%, color-mix(in srgb, var(--theme-border-ink) 8.6%, transparent));
   border-radius: 9px;
   background:
     radial-gradient(ellipse at 50% 72%, color-mix(in srgb, var(--service-color) 15%, transparent), transparent 58%),
-    linear-gradient(145deg, #ffffff08, transparent 55%),
-    repeating-linear-gradient(0deg, transparent 0 23px, #ffffff05 23px 24px),
-    #13181d;
+    linear-gradient(145deg, color-mix(in srgb, var(--theme-tint) 3.1%, transparent), transparent 55%),
+    repeating-linear-gradient(0deg, transparent 0 23px, color-mix(in srgb, var(--theme-tint) 2.0%, transparent) 23px 24px),
+    var(--theme-inset);
   filter: none;
 }
 
@@ -37,7 +37,7 @@
   width: 100%;
   height: 100%;
   object-fit: contain;
-  filter: drop-shadow(0 3px 3px #000b);
+  filter: drop-shadow(0 3px 3px color-mix(in srgb, var(--theme-shadow) 73.3%, transparent));
 }
 
 .assigned-vehicle-thumbnail { width: 44px; height: 31px; flex-basis: 44px; }
@@ -57,7 +57,7 @@
   bottom: 13px;
   height: 13px;
   border-radius: 50%;
-  background: #0009;
+  background: color-mix(in srgb, var(--theme-inset) 60.0%, transparent);
   filter: blur(8px);
 }
 
@@ -70,13 +70,13 @@
   object-fit: contain;
   object-position: center;
   user-select: none;
-  filter: drop-shadow(0 11px 9px #0009) saturate(.92) contrast(1.04);
+  filter: drop-shadow(0 11px 9px color-mix(in srgb, var(--theme-shadow) 60.0%, transparent)) saturate(.92) contrast(1.04);
   transition: transform .25s ease, filter .25s ease;
 }
 
 .vehicle-card:hover .vehicle-photo > img {
   transform: translateY(-2px) scale(1.005);
-  filter: drop-shadow(0 14px 11px #000a) saturate(1) contrast(1.05);
+  filter: drop-shadow(0 14px 11px color-mix(in srgb, var(--theme-shadow) 66.7%, transparent)) saturate(1) contrast(1.05);
 }
 
 .game-modal .vehicle-art.vehicle-photo {
@@ -105,10 +105,10 @@
 .minimal-shell .game-workspace .fleet-card {
   min-width: 0;
   padding: 13px;
-  border: 1px solid #414e60;
-  border-top: 2px solid color-mix(in srgb, var(--service-color) 65%, #ffffff22);
+  border: 1px solid var(--theme-border-strong);
+  border-top: 2px solid color-mix(in srgb, var(--service-color) 65%, color-mix(in srgb, var(--theme-border-ink) 13.3%, transparent));
   border-radius: 11px;
-  background: #1c232d;
+  background: var(--theme-surface);
 }
 
 .minimal-shell .game-workspace .fleet-card > header {
@@ -132,7 +132,7 @@
 .minimal-shell .game-workspace .fleet-card > header strong {
   display: block;
   overflow: hidden;
-  color: #edf4ff;
+  color: var(--distrito-text);
   font: 700 12px/1.3 var(--mono);
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -151,16 +151,16 @@
   min-width: 0;
   margin-top: 11px;
   padding: 9px;
-  color: #b9c9dc;
-  border: 1px solid #ffffff14;
+  color: var(--distrito-text);
+  border: 1px solid color-mix(in srgb, var(--theme-border-ink) 7.8%, transparent);
   border-radius: 7px;
-  background: #ffffff05;
+  background: color-mix(in srgb, var(--theme-tint) 2.0%, transparent);
 }
 
 .minimal-shell .game-workspace .fleet-card-base > svg { flex: 0 0 auto; color: var(--service-color); }
 .minimal-shell .game-workspace .fleet-card-base > span { min-width: 0; }
 .minimal-shell .game-workspace .fleet-card-base small,
-.minimal-shell .game-workspace .fleet-card-details small { display: block; margin-bottom: 3px; color: #8f9caf; font: 700 7px/1 var(--mono); letter-spacing: .4px; }
+.minimal-shell .game-workspace .fleet-card-details small { display: block; margin-bottom: 3px; color: var(--theme-info); font: 700 7px/1 var(--mono); letter-spacing: .4px; }
 .minimal-shell .game-workspace .fleet-card-base b { display: block; overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 
 .minimal-shell .game-workspace .fleet-card-details {
@@ -172,7 +172,7 @@
 
 .minimal-shell .game-workspace .fleet-card-details > span:not(.fleet-status) {
   min-width: 0;
-  color: #d7e0ec;
+  color: var(--distrito-text);
 }
 
 .minimal-shell .game-workspace .fleet-card-details > span:not(.fleet-status) b { font: 700 11px/1 var(--mono); }
@@ -297,13 +297,13 @@
 
 .minimal-shell .game-workspace .fleet-card[role="button"]:hover {
   transform: translateY(-2px);
-  border-color: color-mix(in srgb, var(--service-color) 56%, #6f7c8e);
-  background: #202934;
-  box-shadow: 0 12px 24px #00000024;
+  border-color: color-mix(in srgb, var(--service-color) 56%, var(--theme-info));
+  background: var(--theme-surface);
+  box-shadow: 0 12px 24px color-mix(in srgb, var(--theme-shadow) 14.1%, transparent);
 }
 
 .minimal-shell .game-workspace .fleet-card[role="button"]:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--service-color) 80%, white);
+  outline: 2px solid color-mix(in srgb, var(--service-color) 80%, var(--theme-border-strong));
   outline-offset: 3px;
 }
 
@@ -321,9 +321,9 @@
   gap: 14px;
   align-items: center;
   padding: 14px;
-  border: 1px solid color-mix(in srgb, var(--service-color) 30%, #ffffff14);
+  border: 1px solid color-mix(in srgb, var(--service-color) 30%, color-mix(in srgb, var(--theme-border-ink) 7.8%, transparent));
   border-radius: 11px;
-  background: linear-gradient(135deg, color-mix(in srgb, var(--service-color) 8%, #18202a), #151c25);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--service-color) 8%, var(--theme-surface)), var(--theme-surface));
 }
 
 .vehicle-command-thumbnail {
@@ -344,7 +344,7 @@
 .vehicle-command-hero strong {
   overflow: hidden;
   margin-top: 8px;
-  color: #edf4ff;
+  color: var(--distrito-text);
   font-size: 13px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -352,7 +352,7 @@
 
 .vehicle-command-hero small {
   margin-top: 5px;
-  color: #9eacbd;
+  color: var(--distrito-secondary);
   font-size: 11px;
   line-height: 1.4;
 }
@@ -361,9 +361,9 @@
   display: grid;
   gap: 12px;
   padding: 14px;
-  border: 1px solid #ffffff14;
+  border: 1px solid color-mix(in srgb, var(--theme-border-ink) 7.8%, transparent);
   border-radius: 11px;
-  background: #ffffff04;
+  background: color-mix(in srgb, var(--theme-tint) 1.6%, transparent);
 }
 
 .vehicle-command-section > header {
@@ -375,7 +375,7 @@
 .vehicle-command-section > header > svg {
   flex: 0 0 auto;
   margin-top: 2px;
-  color: #b9d4fa;
+  color: var(--theme-info);
 }
 
 .vehicle-command-section h3,
@@ -385,13 +385,13 @@
 }
 
 .vehicle-command-section h3 {
-  color: #edf4ff;
+  color: var(--distrito-text);
   font-size: 13px;
 }
 
 .vehicle-command-section > header p {
   margin-top: 3px;
-  color: #8e9daf;
+  color: var(--theme-info);
   font-size: 10px;
   line-height: 1.45;
 }
@@ -407,18 +407,18 @@
   min-width: 0;
   min-height: 39px;
   padding: 8px 10px;
-  color: #e7eef8;
-  border: 1px solid #445164;
+  color: var(--distrito-text);
+  border: 1px solid var(--theme-border-strong);
   border-radius: 7px;
   outline: none;
-  background: #121922;
+  background: var(--theme-inset);
   font: 600 12px/1.2 var(--mono);
 }
 
 .vehicle-name-row input:focus,
 .vehicle-command-section select:focus {
-  border-color: #8ebeff;
-  box-shadow: 0 0 0 2px #6ea8ff1c;
+  border-color: var(--theme-info);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-highlight) 11.0%, transparent);
 }
 
 .transfer-estimate {
@@ -426,9 +426,9 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   padding: 10px;
-  border: 1px solid #ffffff14;
+  border: 1px solid color-mix(in srgb, var(--theme-border-ink) 7.8%, transparent);
   border-radius: 8px;
-  background: #101720;
+  background: var(--theme-inset);
 }
 
 .transfer-estimate > div {
@@ -440,7 +440,7 @@
 
 .transfer-estimate svg {
   flex: 0 0 auto;
-  color: #9fc7ff;
+  color: var(--theme-info);
 }
 
 .transfer-estimate small,
@@ -450,13 +450,13 @@
 
 .transfer-estimate small {
   margin-bottom: 3px;
-  color: #7f8da1;
+  color: var(--theme-info);
   font: 700 8px/1 var(--mono);
   letter-spacing: .45px;
 }
 
 .transfer-estimate strong {
-  color: #e9f1fb;
+  color: var(--distrito-text);
   font: 700 12px/1.2 var(--mono);
 }
 
@@ -465,14 +465,14 @@
   display: flex;
   grid-template-columns: none;
   align-items: center;
-  color: #aebed0;
+  color: var(--distrito-secondary);
   font-size: 11px;
 }
 
 .transfer-estimate.error {
-  color: #ffb9b9;
-  border-color: #ff6c6c42;
-  background: #ff4f4f0a;
+  color: var(--theme-danger);
+  border-color: color-mix(in srgb, var(--theme-danger) 25.9%, transparent);
+  background: color-mix(in srgb, var(--theme-danger) 3.9%, transparent);
 }
 
 .vehicle-fixed-crew {
@@ -481,9 +481,9 @@
   gap: 9px;
   align-items: start;
   padding: 10px;
-  border: 1px solid #ffffff12;
+  border: 1px solid color-mix(in srgb, var(--theme-border-ink) 7.1%, transparent);
   border-radius: 8px;
-  background: #ffffff04;
+  background: color-mix(in srgb, var(--theme-tint) 1.6%, transparent);
   cursor: pointer;
 }
 
@@ -497,23 +497,23 @@
 }
 
 .vehicle-fixed-crew b {
-  color: #dfe8f4;
+  color: var(--distrito-text);
   font-size: 11px;
 }
 
 .vehicle-fixed-crew small {
   margin-top: 3px;
-  color: #8696aa;
+  color: var(--theme-info);
   font-size: 9px;
   line-height: 1.45;
 }
 
 .vehicle-command-warning {
   padding: 9px 10px;
-  color: #f0c987;
-  border: 1px solid #dba85135;
+  color: var(--theme-warning);
+  border: 1px solid color-mix(in srgb, var(--theme-warning) 20.8%, transparent);
   border-radius: 7px;
-  background: #dba85109;
+  background: color-mix(in srgb, var(--theme-warning) 3.5%, transparent);
   font-size: 10px;
   line-height: 1.45;
 }
@@ -528,13 +528,13 @@
   gap: 8px 10px;
   align-items: center;
   padding: 12px;
-  border: 1px solid #7db9ff35;
+  border: 1px solid color-mix(in srgb, var(--theme-info) 20.8%, transparent);
   border-radius: 9px;
-  background: #4a94ed0a;
+  background: color-mix(in srgb, var(--theme-info) 3.9%, transparent);
 }
 
 .transfer-live > svg {
-  color: #9bc8ff;
+  color: var(--theme-info);
 }
 
 .transfer-live strong,
@@ -543,13 +543,13 @@
 }
 
 .transfer-live strong {
-  color: #ecf5ff;
+  color: var(--distrito-text);
   font-size: 12px;
 }
 
 .transfer-live span {
   margin-top: 3px;
-  color: #91a8c1;
+  color: var(--theme-info);
   font-size: 10px;
 }
 
@@ -558,14 +558,14 @@
   height: 5px;
   overflow: hidden;
   border-radius: 99px;
-  background: #ffffff12;
+  background: color-mix(in srgb, var(--theme-tint) 7.1%, transparent);
 }
 
 .transfer-progress > i {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: #83baff;
+  background: var(--theme-info);
   transition: width .4s linear;
 }
 
@@ -577,7 +577,7 @@
 
 .crew-columns h4 {
   margin-bottom: 7px;
-  color: #8292a6;
+  color: var(--theme-info);
   font: 700 8px/1 var(--mono);
   letter-spacing: .55px;
 }
@@ -594,9 +594,9 @@
   align-items: center;
   min-height: 48px;
   padding: 8px;
-  border: 1px solid #ffffff10;
+  border: 1px solid color-mix(in srgb, var(--theme-border-ink) 6.3%, transparent);
   border-radius: 7px;
-  background: #111821;
+  background: var(--theme-inset);
 }
 
 .crew-row span,
@@ -612,7 +612,7 @@
 
 .crew-row b {
   overflow: hidden;
-  color: #dfe8f4;
+  color: var(--distrito-text);
   font-size: 10px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -620,7 +620,7 @@
 
 .crew-row small {
   margin-top: 3px;
-  color: #8290a2;
+  color: var(--theme-info);
   font-size: 8px;
   line-height: 1.35;
 }
@@ -632,17 +632,17 @@
   justify-content: center;
   min-height: 30px;
   padding: 5px 7px;
-  color: #bdd5f4;
-  border: 1px solid #455469;
+  color: var(--theme-info);
+  border: 1px solid var(--theme-border-strong);
   border-radius: 6px;
-  background: #1b2531;
+  background: var(--theme-surface);
   font-size: 9px;
   cursor: pointer;
 }
 
 .crew-row button:hover:not(:disabled) {
-  border-color: #7199ca;
-  background: #233144;
+  border-color: var(--theme-info);
+  background: var(--theme-raised);
 }
 
 .crew-row button:disabled {
@@ -652,8 +652,8 @@
 
 .crew-empty {
   padding: 12px 9px;
-  color: #728196;
-  border: 1px dashed #ffffff12;
+  color: var(--theme-info);
+  border: 1px dashed color-mix(in srgb, var(--theme-border-ink) 7.1%, transparent);
   border-radius: 7px;
   font-size: 9px;
   text-align: center;

@@ -1,11 +1,8 @@
-/* Distrito 112 — adaptive daylight palette.
-   Night remains the visual architecture. Morning and afternoon only alter
-   colour temperature, luminance and map treatment; layout/material logic
-   stays owned by Interface.css. */
+/* Distrito 112 — daylight materials shared by the map, HUD and workspace. */
 
 html, body, #root {
-  background: var(--theme-page-bg, #05070a);
-  color-scheme: dark;
+  background: var(--theme-page-bg);
+  color-scheme: var(--theme-color-scheme, dark);
 }
 
 .minimal-shell.distrito-interface {
@@ -17,26 +14,23 @@ html, body, #root {
   --ui-secondary: var(--distrito-secondary);
   --ui-muted: var(--distrito-muted);
   --text: var(--distrito-text);
-  --muted: var(--distrito-muted);
-  --border: var(--distrito-edge);
   --compact-surface: var(--distrito-glass);
   --compact-line: var(--distrito-edge);
   --cinema-glass: var(--distrito-glass);
   background: var(--theme-shell-bg);
   color: var(--distrito-text);
-  color-scheme: dark;
+  color-scheme: var(--theme-color-scheme, dark);
   transition: background-color 1.2s ease, color 1.2s ease;
 }
 
-/* Keep the permanent HUD exactly like night: white ink, black optical shadow,
-   no cards. Only the shadow temperature changes through the palette tokens. */
+/* HUD ink and optical separation follow the cartographic palette. */
 .minimal-shell.distrito-interface :is(
   .minimal-brand > .brand-wordmark, .minimal-brand > .brand-wordmark > span,
   .minimal-budget, .hud-time b, .minimal-options-toggle > span,
   .menu-launcher > button > span, .queue-count, .incoming-call strong,
   .incoming-call small, .paused-label, .central-incidents-launcher
 ) {
-  color: #fff !important;
+  color: var(--theme-hud-color) !important;
   text-shadow: var(--distrito-hud-text-shadow) !important;
 }
 
@@ -47,7 +41,7 @@ html, body, #root {
   .incoming-call > svg, .incoming-icon > svg,
   .central-incidents-launcher > svg
 ) {
-  color: #fff !important;
+  color: var(--theme-hud-color) !important;
   filter: var(--distrito-hud-icon-shadow) !important;
 }
 
@@ -113,7 +107,7 @@ html, body, #root {
   background: var(--distrito-hover);
 }
 .time-theme-buttons > button[aria-pressed="true"] {
-  color: #fff;
+  color: var(--distrito-text);
   border-color: color-mix(in srgb, var(--theme-accent) 48%, var(--distrito-edge));
   background: var(--distrito-selected);
   box-shadow: inset 0 -2px var(--theme-accent);
@@ -136,15 +130,13 @@ html, body, #root {
   --ui-secondary: var(--distrito-secondary);
   --ui-muted: var(--distrito-muted);
   --text: var(--distrito-text);
-  --muted: var(--distrito-muted);
-  --border: var(--distrito-edge);
   --compact-surface: var(--distrito-glass);
   --compact-line: var(--distrito-edge);
   --cinema-glass: var(--distrito-glass);
   background: var(--distrito-glass) !important;
   border-color: var(--distrito-edge) !important;
   color: var(--distrito-text) !important;
-  color-scheme: dark;
+  color-scheme: var(--theme-color-scheme, dark);
 }
 .game-modal :is(button, input, select, textarea) { color: var(--distrito-text); }
 .game-modal :is(input, select, textarea) {
@@ -250,7 +242,7 @@ html, body, #root {
   .central-management-rail > button > span,
   .map-layer-button > span
 ) {
-  text-shadow: 0 1px 2px rgba(0,0,0,.88), 0 0 1px rgba(0,0,0,.35) !important;
+  text-shadow: var(--distrito-hud-text-shadow) !important;
 }
 
 .minimal-shell.distrito-interface :is(
@@ -265,7 +257,7 @@ html, body, #root {
   .central-incidents-launcher > svg,
   .central-management-rail > button > svg
 ) {
-  filter: drop-shadow(0 1px 1px rgba(0,0,0,.82)) !important;
+  filter: var(--distrito-hud-icon-shadow) !important;
 }
 
 /* Rails are deliberately quieter than content. */
@@ -301,12 +293,165 @@ html, body, #root {
   box-shadow: none !important;
 }
 
-/* Map labels/controls should never inherit a light card from old CSS. */
+/* Attribution stays readable on the cartographic background. */
 .minimal-shell.distrito-interface .portugal-map :is(
   .maplibregl-ctrl-attrib,
   .maplibregl-ctrl-scale
 ) {
   background: transparent !important;
-  color: #fff !important;
-  text-shadow: 0 1px 2px rgba(0,0,0,.88) !important;
+  color: var(--theme-hud-color) !important;
+  text-shadow: var(--distrito-hud-text-shadow) !important;
+}
+
+/* Material hierarchy: quiet elevated glass, precise borders and one accent. */
+:root[data-time-theme-dark="false"] {
+  --theme-color-scheme: light;
+}
+:root[data-time-theme] {
+  --distrito-radius: 14px;
+  --distrito-card-radius: 10px;
+  --distrito-control-radius: 8px;
+  --distrito-shadow: 0 18px 48px color-mix(in srgb, var(--theme-hud-color) 14%, transparent), 0 2px 8px color-mix(in srgb, var(--theme-shadow) 4%, transparent);
+  --distrito-card-shadow: 0 1px 3px color-mix(in srgb, var(--theme-shadow) 2.4%, transparent);
+  --distrito-menu-blur: blur(24px) saturate(1.1);
+}
+.minimal-shell.distrito-interface :is(.minimal-brand, .minimal-readout, .minimal-readout > .icon-btn, .minimal-options-toggle, .menu-launcher > button, .map-zoom > .icon-btn, .central-management-rail > button, .central-quick-rail > button, .map-layer-button) {
+  color: var(--theme-hud-color) !important;
+}
+.minimal-shell.distrito-interface :is(.central-quick-rail > button, .map-layer-button) {
+  background: var(--theme-quick-bg) !important;
+  border: 1px solid var(--distrito-edge) !important;
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--theme-shadow) 4.7%, transparent) !important;
+  border-radius: 10px;
+  text-shadow: none !important;
+}
+.minimal-shell.distrito-interface :is(.central-quick-rail > button, .map-layer-button):is(:hover, .active) {
+  background: var(--distrito-selected) !important;
+  border-color: var(--theme-accent) !important;
+}
+.minimal-shell.distrito-interface :is(.central-quick-rail > button > svg, .central-quick-rail > button > span, .map-layer-button > svg, .map-layer-button > span) {
+  color: var(--theme-hud-color) !important;
+  text-shadow: none !important;
+  filter: none !important;
+}
+.minimal-shell.distrito-interface :is(.central-quick-rail > button > b, .central-incidents-launcher > b) {
+  background: var(--distrito-selected);
+  color: var(--distrito-text);
+  box-shadow: none;
+}
+.minimal-shell.distrito-interface :is(.menu-launcher > button, .minimal-options-toggle, .map-layer-button, .central-incidents-launcher)::after {
+  background: var(--theme-accent);
+  box-shadow: none;
+}
+.minimal-shell.distrito-interface :is(.hud-options, .layer-menu, .game-menu, .central-widget) {
+  border-color: var(--distrito-edge) !important;
+  box-shadow: var(--distrito-shadow) !important;
+}
+.minimal-shell.distrito-interface :is(button, a, input, select, textarea):focus-visible,
+.game-modal :is(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid var(--theme-accent) !important;
+  outline-offset: 3px;
+}
+.minimal-shell.distrito-interface :is(.geo-base, .geo-incident, .geo-vehicle-label) {
+  color: var(--distrito-text);
+}
+.time-theme-buttons { gap: 6px; }
+.time-theme-buttons > button {
+  height: 54px;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 10px;
+  cursor: pointer;
+}
+.time-theme-buttons svg { width: 16px; height: 16px; }
+.time-theme-buttons > button[aria-pressed="true"] {
+  color: var(--theme-accent);
+  border-color: var(--theme-accent);
+}
+.time-theme-buttons > button[data-theme="morning"] > svg { color: var(--theme-warning); }
+.time-theme-buttons > button[data-theme="afternoon"] > svg { color: var(--theme-danger); }
+.time-theme-buttons > button[data-theme="night"] > svg { color: var(--theme-violet); }
+.time-theme-heading { font-size: 11px; }
+.time-theme-detail { font-size: 10px; line-height: 1.6; }
+.minimal-shell.distrito-interface .hud-options-heading {
+  color: var(--theme-accent);
+  letter-spacing: 1.5px;
+}
+/* Native option menus are opaque; translucent gradients cannot paint options. */
+:root[data-time-theme] option { background: var(--theme-surface); color: var(--distrito-text); }
+:root[data-time-theme-dark="false"] .minimal-shell.distrito-interface :is(.unit-choice:disabled, .unit-choice:disabled .unit-ready, .unit-choice:disabled .unit-choice-text > small) {
+  background: var(--theme-inset) !important;
+  color: var(--distrito-muted) !important;
+  border-color: var(--distrito-edge) !important;
+}
+@media (max-width: 600px) {
+  .time-theme-buttons > button { height: 48px; font-size: 9px; }
+  .time-theme-detail { font-size: 9px; }
+}
+.time-theme-preview {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  height: 88px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  background: var(--theme-inset);
+  color: var(--theme-on-image);
+}
+.time-theme-preview img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: -2;
+  transition: opacity 1.2s ease;
+}
+.time-theme-preview::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, transparent, var(--theme-image-scrim));
+}
+.time-theme-preview > span { font: 600 8px/1.6 var(--distrito-font); letter-spacing: 1.8px; color: var(--theme-on-image); }
+.time-theme-preview > strong { font: 600 22px/1.2 var(--distrito-font); color: var(--theme-on-image); }
+@media (prefers-reduced-motion: reduce) {
+  .time-theme-preview img { transition: none; }
+}
+.minimal-shell.distrito-interface select option, .game-modal select option {
+  background: var(--theme-surface);
+  color: var(--distrito-text);
+}
+.minimal-shell.distrito-interface .hud-options .speed-group > button.chosen {
+  background: var(--distrito-selected);
+  color: var(--theme-accent);
+  border-color: var(--theme-accent);
+}
+.minimal-shell.distrito-interface .portugal-map .maplibregl-ctrl-scale { border-color: var(--theme-hud-color); }
+.minimal-shell.distrito-interface .hud-options {
+  max-height: calc(100dvh - 80px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.minimal-shell.distrito-interface .hud-options .speed-group > button { color: var(--distrito-secondary); }
+.minimal-shell.distrito-interface .portugal-map .maplibregl-ctrl-attrib :is(a, summary) {
+  color: var(--theme-hud-color) !important;
+}
+.time-theme-preview img[src$="afternoon.jpg"] { object-position: center 88%; }
+.minimal-shell.distrito-interface :is(.primary-button, .dispatch-button), .game-modal .primary-button,
+.minimal-shell.distrito-interface :is(.primary-button, .dispatch-button):hover:not(:disabled), .game-modal .primary-button:hover:not(:disabled) {
+  background: var(--theme-accent) !important;
+  border-color: var(--theme-accent) !important;
+  color: var(--theme-on-accent) !important;
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--theme-shadow) 7.8%, transparent);
+}
+.minimal-shell.distrito-interface .strategy-panel > .primary-button { margin: 14px 16px; }
+.minimal-shell.distrito-interface .training-console label { color: var(--distrito-secondary); }
+.minimal-shell.distrito-interface :is(.outline-button, .smart-dispatch), .game-modal .outline-button {
+  border-color: var(--distrito-edge) !important;
 }
