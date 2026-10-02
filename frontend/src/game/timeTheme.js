@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export const TIME_THEME_STORAGE_KEY = 'distrito112-time-theme';
 export const TIME_THEME_MODES = ['auto', 'morning', 'afternoon', 'night'];
@@ -201,8 +201,7 @@ export function useTimeTheme(location) {
     return () => window.clearInterval(timer);
   }, []);
 
-  const locationKey = [location?.lat, location?.lng, location?.city, location?.land].join('|');
-  const theme = useMemo(() => getTimeThemeSnapshot(now, location, themeMode), [now, locationKey, themeMode]);
+  const theme = getTimeThemeSnapshot(now, location, themeMode);
 
   useEffect(() => {
     const root = document.documentElement;
