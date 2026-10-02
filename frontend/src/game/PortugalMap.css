@@ -82,6 +82,15 @@
   background: #74b987;
   box-shadow: 0 0 0 2px #0a0b0c, 0 0 7px rgba(116,185,135,.34);
 }
+.geo-incident[data-priority="1"] { z-index: 10; }
+.geo-incident[data-priority="2"] { z-index: 9; }
+.geo-incident[data-priority="3"] { z-index: 8; }
+.geo-incident[data-incident-state="onscene"] .geo-incident-core {
+  box-shadow:
+    0 0 0 2px rgba(0,0,0,.82),
+    0 0 10px color-mix(in srgb, var(--marker-color) 24%, transparent),
+    inset 0 1px 0 rgba(255,255,255,.06);
+}
 .geo-incident-state {
   position: absolute;
   left: 0;
