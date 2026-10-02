@@ -163,8 +163,8 @@ const refreshGuidance=g=>{
   g.campaign=g.campaign||{chapter:1,goals:[]};
   const goals=[
     ['stabilize-porto','Estabilizar o distrito do Porto',g.completed,8],
-    ['support-network','Criar rede de apoio com 2 instalações',g.facilities.length,2],
-    ['specialized-response','Operar 3 viaturas especializadas',g.units.filter(unit=>unit.advanced).length,3],
+    ['support-network','Criar rede de apoio com 2 instalações',g.facilities.filter(facility=>facility.enabled!==false&&(!facility.operational_at||facility.operational_at<=g.elapsed)).length,2],
+    ['specialized-response','Operar 3 viaturas especializadas',g.units.filter(unit=>unit.advanced&&unit.enabled!==false&&(unit.crew_assigned||0)>=(unit.crew_required||1)).length,3],
     ['regional-command','Abrir 2 Centros de Comando',g.command_centers.filter(center=>center.active!==false).length,2],
   ];
   g.campaign.goals=goals.map(([id,title,value,target])=>({id,title,value,target,done:value>=target}));
@@ -580,7 +580,7 @@ export function applyAction(input,kind,data={}){
     const complex=(g.complexes||[]).find(item=>item.id===data.complex_id),collection=data.member_kind==='facility'?'facility_ids':'base_ids',valid=data.member_kind==='facility'?g.facilities:g.bases,member=valid.find(item=>item.id===data.member_id);requireValue(complex&&member,'Complexo ou edifício inválido.');requireValue(member.command_center_id===complex.command_center_id,'O edifício pertence a outra área operacional.');complex[collection]=complex[collection]||[];complex[collection]=complex[collection].includes(data.member_id)?complex[collection].filter(id=>id!==data.member_id):[...complex[collection],data.member_id];log(g,`${complex.name} atualizado.`,'success');
   }
   else if(kind==='claim_task'){
-    refreshMeta(g);const task=(g.tasks||[]).find(item=>item.id===data.task_id);requireValue(task&&!task.claimed&&task.progress>=task.target,'Tarefa ainda não está concluída.');task.claimed=true;task.claimed_at=g.elapsed;g.money+=task.reward;g.earned+=task.reward;log(g,`Recompensa recebida: ${task.title} (+${task.reward} €).`,'success');
+    refreshMeta(g);const task=(g.tasks||[]).find(item=>item.id===data.task_id);requireValue(task&&!task.claimed&&task.progress>=task.target,'Tarefa ainda não está concluída.');task.claimed=true;task.claimed_at=g.elapsed;g.money+=task.reward;g.task_rewards=(g.task_rewards||0)+task.reward;log(g,`Recompensa recebida: ${task.title} (+${task.reward} €).`,'success');
   }
   else if(kind==='update_unit_settings'){
     const unit=g.units.find(item=>item.id===data.unit_id);requireValue(unit,'Viatura inválida.');if(data.enabled!==undefined){requireValue(unit.status==='available'||data.enabled,'A viatura só pode ser desativada na base.');unit.enabled=!!data.enabled;}if(data.exclude_from_arr!==undefined)unit.exclude_from_arr=!!data.exclude_from_arr;if(data.max_crew!==undefined){requireValue(unit.status==='available','A lotação só pode ser alterada na base.');const limit=Math.max(unit.crew_required||1,Math.min(12,Number(data.max_crew)||unit.crew_required||1)),base=g.bases.find(item=>item.id===unit.base_id),definition=vehicleDefinition(unit.service,unit.vehicle_type);unit.max_crew=limit;const assigned=(unit.personnel_ids||[]).map(id=>g.personnel.find(person=>person.id===id)).filter(Boolean);assigned.slice(limit).forEach(person=>{person.unit_id=null;person.status='available';});unit.personnel_ids=assigned.slice(0,limit).map(person=>person.id);freePeople(g,base,definition.training||null).slice(0,Math.max(0,limit-unit.personnel_ids.length)).forEach(person=>{person.unit_id=unit.id;person.status='assigned';unit.personnel_ids.push(person.id);});unit.crew_assigned=unit.personnel_ids.length;}if(data.response_delay!==undefined)unit.response_delay=Math.max(0,Math.min(120,Number(data.response_delay)||0));log(g,`Configuração atualizada: ${unit.name}.`,'success');
