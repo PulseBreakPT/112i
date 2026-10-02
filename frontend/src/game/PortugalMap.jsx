@@ -84,7 +84,7 @@ function markerElement(kind, item) {
   el.className = `geo-marker geo-${kind}`;
   el.style.setProperty('--marker-color', SERVICE[item.service].color);
   el.dataset.testid = kind === 'incident' ? `map-incident-${item.number}` : kind === 'base' ? `map-base-${item.service}-${item.id}` : `moving-unit-${item.name}`;
-  el.title = item.title || item.name;
+  el.title = item.title || item.callsign || item.name;
   if (kind === 'incident') {
     el.type = 'button';
     el.setAttribute('aria-label', `${item.title} · ${item.address}`);
@@ -117,7 +117,7 @@ function markerElement(kind, item) {
     visual.append(image, fallback);
     const label = document.createElement('span');
     label.className = 'geo-vehicle-label';
-    label.textContent = item.name;
+    label.textContent = item.callsign || item.name;
     el.append(visual, label);
   }
   return el;
