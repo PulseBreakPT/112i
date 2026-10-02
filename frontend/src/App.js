@@ -25,7 +25,8 @@ import { ambientAudio } from './game/ambientAudio';
 import { useAmbientAudio } from './game/useAmbientAudio';
 import EventEffects from './game/EventEffects';
 import { APP_NAME, BRAND_WORD, BRAND_NUMBER } from './game/branding';
-import { SOUND_PREFERENCE_KEY } from './game/storageCompatibility';\nimport { useTimeTheme } from './game/timeTheme';
+import { SOUND_PREFERENCE_KEY } from './game/storageCompatibility';
+import { useTimeTheme } from './game/timeTheme';
 import './Silver.css';
 import './game/semantics.css';
 import './Immersive.css';
@@ -34,7 +35,8 @@ import './Polish.css';
 import './Clarity.css';
 import './Compact.css';
 import './VehicleMedia.css';
-import './Interface.css';\nimport './TimeTheme.css';
+import './Interface.css';
+import './TimeTheme.css';
 
 function GameApp() {
   const { game, world, error, busy, act, retry, feedback, clearFeedback } = useGame();
@@ -51,6 +53,8 @@ function GameApp() {
   const [sound, setSoundState] = useState(() => localStorage.getItem(SOUND_PREFERENCE_KEY) !== 'false');
   const sequence = useRef(null);
   const audioActive = !!game && !!game.speed && isCentral;
+  const themeLocation = game?.command_centers?.find(center => center.id === game.active_command_center_id && center.active !== false) || game?.command_centers?.find(center => center.active !== false) || game?.bases?.[0] || { lat: 39.5, lng: -8, city: 'Portugal', land: 'mainland' };
+  const { themeMode, setThemeMode, theme } = useTimeTheme(themeLocation);
   useAmbientAudio(sound, audioActive);
   const setSound = value => {
     setSoundState(value);
@@ -99,7 +103,7 @@ function GameApp() {
   const workspaceMeta = { '/gestao':['GESTÃO','Gestão'], '/comando':['GESTÃO','Comandos'], '/bases':['GESTÃO','Bases'], '/frota':['GESTÃO','Frota'], '/funcionarios':['GESTÃO','Funcionários'], '/infraestruturas':['GESTÃO','Infraestruturas'], '/operacoes':['OPERAÇÕES','Operações'], '/estrategia':['ESTRATÉGIA','Planeamento'], '/alianca':['ALIANÇA','Aliança operacional'], '/relatorios':['RELATÓRIOS','Desempenho'], '/carreira':['PERFIL','Carreira'], '/definicoes':['SISTEMA','Definições'], '/privacidade':['SISTEMA','Privacidade'] }[location.pathname] || ['SISTEMA','Setor não encontrado'];
   const [workspaceSection, workspaceName] = workspaceMeta;
 
-  return <div className={`app-shell immersive-shell minimal-shell distrito-interface dark ${isCentral ? 'central-open' : 'workspace-open'} ${panel && isCentral ? `panel-open panel-${panel}` : ''} ${menuOpen ? 'menu-open' : ''}`}>
+  return <div data-time-theme={theme.phase} data-time-theme-mode={themeMode} className={`app-shell immersive-shell minimal-shell distrito-interface ${theme.dark ? 'dark' : ''} ${isCentral ? 'central-open' : 'workspace-open'} ${panel && isCentral ? `panel-open panel-${panel}` : ''} ${menuOpen ? 'menu-open' : ''}`}>
     <main className="world-stage" aria-label="Mapa operacional" inert={!isCentral || menuOpen}>
       <CityMap world={world} game={game} selected={selected} onSelect={selectIncident} focusKey={focusKey} active={isCentral && !menuOpen} />
     </main>
