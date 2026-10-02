@@ -1,8 +1,9 @@
 """Detailed route validation for review request requirements"""
+import os
 import requests
 import json
 
-BACKEND_URL = "https://menu-standardization.preview.emergentagent.com/api"
+BACKEND_URL = os.environ.get("BACKEND_URL", "http://127.0.0.1:8000/api").rstrip("/")
 
 def detailed_route_check(origin_id, destination_id, route_name):
     """Check detailed route requirements"""
