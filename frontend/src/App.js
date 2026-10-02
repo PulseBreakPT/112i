@@ -38,6 +38,7 @@ import './VehicleMedia.css';
 import './Interface.css';
 import './TimeTheme.css';
 import './ThemeComponents.css';
+import './VehicleTechnical.css';
 
 function GameApp() {
   const { game, world, error, busy, act, retry, feedback, clearFeedback } = useGame();
