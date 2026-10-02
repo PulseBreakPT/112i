@@ -8,24 +8,24 @@ export const TIME_THEME_MODES = ['auto', 'morning', 'afternoon', 'night'];
 
 const PALETTES = {
   morning: {
-    page: '#08131d', shell: '#0a1722', surface: '#112536', raised: '#19344a', inset: '#0a1a27',
-    text: '#f3f8fc', secondary: '#c8d8e5', muted: '#91a9bb', edge: '#8bc8ff1c', divider: '#b8dcff12',
-    glassA: '#10283bdd', glassB: '#081824e8', cardA: '#8bc8ff12', cardB: '#6eb8ff08',
-    headerA: '#b9ddff0a', headerB: '#07121d05', controlA: '#b4dcff14', controlB: '#7bbfff0b',
-    hoverA: '#9ed2ff20', hoverB: '#67b4ff12', selectedA: '#8cc9ff18', selectedB: '#5dacfa0d',
-    hud: '#ffffff', accent: '#7dc3ff', quickA: '#10283bcc', quickB: '#081824dc',
-    marker: '#102433f2', mapControl: '#0e2230ec', overlayTop: '#7ac7ff0b', overlayBottom: '#06111b20',
-    saturation: 0.92, brightness: 0.98, contrast: 1.01, sepia: 0.01, dark: true,
+    page: '#071018', shell: '#09131c', surface: '#101a24', raised: '#162330', inset: '#0b141d',
+    text: '#f1f5f8', secondary: '#c8d2db', muted: '#97a7b5', edge: '#b8d6ef1a', divider: '#d2e4f210',
+    glassA: '#101a24d8', glassB: '#08121be6', cardA: '#ffffff09', cardB: '#9fc3df05',
+    headerA: '#ffffff08', headerB: '#89b6d204', controlA: '#ffffff10', controlB: '#9cc3df08',
+    hoverA: '#ffffff1a', hoverB: '#9fc3df0d', selectedA: '#ffffff16', selectedB: '#8fb8d60a',
+    hud: '#ffffff', accent: '#7ebcf2', quickA: '#101a24cc', quickB: '#08121bdc',
+    marker: '#101a24f2', mapControl: '#0e1822ec', overlayTop: '#84bfe20a', overlayBottom: '#050a1024',
+    saturation: 0.88, brightness: 0.92, contrast: 1.03, sepia: 0.01, dark: true,
   },
   afternoon: {
-    page: '#18110c', shell: '#1b130d', surface: '#2a1d13', raised: '#382719', inset: '#1a120c',
-    text: '#fff8f1', secondary: '#ead8c6', muted: '#bca18a', edge: '#ffc58d1d', divider: '#ffd7ae12',
-    glassA: '#2c1d12dd', glassB: '#160f0ae8', cardA: '#ffbc7d12', cardB: '#e99a5408',
-    headerA: '#ffd0a00a', headerB: '#140c0705', controlA: '#ffc18b14', controlB: '#e9914a0b',
-    hoverA: '#ffc08a20', hoverB: '#e88b4312', selectedA: '#ffb77818', selectedB: '#db7d390d',
-    hud: '#ffffff', accent: '#f2a45f', quickA: '#2c1d12cc', quickB: '#160f0adc',
-    marker: '#291b12f2', mapControl: '#25180fec', overlayTop: '#e7984a12', overlayBottom: '#120a061f',
-    saturation: 0.86, brightness: 0.90, contrast: 1.04, sepia: 0.10, dark: true,
+    page: '#100b08', shell: '#140f0b', surface: '#1d1612', raised: '#281d17', inset: '#120d09',
+    text: '#f4f1ed', secondary: '#d9cdc0', muted: '#af9e90', edge: '#e5c2a11a', divider: '#f0d3b210',
+    glassA: '#1d1612d8', glassB: '#120d09e6', cardA: '#ffffff08', cardB: '#e0a46a05',
+    headerA: '#ffffff07', headerB: '#d89a6204', controlA: '#ffffff10', controlB: '#e1a36908',
+    hoverA: '#ffffff19', hoverB: '#d9975a0d', selectedA: '#ffffff15', selectedB: '#d38b4e0a',
+    hud: '#ffffff', accent: '#e8a160', quickA: '#1d1612cc', quickB: '#120d09dc',
+    marker: '#1d1612f2', mapControl: '#18120eec', overlayTop: '#d9985710', overlayBottom: '#09060428',
+    saturation: 0.82, brightness: 0.88, contrast: 1.05, sepia: 0.07, dark: true,
   },
   night: {
     page: '#05070a', shell: '#070a0f', surface: '#11151c', raised: '#1b2029', inset: '#090c11',
@@ -91,8 +91,8 @@ const mixPalette = (fromName, toName, amount) => {
     '--theme-map-control-bg': color('mapControl'),
     '--theme-map-overlay': 'linear-gradient(180deg, ' + color('overlayTop') + ', ' + color('overlayBottom') + ')',
     '--theme-map-filter': 'saturate(' + number('saturation').toFixed(3) + ') brightness(' + number('brightness').toFixed(3) + ') contrast(' + number('contrast').toFixed(3) + ') sepia(' + number('sepia').toFixed(3) + ')',
-    '--distrito-hud-text-shadow': dark ? '0 1px 2px #000, 0 2px 5px #000, 0 0 2px #000' : '0 1px 2px #fff, 0 0 5px #ffffffd9',
-    '--distrito-hud-icon-shadow': dark ? 'drop-shadow(0 1px 1px #000) drop-shadow(0 2px 3px #000d)' : 'drop-shadow(0 1px 1px #fff) drop-shadow(0 0 3px #ffffffc9)',
+    '--distrito-hud-text-shadow': '0 1px 2px rgba(0,0,0,.88), 0 0 1px rgba(0,0,0,.38)',
+    '--distrito-hud-icon-shadow': 'drop-shadow(0 1px 1px rgba(0,0,0,.88)) drop-shadow(0 0 1px rgba(0,0,0,.32))',
   };
 };
 
