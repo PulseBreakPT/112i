@@ -141,6 +141,7 @@ export function tickAdvancedState(game,dt,log=()=>{},random=Math.random) {
     if(onShift&&unit.status==='offshift')unit.status=(unit.crew_assigned||0)>=(unit.crew_required||1)?'available':'uncrewed';
     if(['available','offshift','uncrewed'].includes(unit.status)){
       const base=(game.bases||[]).find(item=>item.id===unit.base_id);
+      if(base?.enabled===false)return;
       Object.entries(RESOURCE_PROFILE[unit.service]||{}).forEach(([key,profile])=>{
         const current=unit.resources[key]||0,missing=Math.max(0,profile.capacity-current),rate=dt*profile.capacity/180;
         const available=Math.max(0,base?.supply_reserve?.[key]||0),transfer=Math.min(missing,rate,available);
@@ -151,7 +152,7 @@ export function tickAdvancedState(game,dt,log=()=>{},random=Math.random) {
   });
   if(game.elapsed>=game.next_supply_order){
     let spent=0;
-    (game.bases||[]).forEach(base=>{
+    (game.bases||[]).filter(base=>base.enabled!==false).forEach(base=>{
       Object.entries(base.supply_capacity||SUPPLY_CAPACITY).forEach(([key,capacity])=>{
         const target=capacity*.75,current=Math.max(0,base.supply_reserve?.[key]||0),wanted=Math.max(0,target-current),unitCost=SUPPLY_COST[key]||1;
         const affordable=Math.min(wanted,Math.floor(Math.max(0,game.money-spent)/unitCost));
