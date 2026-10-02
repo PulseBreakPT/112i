@@ -19,6 +19,7 @@ import StrategicOperations from './game/StrategicOperations';
 import Cooperation from './game/Cooperation';
 import ManagementHub from './game/ManagementHub';
 import Career from './game/Career';
+import Wiki from './game/Wiki';
 import { beep } from './game/common';
 import { ambientAudio } from './game/ambientAudio';
 import { useAmbientAudio } from './game/useAmbientAudio';
@@ -52,6 +53,9 @@ const WORKSPACE_GROUPS = [
   ]},
   { id:'analysis', label:'Análise', home:'/relatorios', routes:[
     ['/relatorios','Relatórios'],['/carreira','Carreira'],
+  ]},
+  { id:'knowledge', label:'Wiki', home:'/wiki', routes:[
+    ['/wiki','Enciclopédia'],
   ]},
   { id:'system', label:'Sistema', home:'/definicoes', routes:[
     ['/definicoes','Definições'],['/privacidade','Privacidade'],
@@ -208,6 +212,7 @@ function GameApp() {
           <Route path="/operacoes" element={<Operations game={game} world={world} act={act} busy={busy} mode="operations" />} />
           <Route path="/relatorios" element={<Reports game={game} />} />
           <Route path="/carreira" element={<Career game={game} act={act} busy={busy} />} />
+          <Route path="/wiki" element={<Wiki game={game} world={world} />} />
           <Route path="/definicoes" element={<Settings game={game} act={act} sound={sound} setSound={setSound} onSave={save} onHelp={() => setHelp(true)} busy={busy} />} />
           <Route path="/privacidade" element={<Privacy />} />
           <Route path="*" element={<div className="empty-state" data-testid="page-not-found"><h1>Setor não encontrado</h1><button className="primary-button" data-testid="return-to-central" onClick={() => navigate('/')}>Voltar à central</button></div>} />
