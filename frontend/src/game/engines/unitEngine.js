@@ -1,5 +1,10 @@
 export const startRoute = (unit,plan,status,destination) => {
   unit.status=status;unit.route=plan.coordinates;unit.route_times=plan.times;unit.travel=0;unit.travel_total=plan.duration;unit.route_distance=plan.distance;unit.destination=destination;unit.lng=plan.coordinates[0][0];unit.lat=plan.coordinates[0][1];unit.x=unit.lng;unit.y=unit.lat;
+  if(unit.resources&&Number.isFinite(plan.distance)){
+    const kilometres=Math.max(0,plan.distance)/1000;
+    const fuelUse=Math.max(.2,kilometres*.42);
+    unit.resources.fuel=Math.max(0,(unit.resources.fuel??100)-fuelUse);
+  }
 };
 
 export const locate = unit => {
