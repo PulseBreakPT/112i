@@ -170,5 +170,5 @@ export function useGame() {
 
   const displayGame = useMemo(() => presentGameCopy(game), [game]);
   const clearFeedback = useCallback(id => setFeedback(currentFeedback => currentFeedback?.id === id ? null : currentFeedback), []);
-  return { game: displayGame, world: DISPLAY_WORLD, error: '', busy, act, retry: () => {}, feedback, clearFeedback };
+  return { game: displayGame, world: DISPLAY_WORLD, error: game.save_warning || '', busy, act, retry: () => {}, feedback, clearFeedback };
 }
