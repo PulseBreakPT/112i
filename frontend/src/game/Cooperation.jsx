@@ -3,6 +3,7 @@ import { Building2, GraduationCap, Hospital, Landmark, MessageSquare, Network, P
 import { toast } from 'sonner';
 import { Button } from '../components/ui/button';
 import { clock, money } from './common';
+import { reserveFloor } from './engines/economyEngine';
 
 const BUILDING_TYPES = [
   { id:'hospital', name:'Hospital partilhado', icon:Hospital },
