@@ -7,6 +7,7 @@ import {
   applyLogisticsAction,
   tickLogistics,
   consumeIncidentLogistics,
+  consumeBaseStock,
 } from './logisticsEngine';
 
 const base=(service='fire')=>({id:'base-1',name:'Base teste',service,land:'mainland',level:1,enabled:true});
@@ -95,5 +96,43 @@ describe('18-stock logistics system',()=>{
     consumeIncidentLogistics(normal,{rarity_level:3,category:'crime',false_alarm:false},[{base_id:n.id,service:'police'}]);
     consumeIncidentLogistics(falseAlarm,{rarity_level:3,category:'crime',false_alarm:true},[{base_id:f.id,service:'police'}]);
     expect(beforeN-n.logistics.stock.police).toBeGreaterThan(beforeF-f.logistics.stock.police);
+  });
+});
+
+
+describe('advanced logistics persistence',()=>{
+  test('internal transfers move physical stock through transit without duplicating it',()=>{
+    const game=gameWithBase('fire');
+    const target={...base('fire'),id:'base-2',name:'Destino'};
+    game.bases.push(target);ensureLogisticsState(game);
+    const source=game.bases[0],beforeSource=source.logistics.stock.fuel,beforeTarget=target.logistics.stock.fuel;
+    applyLogisticsAction(game,'transfer_supply_stock',{source_base_id:source.id,target_base_id:target.id,stock_id:'fuel',quantity:100});
+    expect(source.logistics.stock.fuel).toBe(beforeSource-100);
+    const order=game.supply_orders[0];
+    expect(order.internal_transfer).toBe(true);
+    game.elapsed=order.arrives_at+1;tickLogistics(game);
+    expect(target.logistics.stock.fuel).toBeGreaterThan(beforeTarget);
+  });
+
+  test('FIFO consumption drains earliest-expiring lots first',()=>{
+    const game=gameWithBase('medical'),b=game.bases[0];
+    b.logistics.stock.medicines=20;
+    b.logistics.lots.medicines=[
+      {id:'early',quantity:10,expires_at:100},
+      {id:'late',quantity:10,expires_at:1000},
+    ];
+    consumeBaseStock(b,'medicines',12);
+    expect(b.logistics.lots.medicines.find(lot=>lot.id==='early')).toBeUndefined();
+    expect(b.logistics.lots.medicines.find(lot=>lot.id==='late')?.quantity).toBe(8);
+  });
+
+  test('expired lots are removed from physical stock during logistics checks',()=>{
+    const game=gameWithBase('medical'),b=game.bases[0];
+    b.logistics.stock.medicines=10;
+    b.logistics.lots.medicines=[{id:'expired',quantity:10,expires_at:5}];
+    game.elapsed=10;game.next_logistics_check=0;
+    tickLogistics(game);
+    expect(b.logistics.stock.medicines).toBe(0);
+    expect(game.logistics_metrics.expired).toBeGreaterThanOrEqual(10);
   });
 });
