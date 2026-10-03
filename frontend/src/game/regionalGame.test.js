@@ -242,7 +242,7 @@ test('weekly fixed costs are charged once when Monday crosses 20:00 Portugal tim
   game.calendar_started_at='2026-10-05T18:59:00.000Z';
   game.elapsed=0;
   game.last_weekly_fixed_cost_key='2026-09-28';
-  game.incidents=[];game.next_spawn=999999;game.next_crisis_wave=999999;
+  game.incidents=[];game.next_spawn=999999;game.next_crisis_wave=999999;game.next_public_funding=999999;
   const before=game.money;
   game=tickGame(game,120);
   expect(game.weekly_fixed_cost_history).toHaveLength(1);
