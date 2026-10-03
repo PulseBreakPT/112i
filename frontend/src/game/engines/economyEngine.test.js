@@ -2,6 +2,7 @@ import {
   missionCompensationBase,
   missionCompensationBand,
   missionPayout,
+  weeklyFixedCostBreakdown,
 } from './economyEngine';
 
 const incident = overrides => ({
@@ -91,5 +92,48 @@ describe('balanced incident compensation', () => {
     const incorrect=missionPayout(game,incident({rarity_level:3,call_result:{correct:false}}),base);
     expect(correct).toBeGreaterThan(incorrect);
     expect(correct-incorrect).toBeLessThanOrEqual(200);
+  });
+});
+
+
+describe('weekly fixed-cost invoice', () => {
+  const fixedGame = () => ({
+    personnel:[
+      {service:'fire',salary:1542},
+      {service:'medical',salary:1341},
+      {service:'police',salary:1998},
+    ],
+    bases:[
+      {id:'f',service:'fire',enabled:true},
+      {id:'m',service:'medical',enabled:true},
+      {id:'p',service:'police',enabled:true},
+    ],
+    facilities:[],
+    command_centers:[{id:'c',active:true}],
+    units:[
+      {id:'v1',vehicle_type:'fire-engine',enabled:true,wear:0,mileage_km:0},
+    ],
+    complexes:[],
+  });
+
+  test('contains salaries and fixed installations but excludes vehicle wear and mileage', () => {
+    const game=fixedGame();
+    const before=weeklyFixedCostBreakdown(game);
+    game.units[0].wear=99;
+    game.units[0].mileage_km=250000;
+    const after=weeklyFixedCostBreakdown(game);
+    expect(after).toEqual(before);
+    expect(after.salaries).toBeGreaterThan(0);
+    expect(after.bases).toBeGreaterThan(0);
+    expect(after.command_centers).toBeGreaterThan(0);
+  });
+
+  test('HEM service is a weekly fixed contract', () => {
+    const game=fixedGame();
+    const before=weeklyFixedCostBreakdown(game);
+    game.units.push({id:'hem',vehicle_type:'medical-helicopter',enabled:true});
+    const after=weeklyFixedCostBreakdown(game);
+    expect(after.hem_contracts).toBeGreaterThan(0);
+    expect(after.total-before.total).toBe(after.hem_contracts);
   });
 });
