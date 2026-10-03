@@ -1,24 +1,26 @@
+import { PORTUGAL_ECONOMY } from './portugalEconomy';
+
 export const NEW_VEHICLES = {
   fire: [
-    { id:'command-unit', name:'VCOT · Comando Tático', level:2, price:7800, crew:3, training:'command' },
-    { id:'tanker', name:'VTTF · Tanque Tático Florestal', level:2, price:8200, crew:3, extension:'wildfire', training:'wildfire' },
-    { id:'light-wildfire', name:'VLCI · Combate Ligeiro', level:2, price:6200, crew:3, extension:'wildfire', training:'wildfire' },
-    { id:'heavy-rescue', name:'VSAT · Salvamento e Desencarceramento', level:3, price:9800, crew:5, training:'rescue' },
-    { id:'aerial-platform', name:'VE · Plataforma Elevatória', level:3, price:11500, crew:3, extension:'aerial' },
+    { id:'command-unit', name:'VCOT · Comando Tático', level:2, price:PORTUGAL_ECONOMY.vehicles['command-unit'], crew:3, training:'command' },
+    { id:'tanker', name:'VTTF · Tanque Tático Florestal', level:2, price:PORTUGAL_ECONOMY.vehicles.tanker, crew:3, extension:'wildfire', training:'wildfire' },
+    { id:'light-wildfire', name:'VLCI · Combate Ligeiro', level:2, price:PORTUGAL_ECONOMY.vehicles['light-wildfire'], crew:3, extension:'wildfire', training:'wildfire' },
+    { id:'heavy-rescue', name:'VSAT · Salvamento e Desencarceramento', level:3, price:PORTUGAL_ECONOMY.vehicles['heavy-rescue'], crew:5, training:'rescue' },
+    { id:'aerial-platform', name:'VE · Plataforma Elevatória', level:3, price:PORTUGAL_ECONOMY.vehicles['aerial-platform'], crew:3, extension:'aerial' },
   ],
   medical: [
-    { id:'patient-transport', name:'Ambulância de Transporte', level:1, price:3500, crew:2 },
-    { id:'siv', name:'SIV · Suporte Imediato de Vida', level:2, price:7600, crew:2, extension:'advanced-care', training:'advanced-care' },
-    { id:'medical-motorcycle', name:'MEM · Motociclo de Emergência Médica', level:2, price:5200, crew:1, extension:'advanced-care', training:'advanced-care' },
-    { id:'umipe', name:'UMIPE · Intervenção Psicológica', level:3, price:8400, crew:2, training:'psychology' },
-    { id:'tip', name:'TIP · Transporte Pediátrico', level:3, price:9600, crew:3, training:'pediatric-transport' },
-    { id:'medical-helicopter', name:'HEM · Helicóptero de Emergência Médica', level:4, price:18000, crew:4, extension:'advanced-care', training:'aeromedical' },
+    { id:'patient-transport', name:'Ambulância de Transporte', level:1, price:PORTUGAL_ECONOMY.vehicles['patient-transport'], crew:2 },
+    { id:'siv', name:'SIV · Suporte Imediato de Vida', level:2, price:PORTUGAL_ECONOMY.vehicles.siv, crew:2, extension:'advanced-care', training:'advanced-care' },
+    { id:'medical-motorcycle', name:'MEM · Motociclo de Emergência Médica', level:2, price:PORTUGAL_ECONOMY.vehicles['medical-motorcycle'], crew:1, extension:'advanced-care', training:'advanced-care' },
+    { id:'umipe', name:'UMIPE · Intervenção Psicológica', level:3, price:PORTUGAL_ECONOMY.vehicles.umipe, crew:2, training:'psychology' },
+    { id:'tip', name:'TIP · Transporte Pediátrico', level:3, price:PORTUGAL_ECONOMY.vehicles.tip, crew:3, training:'pediatric-transport' },
+    { id:'medical-helicopter', name:'HEM · Helicóptero de Emergência Médica', level:4, price:PORTUGAL_ECONOMY.vehicles['medical-helicopter'], crew:4, extension:'advanced-care', training:'aeromedical' },
   ],
   police: [
-    { id:'traffic-unit', name:'Unidade de Trânsito', level:1, price:4200, crew:2, training:'traffic' },
-    { id:'investigation-unit', name:'Investigação Criminal', level:2, price:5400, crew:2, training:'investigation' },
-    { id:'prisoner-van', name:'Transporte de Detidos', level:2, price:6200, crew:3, training:'custody' },
-    { id:'tactical-unit', name:'Unidade Tática', level:3, price:12000, crew:6, extension:'public-order', training:'public-order' },
+    { id:'traffic-unit', name:'Unidade de Trânsito', level:1, price:PORTUGAL_ECONOMY.vehicles['traffic-unit'], crew:2, training:'traffic' },
+    { id:'investigation-unit', name:'Investigação Criminal', level:2, price:PORTUGAL_ECONOMY.vehicles['investigation-unit'], crew:2, training:'investigation' },
+    { id:'prisoner-van', name:'Transporte de Detidos', level:2, price:PORTUGAL_ECONOMY.vehicles['prisoner-van'], crew:3, training:'custody' },
+    { id:'tactical-unit', name:'Unidade Tática', level:3, price:PORTUGAL_ECONOMY.vehicles['tactical-unit'], crew:6, extension:'public-order', training:'public-order' },
   ],
 };
 
