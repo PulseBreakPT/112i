@@ -205,6 +205,7 @@ export function ensureRealismState(game){
   game.regional_trust=game.regional_trust||{};
   game.infrastructure_state=game.infrastructure_state||{power:'normal',communications:'normal',sirensp:'normal',backup_power:true};
   game.risk_forecast=game.risk_forecast||{};
+  game.cost_centers=game.cost_centers||{by_base:{},by_service:{fire:0,medical:0,police:0}};
   game.sustainability_state={diesel_litres:0,petrol_litres:0,electric_kwh:0,co2_kg:0,charging_points:0,...(game.sustainability_state||{})};
   game.media_state={scrutiny:0,last_event_at:0,...(game.media_state||{})};
   game.operational_layers={coverage:true,hospitals:true,risk:true,incidents:true,hydrants:false,road_closures:true,...(game.operational_layers||{})};
@@ -446,7 +447,7 @@ export function coverageSnapshot(game){
   const services=['fire','medical','police'],byService={};
   for(const service of services){
     const bases=(game.bases||[]).filter(base=>base.service===service&&base.enabled!==false);
-    const values=bases.map(base=>({base_id:base.id,name:base.name,city:base.city,coverage:baseCoverage(game,base,service),available:(game.units||[]).filter(unit=>unit.base_id===base.id&&unit.service===service&&['available','patrol','staged'].includes(unit.status)).length}));
+    const values=bases.map(base=>{const coverage=baseCoverage(game,base,service),available=(game.units||[]).filter(unit=>unit.base_id===base.id&&unit.service===service&&['available','patrol','staged'].includes(unit.status)).length;return {base_id:base.id,name:base.name,city:base.city,coverage,available,response_band:available>=2&&coverage>=70?'<8 min':available>=1?'8–15 min':'>30 min'};});
     const score=values.length?Math.round(values.reduce((sum,item)=>sum+item.coverage,0)/values.length):0;
     byService[service]={score,bases:values,uncovered:values.filter(item=>item.coverage<35)};
   }
@@ -494,11 +495,23 @@ const seasonalRisk=(game,service)=>{
 
 const processRiskForecast=game=>{
   if(game.realism?.modules?.regional_risk===false)return;
+  const date=simulatedDate(game),month=localParts(date).month;
+  const regional={};
+  for(const base of game.bases||[]){
+    const key=base.city||base.land||'Portugal';if(regional[key])continue;
+    const southern=/Faro|Albufeira|Loulé|Portimão|Lagos/i.test(key),interior=/Évora|Beja|Bragança|Castelo Branco|Guarda|Portalegre/i.test(key),island=['madeira','sao-miguel','terceira','azores'].includes(base.land);
+    const summer=[6,7,8,9].includes(month);
+    regional[key]={
+      fire:Number((seasonalRisk(game,'fire')+(summer&&(southern||interior)?.22:0)).toFixed(2)),
+      medical:Number((seasonalRisk(game,'medical')+(summer&&southern?.18:0)+(island?.04:0)).toFixed(2)),
+      police:Number((seasonalRisk(game,'police')+(summer&&southern?.16:0)).toFixed(2)),
+    };
+  }
   game.risk_forecast={
     fire:{index:seasonalRisk(game,'fire'),label:seasonalRisk(game,'fire')>=1.35?'Elevado':'Normal'},
     medical:{index:seasonalRisk(game,'medical'),label:seasonalRisk(game,'medical')>=1.25?'Elevado':'Normal'},
     police:{index:seasonalRisk(game,'police'),label:seasonalRisk(game,'police')>=1.25?'Elevado':'Normal'},
-    updated_at:game.elapsed,
+    regional,updated_at:game.elapsed,
   };
 };
 
@@ -823,6 +836,12 @@ const createPoliceCase=(game,incident,success)=>{
     id:uid('case'),incident_id:incident.id,title:incident.title,category:incident.category,status:success?'investigation':'urgent',
     created_at:game.elapsed,priority:incident.priority||2,progress:success?18:5,evidence:Math.max(0,Math.round((incident.rarity_level||1)*.8+(incident.detainees||0))),
     suspects:Math.max(0,incident.detainees||0)+(incident.category==='crime'?1:0),detainees:incident.detainees||0,
+    leads:{
+      witnesses:1+Math.floor(hash(incident.id+'witness')*4),
+      cctv:hash(incident.id+'cctv')>.35,
+      plate:hash(incident.id+'plate')>.58,
+      forensics:hash(incident.id+'forensics')>.28,
+    },
     assigned_priority:false,last_update_at:game.elapsed,closed_at:null,
   };
   game.police_cases=[caseFile,...(game.police_cases||[])].slice(0,100);
@@ -973,6 +992,11 @@ export function buildAfterActionReport(game,incident,performance,assignedUnits,s
   if(costs.external_support>0)report.lessons.push('Foi necessário apoio externo; rever cobertura territorial.');
   if(!report.lessons.length)report.lessons.push('Resposta dentro dos parâmetros operacionais definidos.');
   game.after_action_reports=[report,...(game.after_action_reports||[])].slice(0,100);
+  const uniqueBases=[...new Set((assignedUnits||[]).map(unit=>unit.base_id).filter(Boolean))],share=uniqueBases.length?Math.round(report.costs.total/uniqueBases.length):0;
+  uniqueBases.forEach(baseId=>{game.cost_centers.by_base[baseId]=(game.cost_centers.by_base[baseId]||0)+share;});
+  const services=[...new Set((assignedUnits||[]).map(unit=>unit.service).filter(Boolean))],serviceShare=services.length?Math.round(report.costs.total/services.length):0;
+  services.forEach(service=>{game.cost_centers.by_service[service]=(game.cost_centers.by_service[service]||0)+serviceShare;});
+  report.base_ids=uniqueBases;report.services=services;
   createPoliceCase(game,incident,success);
   if(!success||(performance?.score||0)<60||(incident.rarity_level||0)>=6&&success===false){
     game.media_state.scrutiny=clamp((game.media_state.scrutiny||0)+(incident.rarity_level||1)*4,0,100);
