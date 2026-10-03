@@ -209,6 +209,8 @@ export function ensureRealismState(game){
   game.sustainability_state={diesel_litres:0,petrol_litres:0,electric_kwh:0,co2_kg:0,charging_points:0,...(game.sustainability_state||{})};
   game.media_state={scrutiny:0,last_event_at:0,...(game.media_state||{})};
   game.operational_layers={coverage:true,hospitals:true,risk:true,incidents:true,hydrants:false,road_closures:true,...(game.operational_layers||{})};
+  game.drone_assets=game.drone_assets||[];
+  game.drone_missions=game.drone_missions||[];
   (game.personnel||[]).forEach(person=>ensurePerson(game,person));
   (game.units||[]).forEach(unit=>ensureUnit(game,unit));
   (game.facilities||[]).forEach(ensureHospital);
@@ -655,6 +657,24 @@ const processProcurement=(game,{addUnit,vehicleDefinition,log}={})=>{
   }
 };
 
+const processDroneMissions=(game,log)=>{
+  for(const mission of game.drone_missions||[]){
+    if(mission.status!=='active'||game.elapsed<mission.completes_at)continue;
+    const asset=game.drone_assets.find(item=>item.id===mission.drone_id),incident=game.incidents.find(item=>item.id===mission.incident_id);
+    mission.status='completed';mission.completed_at=game.elapsed;
+    if(asset){asset.status='available';asset.missions=(asset.missions||0)+1;asset.battery=Math.max(10,(asset.battery??100)-22);}
+    if(incident){
+      revealIncidentIntel(incident,38,'drone');
+      incident.aerial_recon=true;
+      incident.timeline=[...(incident.timeline||[]),{time:game.elapsed,type:'drone',text:'Reconhecimento aéreo por drone concluído.'}].slice(-30);
+      if(log)log(game,`${incident.title}: drone concluiu reconhecimento; inteligência atualizada para ${Math.round(incident.intel_confidence||0)}%.`,'success');
+    }
+  }
+  for(const asset of game.drone_assets||[]){
+    if(asset.status==='available'&&(asset.battery??100)<100)asset.battery=Math.min(100,(asset.battery??100)+.03);
+  }
+};
+
 const processMutualAid=(game,{log}={})=>{
   for(const aid of game.mutual_aid||[]){
     if(aid.status==='requested'&&game.elapsed>=aid.arrives_at){
@@ -735,6 +755,7 @@ export function tickRealism(game,dt,{log=null,addUnit=null,vehicleDefinition=nul
   updatePowerAndEnergy(game,log);
   refreshUsedMarket(game,vehicleCatalog);
   processProcurement(game,{addUnit,vehicleDefinition,log});
+  processDroneMissions(game,log);
   processMutualAid(game,{log});
   processHandover(game,{returnToBase,log});
 
@@ -755,7 +776,8 @@ export function tickRealism(game,dt,{log=null,addUnit=null,vehicleDefinition=nul
       const commandUnit=(game.units||[]).find(unit=>unit.incident_id===incident.id&&unit.status==='onscene'&&['command-unit'].includes(unit.vehicle_type));
       const anyUnit=(game.units||[]).find(unit=>unit.incident_id===incident.id&&unit.status==='onscene');
       if(commandUnit||((incident.rarity_level||1)<=3&&anyUnit)){
-        incident.command_structure={established:true,commander_unit_id:(commandUnit||anyUnit)?.id||null,sectors:(incident.rarity_level||1)>=5?['Operações','Socorro','Logística']:['Operações']};
+        const commandVehicle=commandUnit||anyUnit,crew=(commandVehicle?.personnel_ids||[]).map(id=>game.personnel.find(person=>person.id===id)).filter(Boolean).sort((a,b)=>(b.leadership||0)-(a.leadership||0));
+        incident.command_structure={established:true,commander_unit_id:commandVehicle?.id||null,commander_person_id:crew[0]?.id||null,sectors:(incident.rarity_level||1)>=5?['Operações','Socorro','Logística']:['Operações']};
         incident.timeline=[...(incident.timeline||[]),{time:game.elapsed,type:'command',text:'Comando da ocorrência estabelecido.'}].slice(-30);
       }
     }
@@ -872,7 +894,8 @@ export function applyOperationalRisk(game,incident,units,random=Math.random,log=
     const crew=(unit.personnel_ids||[]).map(id=>game.personnel.find(person=>person.id===id)).filter(Boolean);
     for(const person of crew){
       const fatigue=(person.fatigue||0)/100,healthRisk=(100-(person.health??100))/100;
-      const baseChance=.0015*rarity*(tactic?.risk||1)*(1+fatigue*.8+healthRisk*.7);
+      const modeFactor=game.realism?.mode==='hardcore'?1.4:game.realism?.mode==='assisted'?.55:1;
+      const baseChance=.0015*rarity*(tactic?.risk||1)*modeFactor*(1+fatigue*.8+healthRisk*.7);
       if(random()<baseChance){
         const hours=6+Math.round(random()*66);
         person.sick_until=Math.max(person.sick_until||0,game.elapsed+hours*3600);
@@ -956,7 +979,24 @@ export function applyRealismAction(game,kind,data={},ctx={}){
     if(!(data.module in REALISM_MODULES))throw new Error('Módulo de realismo inválido.');
     game.realism.modules[data.module]=!!data.enabled;log(game,`${REALISM_MODULES[data.module]}: ${data.enabled?'ativo':'desativado'}.`,'success');return true;
   }
-  if(kind==='set_incident_tactic'){
+  if(kind==='acquire_drone'){
+    const center=game.command_centers.find(item=>item.id===data.command_center_id&&item.active!==false);if(!center)throw new Error('Centro de Comando inválido.');
+    const cost=12000;if((game.money||0)-cost<reserveFloor(game))throw new Error('Orçamento insuficiente para aquisição de drone.');
+    payCost(game,cost,{label:'drone operacional térmico',log,protectReserve:false});
+    game.drone_assets.push({id:uid('drone'),name:`UAS ${String(game.drone_assets.length+1).padStart(2,'0')}`,command_center_id:center.id,status:'available',battery:100,thermal:true,cost,missions:0,acquired_at:game.elapsed});
+    log(game,`${center.name}: drone térmico operacional adquirido.`,'success');return true;
+  }
+  if(kind==='deploy_drone'){
+    const incident=game.incidents.find(item=>item.id===data.incident_id);if(!incident)throw new Error('Ocorrência inválida.');
+    if(['storm','fog'].includes(game.conditions?.weather))throw new Error('Condições meteorológicas impedem operação segura do drone.');
+    const center=game.command_centers.find(item=>item.id===incident.command_center_id)||game.command_centers?.[0];
+    const drone=game.drone_assets.find(item=>item.command_center_id===center?.id&&item.status==='available'&&(item.battery??100)>=25);
+    if(!drone)throw new Error('Não existe drone disponível com bateria suficiente neste comando.');
+    drone.status='deployed';drone.incident_id=incident.id;
+    game.drone_missions.unshift({id:uid('uas-mission'),drone_id:drone.id,incident_id:incident.id,status:'active',started_at:game.elapsed,completes_at:game.elapsed+90});
+    log(game,`${drone.name} lançado para reconhecimento de ${incident.title}.`,'success');return true;
+  }
+    if(kind==='set_incident_tactic'){
     const incident=game.incidents.find(item=>item.id===data.incident_id);if(!incident)throw new Error('Ocorrência inválida.');
     const option=tacticalOptionsFor(incident).find(item=>item.id===data.option);if(!option)throw new Error('Tática inválida para esta ocorrência.');
     incident.tactical_plan={option:option.id,set_at:game.elapsed};incident.timeline=[...(incident.timeline||[]),{time:game.elapsed,type:'command',text:`Tática definida: ${option.name}.`}].slice(-30);log(game,`${incident.title}: ${option.name} definida pelo comando.`,'success');return true;
