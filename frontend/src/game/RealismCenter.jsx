@@ -67,7 +67,7 @@ export default function RealismCenter({game,act,busy}){
         <div className="coverage-services">{Object.entries(coverage.by_service||{}).map(([service,data])=><article key={service} data-tone={stateTone(data.score)}>
           <div><strong>{SERVICE[service]?.name||service}</strong><b>{percent(data.score)}</b></div>
           <div className="realism-meter"><i style={{width:`${Math.min(100,data.score)}%`}}/></div>
-          <small>{data.uncovered?.length||0} bases abaixo de 35%</small>
+          <small>{data.uncovered?.length||0} bases abaixo de 35% · {data.bases?.map(base=>base.name+' '+base.response_band).slice(0,2).join(' · ')}</small>
         </article>)}</div>
         {(game.coverage_recommendations||[]).length>0&&<div className="recommendation-list">{game.coverage_recommendations.map(item=><div key={item.id}><RadioTower size={14}/><span>{item.text}</span></div>)}</div>}
       </section>
@@ -80,6 +80,12 @@ export default function RealismCenter({game,act,busy}){
       <section className="realism-panel">
         <header><div><h2>Objetivos estratégicos</h2><p>Indicadores de qualidade da rede no ciclo atual.</p></div></header>
         <div className="objective-list">{(game.strategic_objectives||[]).map(item=><article key={item.id} className={item.met?'met':''}><ShieldCheck size={16}/><div><strong>{item.title}</strong><small>Atual: {Math.round(item.progress||0)} · Meta: {item.target}</small></div><b>{item.met?'Cumprido':'Em curso'}</b></article>)}</div>
+      </section>
+
+      <section className="realism-panel">
+        <header><div><h2>Centros de custo</h2><p>Custo operacional atribuído pelas ocorrências encerradas.</p></div></header>
+        <div className="risk-grid">{Object.entries(game.cost_centers?.by_service||{}).map(([service,value])=><article key={service}><span>{SERVICE[service]?.name||service}</span><strong>{money(value||0)}</strong><small>custo acumulado</small></article>)}</div>
+        <div className="cost-base-list">{Object.entries(game.cost_centers?.by_base||{}).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([baseId,value])=><span key={baseId}>{game.bases.find(base=>base.id===baseId)?.name||baseId}<b>{money(value)}</b></span>)}</div>
       </section>
 
       <section className="realism-panel">
@@ -160,7 +166,7 @@ export default function RealismCenter({game,act,busy}){
 
       <section className="realism-panel">
         <header><div><h2>Investigação criminal</h2><p>Casos persistem depois da ocorrência e consomem capacidade investigatória.</p></div></header>
-        <div className="case-persistence-list">{(game.police_cases||[]).filter(file=>file.status!=='closed').map(file=><article key={file.id}><div><strong>{file.title}</strong><small>{file.status} · prova {file.evidence||0} · suspeitos {file.suspects||0}</small></div><div className="realism-meter"><i style={{width:String(Math.min(100,file.progress||0))+'%'}}/></div><span>{Math.round(file.progress||0)}%</span><Button disabled={busy||file.assigned_priority} onClick={()=>run('prioritize_police_case',{case_id:file.id},'Investigação priorizada.')}>{file.assigned_priority?'Prioridade ativa':'Priorizar'}</Button></article>)}{!(game.police_cases||[]).some(file=>file.status!=='closed')&&<p className="realism-empty">Sem processos investigatórios pendentes.</p>}</div>
+        <div className="case-persistence-list">{(game.police_cases||[]).filter(file=>file.status!=='closed').map(file=><article key={file.id}><div><strong>{file.title}</strong><small>{file.status} · prova {file.evidence||0} · suspeitos {file.suspects||0} · testemunhas {file.leads?.witnesses||0}{file.leads?.cctv?' · CCTV':''}{file.leads?.plate?' · matrícula':''}{file.leads?.forensics?' · forense':''}</small></div><div className="realism-meter"><i style={{width:String(Math.min(100,file.progress||0))+'%'}}/></div><span>{Math.round(file.progress||0)}%</span><Button disabled={busy||file.assigned_priority} onClick={()=>run('prioritize_police_case',{case_id:file.id},'Investigação priorizada.')}>{file.assigned_priority?'Prioridade ativa':'Priorizar'}</Button></article>)}{!(game.police_cases||[]).some(file=>file.status!=='closed')&&<p className="realism-empty">Sem processos investigatórios pendentes.</p>}</div>
       </section>
 
       <section className="realism-panel">
