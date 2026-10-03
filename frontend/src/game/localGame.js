@@ -7,14 +7,14 @@ import { operationalPhasesFor, generatedEvolution, vehicleTraining as vehicleTra
 import { buildIncidentDoctrine, initialiseVictimStates, deteriorateVictimStates, escalationRequirementsFor, missionPerformance, RARITY_LEVELS } from './engines/missionDoctrine';
 import { operationalUnit, hasOperationalResources, selectArrUnitIds as selectArrUnitIdsEngine, selectRecommendedUnitIds as selectRecommendedUnitIdsEngine } from './engines/dispatchEngine';
 import { locate, returnToBase, startRoute } from './engines/unitEngine';
-import { ECONOMY, ensureReserve, payCost, payCapitalCost, applyPeriodicFunding, missionCompensationBase, missionPayout, reserveFloor } from './engines/economyEngine';
-import { isPortugalNight, legacyRealTime } from './engines/timeEngine';
+import { ECONOMY, ensureReserve, payCost, payCapitalCost, applyPeriodicFunding, chargeWeeklyFixedCosts, missionCompensationBase, missionPayout, reserveFloor } from './engines/economyEngine';
+import { isPortugalNight, legacyRealTime, portugalWeeklyBillingKey, portugalWeeklyBillingKeysBetween } from './engines/timeEngine';
 import { normalizeVehicleUnit, fuelPercentForDistance, breakdownChance, maintenanceQuote, resaleValue, crewFatigue } from './vehicleSystems';
 
 import { GAME_SAVE_KEY as SAVE_KEY } from './storageCompatibility';
 import { PERSONNEL_PROFILES, normalizePersonnelProfile, personnelLevel, personnelRank } from './personnelProfiles';
 import { recordAchievementIncident, recordAchievementTriage, recordAchievementTransport, syncAchievements } from './achievementEngine';
-import { PORTUGAL_ECONOMY, baseUpgradeNet, facilityUpgradeNet, recruitmentCost, monthlyEmployerCost, vehicleMaintenanceReserveRate } from './portugalEconomy';
+import { PORTUGAL_ECONOMY, baseUpgradeNet, facilityUpgradeNet, recruitmentCost } from './portugalEconomy';
 
 const SERVICES = {
   fire: { name: 'Bombeiros', vehicle: 'Veículo de combate a incêndios', short: 'VFCI', price: PORTUGAL_ECONOMY.vehicles['wildfire-unit'], base_price: PORTUGAL_ECONOMY.buildings.fire },
@@ -309,8 +309,9 @@ const spawn=(g,scenarioIndex=null,nodeId=null,requestedCommandCenterId=null)=>{
 };
 export function newGame(){
   const seed=randomSeed();
-  const g={id:uid(),mode:'portugal-offline-v5',rng_seed:seed,rng_state:seed,rng_counter:0,city:'Porto',money:ECONOMY.startingCash,xp:0,level:1,trust:98,reputation:0,medals:[],elapsed:0,speed:1,calendar_started_at:new Date().toISOString(),completed:0,failed:0,earned:0,expenses:0,public_funding:0,capital_grants:0,capital_investment:0,vat_paid:0,task_rewards:0,emergency_aid:0,debt_relief:0,operating_debt:0,next_public_funding:ECONOMY.fundingInterval,next_spawn:180,next_crisis_wave:900,next_upkeep:ECONOMY.upkeepInterval,sequence:101,incidents:[],units:[],bases:[],facilities:[],command_centers:[],active_command_center_id:null,player_pois:[],personnel:[],planned_missions:[],staging_areas:[],complexes:[],tasks:[],achievements:[],unit_groups:[],patients:[],prisoners:[],trainings:[],arrs:clone(DEFAULT_ARRS),logs:[],history:[],conditions:null,saved_at:new Date().toISOString()};g.conditions=freshConditions(0,null,()=>gameRandom(g),POINTS['porto-aliados'],simulatedDate(g));
-  [['fire','porto-boavista'],['medical','porto-asprela'],['police','porto-bonfim']].forEach(([service,key])=>{const base=makeBase(service,POINTS[key]);g.bases.push(base);addUnit(g,base);addUnit(g,base);});
+  const g={id:uid(),mode:'portugal-offline-v5',rng_seed:seed,rng_state:seed,rng_counter:0,city:'Porto',money:ECONOMY.startingCash,xp:0,level:1,trust:98,reputation:0,medals:[],elapsed:0,speed:1,calendar_started_at:new Date().toISOString(),completed:0,failed:0,earned:0,expenses:0,public_funding:0,capital_grants:0,capital_investment:0,vat_paid:0,task_rewards:0,emergency_aid:0,debt_relief:0,operating_debt:0,next_public_funding:ECONOMY.fundingInterval,next_spawn:180,next_crisis_wave:900,weekly_fixed_expenses:0,weekly_fixed_cost_history:[],last_weekly_fixed_cost_key:null,sequence:101,incidents:[],units:[],bases:[],facilities:[],command_centers:[],active_command_center_id:null,player_pois:[],personnel:[],planned_missions:[],staging_areas:[],complexes:[],tasks:[],achievements:[],unit_groups:[],patients:[],prisoners:[],trainings:[],arrs:clone(DEFAULT_ARRS),logs:[],history:[],conditions:null,saved_at:new Date().toISOString()};g.conditions=freshConditions(0,null,()=>gameRandom(g),POINTS['porto-aliados'],simulatedDate(g));
+  g.last_weekly_fixed_cost_key=portugalWeeklyBillingKey(simulatedDate(g));
+    [['fire','porto-boavista'],['medical','porto-asprela'],['police','porto-bonfim']].forEach(([service,key])=>{const base=makeBase(service,POINTS[key]);g.bases.push(base);addUnit(g,base);addUnit(g,base);});
   g.bases.forEach(base=>addPersonnel(g,base,base.personnel||0));g.units.forEach(unit=>{unit.personnel_ids=[];unit.crew_assigned=0;assignUnitCrew(g,unit,vehicleDefinition(unit.service,unit.vehicle_type));});
   g.tasks=makeCareerTasks(g);
   const command=makeCommandCenter('Comando Metropolitano do Porto',POINTS['porto-aliados'],35);g.command_centers.push(command);g.active_command_center_id=command.id;g.bases.forEach(base=>{base.command_center_id=command.id;});
@@ -489,30 +490,9 @@ export function tickGame(input,seconds){
     if(inc.progress>=100)resolveIncident(g,inc,true);else if(g.elapsed>=responseDeadline&&!inc.response_arrived_at)resolveIncident(g,inc,false);else if(g.elapsed>=resolutionDeadline)resolveIncident(g,inc,false);
   });
   g.level=1+Math.floor(g.xp/200);
-  if(g.elapsed>=g.next_upkeep){
-    const discountFor=(kind,id)=>Math.max(0,...(g.complexes||[]).filter(complex=>complex.shared_services!==false&&(complex[kind]||[]).includes(id)).map(complex=>complex.operating_cost_discount||0));
-    let distanceCost=0;
-    const fleetReserve=g.units.reduce((sum,unit)=>{
-      const discount=discountFor('base_ids',unit.base_id),distanceDelta=Math.max(0,(unit.mileage_km||0)-(unit.billed_mileage_km||0));
-      distanceCost+=distanceDelta*Math.max(0,unit.operating_cost_per_km||0);
-      unit.billed_mileage_km=unit.mileage_km||0;
-      const annualRate=vehicleMaintenanceReserveRate(unit.vehicle_class);
-      const reserve=unit.vehicle_type==='medical-helicopter'?(unit.purchase_price||PORTUGAL_ECONOMY.vehicles['medical-helicopter'])/12:(unit.purchase_price||0)*annualRate/12;
-      return sum+reserve*(1-discount);
-    },0);
-    const infrastructure=g.bases.filter(base=>base.enabled!==false).reduce((sum,base)=>{
-      const asset=PORTUGAL_ECONOMY.buildings[base.service]||0,annualRate=base.service==='medical'?.04:.035;
-      return sum+(asset*annualRate/12)*(1-discountFor('base_ids',base.id));
-    },0)+g.facilities.filter(facility=>facility.enabled!==false).reduce((sum,facility)=>{
-      const asset=PORTUGAL_ECONOMY.buildings[facility.type]||0,annualRate=facility.type==='hospital'?.06:.04;
-      return sum+(asset*annualRate/12)*(1-discountFor('facility_ids',facility.id));
-    },0);
-    const personnelCost=(g.personnel||[]).reduce((sum,person)=>sum+monthlyEmployerCost(person.salary||PORTUGAL_ECONOMY.salaries[person.service]),0);
-    const cost=Math.max(0,Math.round(fleetReserve+distanceCost+infrastructure+personnelCost));
-    payCost(g,cost,{label:'custos mensais de operação',log});
-    log(g,`Custos mensais: -${cost.toLocaleString('pt-PT')} € · pessoal ${Math.round(personnelCost).toLocaleString('pt-PT')} € · frota ${Math.round(fleetReserve+distanceCost).toLocaleString('pt-PT')} € · instalações ${Math.round(infrastructure).toLocaleString('pt-PT')} €.`);
-    g.next_upkeep=g.elapsed+ECONOMY.upkeepInterval;
-  }
+  if(!g.last_weekly_fixed_cost_key)g.last_weekly_fixed_cost_key=portugalWeeklyBillingKey(simulatedDate(g));
+  const dueWeeklyBills=portugalWeeklyBillingKeysBetween(g.last_weekly_fixed_cost_key,simulatedDate(g),20);
+  dueWeeklyBills.forEach(key=>chargeWeeklyFixedCosts(g,key,log));
   applyPeriodicFunding(g,log);
   ensureReserve(g,log,'garantia mínima de continuidade operacional');
   refreshProgression(g);
@@ -769,7 +749,7 @@ export function loadLocalGame(){
       const fresh=newGame();
       const stampRecord=item=>item&&({...item,real_time:item.real_time||legacyRealTime(saved.saved_at||new Date().toISOString(),saved.elapsed||0,item.time??saved.elapsed??0)});
       const migratedCenters=saved.command_centers?.length?saved.command_centers:[makeCommandCenter(`Comando Operacional de ${saved.city||'Porto'}`,POINTS['porto-aliados'],35)];
-      const previousDebt=Math.max(0,saved.operating_debt||0);const merged={...fresh,...saved,mode:'portugal-offline-v5',reputation:saved.reputation||0,medals:saved.medals||[],capital_grants:saved.capital_grants||0,capital_investment:saved.capital_investment||0,vat_paid:saved.vat_paid||0,rng_seed:saved.rng_seed||fresh.rng_seed,rng_state:saved.rng_state||saved.rng_seed||fresh.rng_state,rng_counter:saved.rng_counter||0,expenses:saved.expenses||0,public_funding:saved.public_funding||0,task_rewards:saved.task_rewards||0,emergency_aid:saved.emergency_aid||0,debt_relief:(saved.debt_relief||0)+previousDebt,operating_debt:0,next_public_funding:saved.next_public_funding||((saved.elapsed||0)+ECONOMY.fundingInterval),next_crisis_wave:saved.next_crisis_wave||saved.elapsed+900,next_upkeep:saved.next_upkeep||saved.elapsed+ECONOMY.upkeepInterval,conditions:saved.conditions||freshConditions(saved.elapsed||0,null,Math.random,migratedCenters[0]),command_centers:migratedCenters,active_command_center_id:saved.active_command_center_id||migratedCenters[0].id,player_pois:saved.player_pois||[],personnel:saved.personnel||[],facilities:saved.facilities||[],planned_missions:saved.planned_missions||[],staging_areas:saved.staging_areas||[],complexes:saved.complexes||[],tasks:saved.tasks?.length?saved.tasks:makeCareerTasks(saved),achievements:saved.achievements||[],unit_groups:saved.unit_groups||[],patients:saved.patients||[],prisoners:saved.prisoners||[],trainings:saved.trainings||[],arrs:saved.arrs?.length?saved.arrs:clone(DEFAULT_ARRS)};
+      const previousDebt=Math.max(0,saved.operating_debt||0);const merged={...fresh,...saved,mode:'portugal-offline-v5',reputation:saved.reputation||0,medals:saved.medals||[],capital_grants:saved.capital_grants||0,capital_investment:saved.capital_investment||0,vat_paid:saved.vat_paid||0,rng_seed:saved.rng_seed||fresh.rng_seed,rng_state:saved.rng_state||saved.rng_seed||fresh.rng_state,rng_counter:saved.rng_counter||0,expenses:saved.expenses||0,public_funding:saved.public_funding||0,task_rewards:saved.task_rewards||0,emergency_aid:saved.emergency_aid||0,debt_relief:(saved.debt_relief||0)+previousDebt,operating_debt:0,next_public_funding:saved.next_public_funding||((saved.elapsed||0)+ECONOMY.fundingInterval),next_crisis_wave:saved.next_crisis_wave||saved.elapsed+900,weekly_fixed_expenses:saved.weekly_fixed_expenses||0,weekly_fixed_cost_history:saved.weekly_fixed_cost_history||[],last_weekly_fixed_cost_key:saved.last_weekly_fixed_cost_key||null,conditions:saved.conditions||freshConditions(saved.elapsed||0,null,Math.random,migratedCenters[0]),command_centers:migratedCenters,active_command_center_id:saved.active_command_center_id||migratedCenters[0].id,player_pois:saved.player_pois||[],personnel:saved.personnel||[],facilities:saved.facilities||[],planned_missions:saved.planned_missions||[],staging_areas:saved.staging_areas||[],complexes:saved.complexes||[],tasks:saved.tasks?.length?saved.tasks:makeCareerTasks(saved),achievements:saved.achievements||[],unit_groups:saved.unit_groups||[],patients:saved.patients||[],prisoners:saved.prisoners||[],trainings:saved.trainings||[],arrs:saved.arrs?.length?saved.arrs:clone(DEFAULT_ARRS)};
       merged.bases=(saved.bases||fresh.bases).map(base=>{const count=(saved.units||fresh.units).filter(unit=>unit.base_id===base.id).length;return {level:1,capacity:Math.max(2,count),staff_capacity:14,personnel:base.service==='fire'?10:6,extensions:[],specialization:'general',qualifications:{},command_center_id:migratedCenters[0].id,...base};});
       merged.facilities=merged.facilities.map(facility=>({command_center_id:migratedCenters[0].id,specialty_capacity:facility.type==='hospital'?Object.fromEntries((facility.specialties||['urgency']).map(id=>[id,id==='urgency'?(facility.capacity||5):Math.max(2,Math.ceil((facility.capacity||5)*.45))])):undefined,...facility}));
       merged.units=(saved.units||fresh.units).map(unit=>{const definition=vehicleDefinition(unit.service,unit.vehicle_type||(unit.advanced?VEHICLE_CATALOG[unit.service]?.[1]?.id:null));return normalizeVehicleUnit({fatigue:0,repair_until:0,rest_until:0,enabled:true,exclude_from_arr:false,response_delay:0,max_crew:definition.crew,vehicle_type:definition.id,crew_required:definition.crew,crew_assigned:definition.crew,training:vehicleTraining(definition.id),...unit},definition,merged.elapsed);});
@@ -781,6 +761,7 @@ export function loadLocalGame(){
       merged.logs=(merged.logs||[]).map(stampRecord);
       if(merged.cooperation){merged.cooperation.log=(merged.cooperation.log||[]).map(stampRecord);merged.cooperation.chat=(merged.cooperation.chat||[]).map(stampRecord);}
       initializeAdvancedState(merged);
+      if(!merged.last_weekly_fixed_cost_key)merged.last_weekly_fixed_cost_key=portugalWeeklyBillingKey(simulatedDate(merged));
       syncBaseQualifications(merged);
       ensureReserve(merged,null,'migração para a nova economia');
       return refreshProgression(merged);
