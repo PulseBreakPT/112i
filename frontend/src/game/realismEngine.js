@@ -855,13 +855,31 @@ const processIncidentDynamics=(game,dt,log)=>{
     const tactic=tacticalModifier(incident);
     incident.consumption_multiplier=tactic?.resources||1;
     if(['urban_fire','wildfire'].includes(incident.category)||incident.service==='fire'){
-      incident.fire_state=incident.fire_state||{intensity:Math.min(100,25+(incident.rarity_level||1)*10),spread:0,structural_risk:10};
-      const weather=game.conditions?.weather==='storm'?1.18:game.conditions?.weather==='rain'?.72:1;
+      const storm=game.conditions?.weather==='storm',rain=game.conditions?.weather==='rain';
+      incident.fire_state=incident.fire_state||{
+        intensity:Math.min(100,25+(incident.rarity_level||1)*10),
+        spread:0,structural_risk:10,
+        wind_kmh:Math.round((storm?45:rain?18:8)+hash(incident.id+'wind')*(storm?35:22)),
+        humidity_percent:Math.round((rain?72:storm?58:28)+hash(incident.id+'humidity')*(rain?20:32)),
+        fuel_load:Math.round(35+(incident.rarity_level||1)*8+hash(incident.id+'fuel')*25),
+        slope_percent:incident.category==='wildfire'?Math.round(hash(incident.id+'slope')*38):0,
+        floors:incident.category==='urban_fire'?1+Math.floor(hash(incident.id+'floors')*12):1,
+        vertical_spread:0,
+        front_m:incident.category==='wildfire'?80+Math.round(hash(incident.id+'front')*260):0,
+      };
+      const windFactor=1+Math.max(0,(incident.fire_state.wind_kmh||0)-15)/90;
+      const humidityFactor=Math.max(.55,1.2-(incident.fire_state.humidity_percent||50)/100*.65);
+      const slopeFactor=1+(incident.fire_state.slope_percent||0)/120;
+      const weatherFactor=storm?1.14:rain?.72:1;
+      const spreadPhysics=windFactor*humidityFactor*slopeFactor*weatherFactor*Math.max(.65,(incident.fire_state.fuel_load||50)/55);
       const controlled=incident.status==='onscene'&&incident.progress>0;
-      const delta=dt*(controlled?-0.018:0.012)*weather*(tactic?.risk||1);
+      const waterSupport=incident.water_supply?.continuous?1.18:1;
+      const delta=dt*(controlled?-0.018*waterSupport:0.012)*spreadPhysics*(tactic?.risk||1);
       incident.fire_state.intensity=clamp(incident.fire_state.intensity+delta,0,100);
-      incident.fire_state.spread=clamp((incident.fire_state.spread||0)+dt*(controlled?.003:.009)*weather,0,100);
-      incident.fire_state.structural_risk=clamp((incident.fire_state.structural_risk||0)+dt*(incident.fire_state.intensity/100)*.003,0,100);
+      incident.fire_state.spread=clamp((incident.fire_state.spread||0)+dt*(controlled?.0025:.0085)*spreadPhysics,0,100);
+      incident.fire_state.structural_risk=clamp((incident.fire_state.structural_risk||0)+dt*(incident.fire_state.intensity/100)*.0035*(incident.fire_state.floors>5?1.22:1),0,100);
+      if(incident.category==='urban_fire')incident.fire_state.vertical_spread=clamp((incident.fire_state.vertical_spread||0)+dt*(controlled?.001:.0055)*windFactor,0,100);
+      if(incident.category==='wildfire')incident.fire_state.front_m=Math.max(20,(incident.fire_state.front_m||80)+dt*(controlled?-.08:.24)*spreadPhysics);
       if(incident.fire_state.structural_risk>75&&!incident.structural_warning){incident.structural_warning=true;if(log)log(game,`${incident.title}: risco estrutural elevado.`,'alert');}
     }
     if(incident.category==='hazmat'){
