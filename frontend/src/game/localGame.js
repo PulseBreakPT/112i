@@ -27,6 +27,7 @@ import {
   applyRealismAction,
   beginHospitalHandover,
   dispatchExplanation,
+  applyOperationalRisk,
 } from './realismEngine';
 
 const SERVICES = {
@@ -364,6 +365,7 @@ const resolveIncident=(g,incident,success)=>{
   const seasonal=(g.seasonal_events||[]).filter(event=>event.status==='active').reduce((factor,event)=>factor*(event.reward_multiplier||1),1);
   const assignedUnits=g.units.filter(unit=>unit.incident_id===incident.id),performance=missionPerformance(incident,assignedUnits,g.elapsed);incident.performance=performance;
   consumeIncidentLogistics(g,incident,assignedUnits.filter(unit=>unit.status==='onscene'||unit.status==='transporting'),log);
+  applyOperationalRisk(g,incident,assignedUnits,()=>gameRandom(g),log);
   recordAchievementIncident(g,incident,success,performance);
   const rawPayout=incident.false_alarm?Math.round(incident.reward*.25):Math.round(incident.reward*trustFactor*seasonal*performance.multiplier);const payout=success?missionPayout(g,incident,rawPayout):0;const afterAction=buildAfterActionReport(g,incident,performance,assignedUnits,success);afterAction.reward=payout;incident.cost_ledger=afterAction.costs;
   log(g,`${incident.title} — ${success?(incident.false_alarm?'falso alarme confirmado.':'resolvida.'):'prazo de resposta excedido.'}`,success?'success':'alert');
@@ -393,7 +395,7 @@ const mobilize=(g,incident,units,routes={},returnRoutes={})=>{
   requireValue(units.every(hasOperationalResources),'Uma das viaturas não tem combustível ou consumíveis suficientes.');
   requireValue(units.every(unit=>{const base=g.bases.find(item=>item.id===unit.base_id);return base&&baseOperationalStockReady(base,unit.service);}), 'Uma das bases está sem consumíveis críticos para sustentar a resposta.');
   requireValue(units.every(unit=>distanceMeters(unit,incident)/1000<=Math.min(Number(g.dispatch_policy?.max_response_km)||Infinity,Number(unit.max_response_km)||Infinity)),'Uma das viaturas está fora do raio máximo de resposta.');
-  units.forEach(unit=>{const plan=routes[unit.id],returnPlan=returnRoutes[unit.id];requireValue(plan?.coordinates?.length>1&&plan?.times?.length===plan.coordinates.length,'Percurso rodoviário não preparado. Tenta despachar novamente.');const returnDistance=returnPlan?.distance??plan.distance??0,requiredFuel=fuelPercentForDistance(unit,Math.max(0,plan.distance||0)+Math.max(0,returnDistance),3);requireValue((unit.resources?.fuel??100)>=requiredFuel,`Combustível insuficiente na ${unit.name} para ida e regresso estimados.`);const outbound=crewAdjustedRoute(g,unit,plan,incident),back=crewAdjustedRoute(g,unit,returnPlan?.coordinates?.length>1?returnPlan:reverseRoute(plan),incident);unit.road_return_plan=back;startRoute(unit,outbound,'enroute',incident.node);unit.incident_id=incident.id;if(!incident.assigned.includes(unit.id))incident.assigned.push(unit.id);});
+  units.forEach(unit=>{const plan=routes[unit.id],returnPlan=returnRoutes[unit.id];requireValue(plan?.coordinates?.length>1&&plan?.times?.length===plan.coordinates.length,'Percurso rodoviário não preparado. Tenta despachar novamente.');const returnDistance=returnPlan?.distance??plan.distance??0,requiredFuel=fuelPercentForDistance(unit,Math.max(0,plan.distance||0)+Math.max(0,returnDistance),3);requireValue((unit.resources?.fuel??100)>=requiredFuel,`Combustível insuficiente na ${unit.name} para ida e regresso estimados.`);const outbound=crewAdjustedRoute(g,unit,plan,incident),back=crewAdjustedRoute(g,unit,returnPlan?.coordinates?.length>1?returnPlan:reverseRoute(plan),incident);unit.road_return_plan=back;unit.dispatched_at=g.elapsed;startRoute(unit,outbound,'enroute',incident.node);unit.incident_id=incident.id;if(!incident.assigned.includes(unit.id))incident.assigned.push(unit.id);});
   incident.status='enroute';log(g,`${units.length} unidade(s) mobilizada(s) pela rede rodoviária.`);
 };
 export function selectArrUnitIds(g,incidentId,arrId){
