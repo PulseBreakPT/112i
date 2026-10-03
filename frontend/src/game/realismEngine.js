@@ -219,7 +219,7 @@ const reportedNeeds=(actual={},confidence=.45,random=Math.random)=>{
   for(const [service,count] of entries){
     const actualCount=Math.max(0,Number(count)||0);
     if(!actualCount){result[service]=0;continue;}
-    const noise=random()<confidence?.15:random()<.5?-1:1;
+    const noise=random()<confidence?0:(random()<.5?-1:1);
     result[service]=Math.max(0,actualCount+noise);
   }
   return result;
@@ -403,10 +403,10 @@ const processFleetLifecycle=(game,dt,log)=>{
 
 const hospitalPressure=(game,facility)=>{
   const date=simulatedDate(game),p=localParts(date),hour=p.hour;
-  const rush=(hour>=10&&hour<=13)||(hour>=18&&hour<=22)?.18:0;
-  const night=hour<7?.08:0;
-  const weather=game.conditions?.weather==='storm'?.18:game.conditions?.weather==='rain'?.08:0;
-  const seasonal=[7,8].includes(p.month)?.08:[12,1].includes(p.month)?.06:0;
+  const rush=((hour>=10&&hour<=13)||(hour>=18&&hour<=22)) ? .18 : 0;
+  const night=hour<7 ? .08 : 0;
+  const weather=game.conditions?.weather==='storm' ? .18 : game.conditions?.weather==='rain' ? .08 : 0;
+  const seasonal=[7,8].includes(p.month) ? .08 : [12,1].includes(p.month) ? .06 : 0;
   const wave=hash(`${facility.id}:${dateKey(date)}:${Math.floor(hour/4)}`)*.18;
   return clamp(28+(rush+night+weather+seasonal+wave)*100,15,94);
 };
@@ -469,7 +469,7 @@ const processCommunications=(game,dt,log)=>{
   const previous=game.infrastructure_state.communications;
   const storm=game.conditions?.weather==='storm';
   const redundancy=game.realism.communications_redundancy;
-  const threshold=redundancy==='high'?.985:redundancy==='low'?.94:.97;
+  const threshold=redundancy==='high' ? .985 : redundancy==='low' ? .94 : .97;
   const sample=hash(`${dateKey(simulatedDate(game))}:${Math.floor((game.elapsed||0)/300)}:comms`);
   game.infrastructure_state.communications=storm&&sample>threshold?'degraded':'normal';
   game.infrastructure_state.sirensp=game.infrastructure_state.communications==='degraded'&&sample>.992?'fallback':'normal';
@@ -669,7 +669,7 @@ const updateRegionalTrust=game=>{
     if(!game.regional_trust[key])game.regional_trust[key]={fire:90,medical:90,police:90};
     const service=base.service,coverage=game.coverage_state?.by_service?.[service]?.bases?.find(item=>item.base_id===base.id)?.coverage??50;
     const current=game.regional_trust[key][service]??90;
-    game.regional_trust[key][service]=Number(clamp(current+(coverage>=65?.02:coverage<35?-.05:0),0,100).toFixed(2));
+    game.regional_trust[key][service]=Number(clamp(current+(coverage>=65 ? .02 : coverage<35 ? -.05 : 0),0,100).toFixed(2));
   }
 };
 
