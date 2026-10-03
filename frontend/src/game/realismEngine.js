@@ -231,10 +231,11 @@ const reportedNeeds=(actual={},confidence=.45,random=Math.random)=>{
 
 export function seedIncidentRealism(game,incident,random=Math.random){
   if(incident.realism_seeded)return incident;
-  const confidence=clamp(32+random()*26,20,65);
+  const mode=game.realism?.mode||'realistic',intelBias=mode==='assisted'?18:mode==='hardcore'?-10:0,locationBias=mode==='assisted'?15:mode==='hardcore'?-8:0;
+  const confidence=clamp(32+random()*26+intelBias,18,82);
   incident.realism_seeded=true;
   incident.intel_confidence=Math.round(confidence);
-  incident.location_confidence=Math.round(45+random()*38);
+  incident.location_confidence=Math.round(clamp(45+random()*38+locationBias,25,96));
   incident.intel_revealed=false;
   incident.reported_needs=reportedNeeds(incident.needs,confidence/100,random);
   incident.reported_casualties=Math.max(0,Math.round((incident.casualties||0)+(random()<.4?(random()<.5?-1:1):0)));
