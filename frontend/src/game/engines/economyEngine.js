@@ -142,8 +142,11 @@ export const publicFundingAmount = game => {
   const personnel=(game.personnel||[]).length;
   const trustFactor=.90+Math.max(0,Math.min(100,game.trust||0))/500;
   const reputationFactor=1+Math.min(.20,Math.max(0,Number(game.reputation)||0)/2500);
+  const latestAudit=game.operational_audits?.[0],auditScore=latestAudit?.score??90;
+  const complianceFactor=.91+Math.max(0,Math.min(100,auditScore))*.0009;
+  const scrutiny=Math.max(0,Math.min(100,game.media_state?.scrutiny||0)),scrutinyFactor=1-scrutiny*.0008;
   const network=220000+operationalBases*70000+facilities*55000+Math.max(0,commands-1)*100000+personnel*2500;
-  return Math.round(network*trustFactor*reputationFactor);
+  return Math.round(network*trustFactor*reputationFactor*complianceFactor*scrutinyFactor);
 };
 
 export const applyPeriodicFunding = (game, log) => {
