@@ -37,7 +37,6 @@ export default function Operations({ game, world, act, busy, mode = 'operations'
   const definition = world.facility_catalog[facilityType];
   const selectedFacilitySite=world.sites.find(option=>option.id===site);
   const buildQuote=capitalQuote(definition?.cost||0,selectedFacilitySite?.land||'mainland',facilityType==='hospital'?'hospital':'facility');
-  const buildPrice = Math.round(definition.cost * (1 + facilities.length * .06));
   const selectedCourse = world.training_catalog.find(item => item.id === course);
   const compatibleBases = useMemo(() => game.bases.filter(base => base.service === selectedCourse?.service), [game.bases, selectedCourse]);
   const selectedTrainingBase = game.bases.find(base => base.id === trainingBase);
@@ -127,7 +126,7 @@ export default function Operations({ game, world, act, busy, mode = 'operations'
         <label>Curso<select value={course} onChange={event => chooseCourse(event.target.value)}>{world.training_catalog.map(item => <option value={item.id} key={item.id}>{item.name} · {SERVICE[item.service].name}</option>)}</select></label>
         <label>Base<select value={trainingBase} onChange={event => setTrainingBase(event.target.value)}>{compatibleBases.map(base => <option value={base.id} key={base.id}>{base.name}</option>)}</select></label>
         <label>Elementos<input type="number" min="1" max="5" value={trainingCount} onChange={event => setTrainingCount(event.target.value)} /></label>
-        <Button data-action-tone={(game.money||0) >= trainingPrice ? 'positive' : 'supported'} disabled={busy || !academy || !trainingBase} onClick={() => run('start_training', { base_id:trainingBase, course, count:Number(trainingCount) }, 'Formação iniciada.')}><Users size={15} />{academy ? `Iniciar · ${money(trainingPrice)}` : 'Requer escola de formação'}</Button>
+        <Button data-action-tone={(game.money||0)-reserveFloor(game) >= trainingPrice ? 'positive' : 'supported'} disabled={busy || !academy || !trainingBase} onClick={() => run('start_training', { base_id:trainingBase, course, count:Number(trainingCount) }, 'Formação iniciada.')}><Users size={15} />{academy ? `Iniciar · ${money(trainingPrice)}` : 'Requer escola de formação'}</Button>
       </div>
       <div className="section-line"><h2>Formações em curso</h2><span>{trainings.filter(item => item.status === 'active').length} CURSOS</span></div>
       <div className="training-list">{trainings.filter(item => item.status === 'active').map(item => <article key={item.id}><Clock3 size={18} /><div><strong>{world.training_catalog.find(course => course.id === item.course)?.name}</strong><small>{game.bases.find(base => base.id === item.base_id)?.name} · {item.count} elemento(s)</small></div><b>{duration(item.completes_at-game.elapsed)}</b></article>)}{!trainings.some(item => item.status === 'active') && <div className="operations-empty compact"><Users size={23} /><p>Sem formações em curso.</p></div>}</div>
