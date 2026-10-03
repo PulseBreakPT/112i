@@ -125,8 +125,8 @@ export const missionCompensationBase = incident => {
   const band=MISSION_COMPENSATION_BANDS[rarity];
   const needs=Object.values(incident?.needs||{}).reduce((sum,count)=>sum+Math.max(0,Number(count)||0),0);
   const activeServices=Object.values(incident?.needs||{}).filter(count=>(Number(count)||0)>0).length;
-  const mandatoryVehicles=new Set(incident?.required_vehicle_types||[]).size;
-  const mandatoryTrainings=new Set(incident?.required_trainings||[]).size;
+  const mandatoryVehicles=new Set([...(incident?.required_vehicle_types||[]),...(incident?.contingency_vehicle_types||[])]).size;
+  const mandatoryTrainings=new Set([...(incident?.required_trainings||[]),...(incident?.contingency_trainings||[])]).size;
   const casualties=Math.min(20,Math.max(0,Number(incident?.casualties)||0));
   const detainees=Math.min(20,Math.max(0,Number(incident?.detainees)||0));
   const risk=Math.max(0,Math.min(100,Number(incident?.risk_score)||0));
