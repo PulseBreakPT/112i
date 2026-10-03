@@ -58,6 +58,7 @@ export function selectArrUnitIds(g,incidentId,arrId,{requireValue,distanceMeters
 }
 
 export function selectRecommendedUnitIds(g,incidentId,mode='safe',{requireValue,distanceMeters,vehicleDefinition}){
+  if(g.realism?.mode==='hardcore')throw new Error('Despacho recomendado desativado no modo Hardcore. Avalia manualmente meios, cobertura e logística.');
   const inc=g.incidents.find(i=>i.id===incidentId);requireValue(inc,'Ocorrência inválida.');
   const assigned=g.units.filter(unit=>unit.incident_id===inc.id),chosen=[];
   const revealed=inc.intel_revealed===true||inc.reconnaissance?.complete===true,confidence=Number(inc.intel_confidence)||0;
