@@ -17,6 +17,8 @@ export default function RealismCenter({game,world,act,busy}){
   const [offerBases,setOfferBases]=useState({});
   const [recall,setRecall]=useState({});
   const [eventCounts,setEventCounts]=useState({});
+  const [aid,setAid]=useState({service:'fire',units:1,base_id:game.bases?.[0]?.id||'',incident_id:game.incidents?.[0]?.id||''});
+  const [chargerBase,setChargerBase]=useState(game.bases?.[0]?.id||'');
   const coverage=useMemo(()=>game.coverage_state?.overall!==undefined?game.coverage_state:coverageSnapshot(game),[game]);
   const realism=game.realism||{};
   const onDuty=(game.personnel||[]).filter(person=>['on-duty','recalled'].includes(person.duty_state)).length;
@@ -52,6 +54,7 @@ export default function RealismCenter({game,world,act,busy}){
       <article data-tone={stateTone(fleetAvailable)}><CarFront/><div><span>Frota disponível</span><strong>{percent(fleetAvailable)}</strong><small>{(game.units||[]).filter(unit=>unit.inspection_overdue).length} inspeções vencidas</small></div></article>
       <article data-tone={game.infrastructure_state?.communications==='normal'?'positive':'warning'}><Activity/><div><span>Comunicações</span><strong>{game.infrastructure_state?.communications==='normal'?'Normal':'Degradada'}</strong><small>SIRESP {game.infrastructure_state?.sirensp||'normal'}</small></div></article>
       <article data-tone={latestAudit?.score>=85?'positive':latestAudit?.score>=65?'warning':'danger'}><ShieldCheck/><div><span>Última auditoria</span><strong>{latestAudit?percent(latestAudit.score):'—'}</strong><small>{latestAudit?.findings?.length||0} não conformidades</small></div></article>
+      <article data-tone={(game.media_state?.scrutiny||0)>60?'danger':(game.media_state?.scrutiny||0)>30?'warning':'positive'}><Activity/><div><span>Escrutínio</span><strong>{percent(game.media_state?.scrutiny||0)}</strong><small>pressão mediática/institucional</small></div></article>
     </section>
 
     <nav className="realism-tabs" aria-label="Centro de Realismo">
@@ -122,7 +125,7 @@ export default function RealismCenter({game,world,act,busy}){
 
       <section className="realism-panel wide">
         <header><div><h2>Saúde técnica da frota</h2><p>Idade, inspeção, pneus, travões e bateria.</p></div></header>
-        <div className="fleet-health"><div className="fleet-health-head"><span>Viatura</span><span>Idade</span><span>Condição</span><span>Pneus</span><span>Travões</span><span>Bateria</span><span>Inspeção</span><span/></div>{game.units.map(unit=><div className="fleet-health-row" key={unit.id}><div><strong>{unit.name}</strong><small>{unit.mileage_km?.toLocaleString('pt-PT',{maximumFractionDigits:0})||0} km</small></div><span>{unit.age_years||0} a</span><span>{percent(unit.condition??100)}</span><span>{percent(unit.tyre_condition??100)}</span><span>{percent(unit.brake_condition??100)}</span><span>{percent(unit.battery_condition??100)}</span><span>{unit.inspection_overdue?'Vencida':'Válida'}</span>{unit.inspection_overdue?<Button disabled={busy} onClick={()=>run('perform_vehicle_inspection',{unit_id:unit.id},'Inspeção concluída.')}><Wrench size={13}/>Inspecionar</Button>:<span/>}</div>)}</div>
+        <div className="fleet-health"><div className="fleet-health-head"><span>Viatura</span><span>Idade</span><span>Condição</span><span>Pneus</span><span>Travões</span><span>Bateria</span><span>Inspeção</span><span>Seguro</span><span/></div>{game.units.map(unit=><div className="fleet-health-row" key={unit.id}><div><strong>{unit.name}</strong><small>{unit.mileage_km?.toLocaleString('pt-PT',{maximumFractionDigits:0})||0} km</small></div><span>{unit.age_years||0} a</span><span>{percent(unit.condition??100)}</span><span>{percent(unit.tyre_condition??100)}</span><span>{percent(unit.brake_condition??100)}</span><span>{percent(unit.battery_condition??100)}</span><span>{unit.inspection_overdue?'Vencida':'Válida'}</span><select value={unit.insurance?.type||'public-fleet'} onChange={event=>run('set_vehicle_insurance',{unit_id:unit.id,type:event.target.value})}><option value="public-fleet">Frota pública</option><option value="comprehensive">Completo</option><option value="self-insured">Auto-seguro</option></select>{unit.inspection_overdue?<Button disabled={busy} onClick={()=>run('perform_vehicle_inspection',{unit_id:unit.id},'Inspeção concluída.')}><Wrench size={13}/>Inspecionar</Button>:<span/>}</div>)}</div>
       </section>
     </div>}
 
