@@ -173,6 +173,9 @@ export function normalizeVehicleUnit(unit,definition,elapsed=0){
     operational_reserve:false,auto_dispatch:true,dispatch_priority:50,maintenance_history:[],breakdown_history:[],billed_mileage_km:0
   };
   const merged={...defaults,...unit};
+  if(!Number.isFinite(Number(unit.purchase_price)) || Number(unit.purchase_price)<spec.price*.25) merged.purchase_price=spec.price;
+  merged.maintenance_base_cost=Math.max(defaults.maintenance_base_cost,Number(unit.maintenance_base_cost)||0);
+  merged.operating_cost_per_km=Math.max(defaults.operating_cost_per_km,Number(unit.operating_cost_per_km)||0);
   merged.resource_capacity={...defaults.resource_capacity,...(unit.resource_capacity||{})};
   merged.equipment_installed=Array.isArray(unit.equipment_installed)?unit.equipment_installed:[...defaults.equipment_installed];
   merged.capabilities=Array.isArray(unit.capabilities)?unit.capabilities:[...defaults.capabilities];
