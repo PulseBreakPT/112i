@@ -93,12 +93,20 @@ export const weeklyFixedCostBreakdown = game => {
     .filter(unit=>unit.enabled!==false&&unit.vehicle_type==='medical-helicopter')
     .reduce(sum=>sum+PORTUGAL_ECONOMY.hemWeeklyContract,0);
 
+  const insurance=(game.units||[])
+    .filter(unit=>unit.enabled!==false&&unit.insurance?.active!==false)
+    .reduce((sum,unit)=>{
+      const annualRate=unit.insurance?.type==='comprehensive'?.025:unit.insurance?.type==='self-insured'?.003:.012;
+      return sum+(unit.purchase_price||0)*annualRate/52;
+    },0);
+
   const rounded={
     salaries:Math.round(salaries),
     bases:Math.round(bases),
     facilities:Math.round(facilities),
     command_centers:Math.round(commandCenters),
     hem_contracts:Math.round(hemContracts),
+    insurance:Math.round(insurance),
   };
   return {...rounded,total:Object.values(rounded).reduce((sum,value)=>sum+value,0)};
 };
