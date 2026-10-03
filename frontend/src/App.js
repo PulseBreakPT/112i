@@ -20,6 +20,7 @@ import Cooperation from './game/Cooperation';
 import ManagementHub from './game/ManagementHub';
 import Career from './game/Career';
 import Logistics from './game/Logistics';
+import RealismCenter from './game/RealismCenter';
 import Wiki from './game/Wiki';
 import { beep } from './game/common';
 import { ambientAudio } from './game/ambientAudio';
@@ -47,7 +48,7 @@ import './WorkspaceArchitecture.css';
 
 const WORKSPACE_GROUPS = [
   { id:'management', label:'Gestão', home:'/gestao', routes:[
-    ['/gestao','Visão geral'],['/comando','Comandos'],['/bases','Bases'],['/frota','Frota'],['/funcionarios','Funcionários'],['/infraestruturas','Infraestruturas'],['/logistica','Logística'],
+    ['/gestao','Visão geral'],['/comando','Comandos'],['/bases','Bases'],['/frota','Frota'],['/funcionarios','Funcionários'],['/infraestruturas','Infraestruturas'],['/logistica','Logística'],['/realismo','Realismo'],
   ]},
   { id:'operations', label:'Operações', home:'/operacoes', routes:[
     ['/operacoes','Operações'],['/estrategia','Estratégia'],['/alianca','Aliança'],
@@ -211,6 +212,7 @@ function GameApp() {
           <Route path="/funcionarios" element={<Personnel game={game} world={world} act={act} busy={busy} />} />
           <Route path="/infraestruturas" element={<Operations game={game} world={world} act={act} busy={busy} mode="infrastructure" />} />
           <Route path="/logistica" element={<Logistics game={game} act={act} busy={busy} />} />
+          <Route path="/realismo" element={<RealismCenter game={game} world={world} act={act} busy={busy} />} />
           <Route path="/operacoes" element={<Operations game={game} world={world} act={act} busy={busy} mode="operations" />} />
           <Route path="/relatorios" element={<Reports game={game} />} />
           <Route path="/carreira" element={<Career game={game} act={act} busy={busy} />} />
