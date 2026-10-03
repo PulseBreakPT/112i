@@ -5,6 +5,8 @@ import { Button } from '../components/ui/button';
 import { SERVICE, money, duration } from './common';
 import { toast } from 'sonner';
 import TrainingPanel from './TrainingPanel';
+import { recruitmentCost } from './portugalEconomy';
+import { reserveFloor } from './engines/economyEngine';
 import './Personnel.css';
 
 const STATUS_LABELS={
@@ -75,7 +77,7 @@ export default function Personnel({game,world,act,busy}){
     <div className="strategy-columns">
       <section className="strategy-panel">
         <header><Users/><div><h2>Recrutamento</h2><p>Reforça o efetivo de cada base e acompanha os processos de seleção em curso.</p></div></header>
-        <div className="recruitment-grid">{game.bases.map(base=><article key={base.id}><div><strong>{base.name}</strong><small>{base.personnel}/{base.staff_capacity} elementos</small></div><Button data-action-tone={(game.money||0) >= 225 ? 'positive' : 'supported'} disabled={busy||(base.personnel||0)>=base.staff_capacity} onClick={()=>run('queue_recruitment',{base_id:base.id,amount:1},'Recrutamento iniciado.')}>Recrutar · {money(225)}</Button></article>)}</div>
+        <div className="recruitment-grid">{game.bases.map(base=>{const cost=recruitmentCost(base.service,1,false);return <article key={base.id}><div><strong>{base.name}</strong><small>{base.personnel}/{base.staff_capacity} elementos</small></div><Button data-action-tone={(game.money||0)-reserveFloor(game) >= cost ? 'positive' : 'supported'} disabled={busy||(base.personnel||0)>=base.staff_capacity} onClick={()=>run('queue_recruitment',{base_id:base.id,amount:1},'Recrutamento iniciado.')}>Recrutar · {money(cost)}</Button></article>})}</div>
         <div className="strategy-list">{(game.recruitment_queue||[]).filter(item=>item.status==='pending').map(item=><article key={item.id}><div><strong>{game.bases.find(base=>base.id===item.base_id)?.name}</strong><small>{item.amount} elemento(s) · T−{duration(item.completes_at-game.elapsed)}</small></div></article>)}</div>
       </section>
       <TrainingPanel game={game} world={world} act={act} busy={busy}/>
