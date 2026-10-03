@@ -206,6 +206,9 @@ export function ensureRealismState(game){
   game.regional_trust=game.regional_trust||{};
   game.infrastructure_state=game.infrastructure_state||{power:'normal',communications:'normal',sirensp:'normal',backup_power:true};
   game.risk_forecast=game.risk_forecast||{};
+  game.sustainability_state={diesel_litres:0,petrol_litres:0,electric_kwh:0,co2_kg:0,charging_points:0,...(game.sustainability_state||{})};
+  game.media_state={scrutiny:0,last_event_at:0,...(game.media_state||{})};
+  game.operational_layers={coverage:true,hospitals:true,risk:true,incidents:true,hydrants:false,road_closures:true,...(game.operational_layers||{})};
   (game.personnel||[]).forEach(person=>ensurePerson(game,person));
   (game.units||[]).forEach(unit=>ensureUnit(game,unit));
   (game.facilities||[]).forEach(ensureHospital);
@@ -714,6 +717,9 @@ export function tickRealism(game,dt,{log=null,addUnit=null,vehicleDefinition=nul
   processPublicEvents(game,log);
   processAudits(game,log);
   processObjectives(game);
+  processPoliceCases(game,dt,log);
+  processIncidentDynamics(game,dt,log);
+  processSustainability(game);
   updateRegionalTrust(game);
   updatePowerAndEnergy(game,log);
   refreshUsedMarket(game,vehicleCatalog);
@@ -759,6 +765,125 @@ export function incidentOperationalCost(game,incident,assignedUnits=[]){
   return {fuel:Math.round(fuel),consumables:Math.round(consumables),overtime:Math.round(overtime),repairs:Math.round(repairs),external_support:Math.round(external),total:Math.round(total)};
 }
 
+const createPoliceCase=(game,incident,success)=>{
+  if(!['crime','search','explosives','public_order','police_patrol'].includes(incident.category)&&incident.service!=='police')return null;
+  if(incident.false_alarm)return null;
+  const caseFile={
+    id:uid('case'),incident_id:incident.id,title:incident.title,category:incident.category,status:success?'investigation':'urgent',
+    created_at:game.elapsed,priority:incident.priority||2,progress:success?18:5,evidence:Math.max(0,Math.round((incident.rarity_level||1)*.8+(incident.detainees||0))),
+    suspects:Math.max(0,incident.detainees||0)+(incident.category==='crime'?1:0),detainees:incident.detainees||0,
+    assigned_priority:false,last_update_at:game.elapsed,closed_at:null,
+  };
+  game.police_cases=[caseFile,...(game.police_cases||[])].slice(0,100);
+  return caseFile;
+};
+
+const processPoliceCases=(game,dt,log)=>{
+  if(game.realism?.modules?.persistent_cases===false)return;
+  for(const file of game.police_cases||[]){
+    if(!['investigation','urgent'].includes(file.status))continue;
+    const investigators=(game.personnel||[]).filter(person=>person.service==='police'&&(person.qualifications||[]).includes('investigation')&&['on-duty','recalled'].includes(person.duty_state)).length;
+    const investigationUnits=(game.units||[]).filter(unit=>unit.service==='police'&&unit.vehicle_type==='investigation-unit'&&['available','patrol','staged'].includes(unit.status)).length;
+    const pace=(.015+investigators*.006+investigationUnits*.01)*(file.assigned_priority?1.6:1);
+    file.progress=Math.min(100,(file.progress||0)+dt*pace);
+    if(game.elapsed-(file.last_evidence_at||file.created_at)>600&&file.progress<85){
+      file.last_evidence_at=game.elapsed;
+      const chance=.18+investigators*.03+(file.assigned_priority?.08:0);
+      if(hash(file.id+Math.floor(game.elapsed/600))<chance){file.evidence=(file.evidence||0)+1;file.progress=Math.min(100,file.progress+6);}
+    }
+    if(file.progress>=100){
+      file.status='closed';file.closed_at=game.elapsed;
+      game.trust=Math.min(100,(game.trust||0)+.25);
+      if(log)log(game,`Caso encerrado: ${file.title} · prova recolhida: ${file.evidence} item(ns).`,'success');
+    }
+  }
+};
+
+const processIncidentDynamics=(game,dt,log)=>{
+  for(const incident of game.incidents||[]){
+    const tactic=tacticalModifier(incident);
+    incident.consumption_multiplier=tactic?.resources||1;
+    if(['urban_fire','wildfire'].includes(incident.category)||incident.service==='fire'){
+      incident.fire_state=incident.fire_state||{intensity:Math.min(100,25+(incident.rarity_level||1)*10),spread:0,structural_risk:10};
+      const weather=game.conditions?.weather==='storm'?1.18:game.conditions?.weather==='rain'?.72:1;
+      const controlled=incident.status==='onscene'&&incident.progress>0;
+      const delta=dt*(controlled?-0.018:0.012)*weather*(tactic?.risk||1);
+      incident.fire_state.intensity=clamp(incident.fire_state.intensity+delta,0,100);
+      incident.fire_state.spread=clamp((incident.fire_state.spread||0)+dt*(controlled?.003:.009)*weather,0,100);
+      incident.fire_state.structural_risk=clamp((incident.fire_state.structural_risk||0)+dt*(incident.fire_state.intensity/100)*.003,0,100);
+      if(incident.fire_state.structural_risk>75&&!incident.structural_warning){incident.structural_warning=true;if(log)log(game,`${incident.title}: risco estrutural elevado.`,'alert');}
+    }
+    if(incident.category==='hazmat'){
+      incident.hazmat_state=incident.hazmat_state||{contamination_radius_m:60,identified:false,decon_ready:false};
+      if(incident.reconnaissance?.complete)incident.hazmat_state.identified=true;
+      if(incident.operational_zones?.hot)incident.hazmat_state.decon_ready=true;
+      if(!incident.hazmat_state.decon_ready)incident.hazmat_state.contamination_radius_m=Math.min(1200,incident.hazmat_state.contamination_radius_m+dt*.06*(game.conditions?.weather==='storm'?1.5:1));
+    }
+    if(incident.category==='road'&&(incident.rarity_level||0)>=4&&incident.reconnaissance?.complete)incident.road_closure=true;
+    if((incident.rarity_level||0)>=6||incident.category==='disaster'){
+      incident.disaster_state=incident.disaster_state||{phase:0,phases:['Impacto','Busca e salvamento','Estabilização','Recuperação'],started_at:incident.created||game.elapsed};
+      const targetPhase=Math.min(3,Math.floor((incident.progress||0)/30));
+      if(targetPhase>incident.disaster_state.phase){
+        incident.disaster_state.phase=targetPhase;
+        incident.timeline=[...(incident.timeline||[]),{time:game.elapsed,type:'phase',text:`Fase: ${incident.disaster_state.phases[targetPhase]}.`}].slice(-30);
+        if(log)log(game,`${incident.title}: transição para ${incident.disaster_state.phases[targetPhase]}.`,'info');
+      }
+    }
+    const onscene=(game.units||[]).filter(unit=>unit.incident_id===incident.id&&unit.status==='onscene');
+    for(const unit of onscene){
+      unit.onscene_since=unit.onscene_since||game.elapsed;
+      const operationalSeconds=game.elapsed-unit.onscene_since;
+      if(operationalSeconds>1800&&!unit.rotation_due){
+        unit.rotation_due=true;
+        unit.fatigue=Math.min(100,(unit.fatigue||0)+8);
+        if(log)log(game,`${unit.name}: rendição de equipa recomendada por operação prolongada.`,'alert');
+      }
+      const provisionInterval=Math.floor(operationalSeconds/900);
+      if(provisionInterval>(unit.last_provision_interval||0)){
+        unit.last_provision_interval=provisionInterval;
+        const base=game.bases.find(item=>item.id===unit.base_id);
+        if(base)consumeBaseStock(base,'provisions',Math.max(1,unit.crew_assigned||1));
+      }
+    }
+  }
+};
+
+export function applyOperationalRisk(game,incident,units,random=Math.random,log=null){
+  const tactic=tacticalModifier(incident),rarity=incident.rarity_level||1;
+  let injuries=0;
+  for(const unit of units||[]){
+    const crew=(unit.personnel_ids||[]).map(id=>game.personnel.find(person=>person.id===id)).filter(Boolean);
+    for(const person of crew){
+      const fatigue=(person.fatigue||0)/100,healthRisk=(100-(person.health??100))/100;
+      const baseChance=.0015*rarity*(tactic?.risk||1)*(1+fatigue*.8+healthRisk*.7);
+      if(random()<baseChance){
+        const hours=6+Math.round(random()*66);
+        person.sick_until=Math.max(person.sick_until||0,game.elapsed+hours*3600);
+        person.health=clamp((person.health??100)-(4+rarity*1.5),20,100);
+        person.injuries=(person.injuries||0)+1;person.duty_state='sick';injuries++;
+        if(log)log(game,`Acidente de trabalho: ${person.name} ficará indisponível durante cerca de ${hours} h.`,'alert');
+      }
+    }
+  }
+  return injuries;
+}
+
+const processSustainability=game=>{
+  if(game.realism?.modules?.sustainability===false)return;
+  for(const unit of game.units||[]){
+    const current=Math.max(0,Number(unit.mileage_km)||0),previous=Math.max(0,Number(unit.sustainability_mileage_km)||0),delta=Math.max(0,current-previous);
+    if(!delta)continue;
+    unit.sustainability_mileage_km=current;
+    if(unit.energy_type==='electric'){
+      const kwh=delta*(Number(unit.energy_kwh_100km)||22)/100;game.sustainability_state.electric_kwh+=kwh;
+    }else{
+      const litres=delta*Math.max(1,Number(unit.fuel_consumption_l_100km)||12)/100;
+      if(unit.energy_type==='petrol'){game.sustainability_state.petrol_litres+=litres;game.sustainability_state.co2_kg+=litres*2.31;}
+      else{game.sustainability_state.diesel_litres+=litres;game.sustainability_state.co2_kg+=litres*2.68;}
+    }
+  }
+};
+
 export function buildAfterActionReport(game,incident,performance,assignedUnits,success){
   const costs=incidentOperationalCost(game,incident,assignedUnits);
   const firstDispatch=Math.min(...assignedUnits.map(unit=>unit.dispatched_at||Infinity));
@@ -778,6 +903,11 @@ export function buildAfterActionReport(game,incident,performance,assignedUnits,s
   if(costs.external_support>0)report.lessons.push('Foi necessário apoio externo; rever cobertura territorial.');
   if(!report.lessons.length)report.lessons.push('Resposta dentro dos parâmetros operacionais definidos.');
   game.after_action_reports=[report,...(game.after_action_reports||[])].slice(0,100);
+  createPoliceCase(game,incident,success);
+  if(!success||(performance?.score||0)<60||(incident.rarity_level||0)>=6&&success===false){
+    game.media_state.scrutiny=clamp((game.media_state.scrutiny||0)+(incident.rarity_level||1)*4,0,100);
+    game.media_state.last_event_at=game.elapsed;
+  }else game.media_state.scrutiny=clamp((game.media_state.scrutiny||0)-.5,0,100);
   return report;
 }
 
@@ -875,7 +1005,21 @@ export function applyRealismAction(game,kind,data={},ctx={}){
     const hospital=game.facilities.find(item=>item.id===data.facility_id&&item.type==='hospital');if(!hospital)throw new Error('Hospital inválido.');
     hospital.manual_diversion=!!data.enabled;hospital.diversion=!!data.enabled||hospital.ed_pressure>=88;log(game,`${hospital.name}: desvio ${hospital.diversion?'ativo':'desativado'}.`,'info');return true;
   }
-  if(kind==='set_infrastructure_backup'){
+  if(kind==='prioritize_police_case'){
+    const file=game.police_cases.find(item=>item.id===data.case_id);if(!file)throw new Error('Caso policial inválido.');
+    game.police_cases.forEach(item=>{if(item.status!=='closed')item.assigned_priority=false;});file.assigned_priority=true;log(game,`Investigação priorizada: ${file.title}.`,'success');return true;
+  }
+  if(kind==='install_ev_charger'){
+    const base=game.bases.find(item=>item.id===data.base_id);if(!base)throw new Error('Base inválida.');
+    const count=Math.max(1,Math.min(8,Number(data.count)||1)),cost=count*25000;
+    if((game.money||0)-cost<reserveFloor(game))throw new Error('Orçamento insuficiente para infraestrutura de carregamento.');
+    payCost(game,cost,{label:'carregadores de frota elétrica',log,protectReserve:false});base.ev_chargers=(base.ev_chargers||0)+count;game.sustainability_state.charging_points=(game.sustainability_state.charging_points||0)+count;log(game,`${base.name}: ${count} ponto(s) de carregamento instalados.`,'success');return true;
+  }
+  if(kind==='toggle_operational_layer'){
+    if(!(data.layer in game.operational_layers))throw new Error('Camada operacional inválida.');
+    game.operational_layers[data.layer]=!!data.enabled;return true;
+  }
+    if(kind==='set_infrastructure_backup'){
     game.infrastructure_state.backup_power=!!data.enabled;log(game,`Energia de contingência ${data.enabled?'ativada':'desativada'}.`,'success');return true;
   }
   return false;
