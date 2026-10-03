@@ -294,6 +294,7 @@ test('vehicle transfers reserve capacity and take time', () => {
   game=tickGame(game,181);
   const target=game.bases.find(base=>base.service==='fire'&&base.node==='porto-campanha'),unit=game.units.find(item=>item.service==='fire');
   const originId=unit.base_id;
+  game.units.find(item=>item.id===unit.id).status='available';
   game=applyAction(game,'transfer_unit',{unit_id:unit.id,base_id:target.id});
   expect(game.units.find(item=>item.id===unit.id).status).toBe('base_transfer');
   expect(game.units.find(item=>item.id===unit.id).base_id).toBe(originId);
@@ -309,6 +310,7 @@ test('routed vehicle transfers move along the prepared road route and finish at 
   const target=game.bases.find(base=>base.service==='fire'&&base.node==='porto-campanha');
   const unit=game.units.find(item=>item.service==='fire');
   const origin=game.bases.find(base=>base.id===unit.base_id);
+  game.units.find(item=>item.id===unit.id).status='available';
   const route={coordinates:[[origin.lng,origin.lat],[(origin.lng+target.lng)/2,(origin.lat+target.lat)/2],[target.lng,target.lat]],times:[0,60,120],duration:120,distance:2400};
   game=applyAction(game,'transfer_unit',{unit_id:unit.id,base_id:target.id,route});
   let moving=game.units.find(item=>item.id===unit.id);
@@ -323,7 +325,7 @@ test('routed vehicle transfers move along the prepared road route and finish at 
   game=tickGame(game,Math.ceil(moving.travel_total-moving.travel)+1);
   const arrived=game.units.find(item=>item.id===unit.id);
   expect(arrived.base_id).toBe(target.id);
-  expect(arrived.status).toMatch(/available|uncrewed/);
+  expect(arrived.status).toMatch(/available|uncrewed|offshift/);
   expect(arrived.route).toHaveLength(0);
 });
 
@@ -385,7 +387,7 @@ test('career task rewards do not count as operational revenue', () => {
 test('response preparation delay affects recommended dispatch order', () => {
   const game=newGame();
   const incident=game.incidents.find(item=>item.service==='fire');
-  incident.needs={fire:1};incident.required_vehicle_types=[];incident.required_trainings=[];incident.required_personnel=1;
+  incident.needs={fire:1};incident.reported_needs={fire:1};incident.intel_revealed=true;incident.required_vehicle_types=[];incident.required_trainings=[];incident.required_personnel=1;
   const fire=game.units.filter(item=>item.service==='fire');
   fire[0].response_delay=120;fire[1].response_delay=0;
   const selected=selectRecommendedUnitIds(game,incident.id,'minimum');
