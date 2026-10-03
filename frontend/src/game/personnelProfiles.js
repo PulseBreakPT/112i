@@ -1,3 +1,5 @@
+import { monthlySalaryFor } from './portugalEconomy';
+
 // 500 identidades definidas pelo utilizador.
 // Mantém exatamente a grafia e ordem da lista fornecida.
 export const PERSONNEL_PROFILES = [
@@ -1557,7 +1559,7 @@ export const personnelDefaults = (profileIndex=0,service='fire') => {
     team_affinity:clamp(profileStat(index,14,55,36)),
     specialization:specializations[index%specializations.length],
     trait,
-    salary:Math.round(1080+serviceYears*24+skill*3.2),
+    salary:monthlySalaryFor(service,serviceYears,skill),
     missions_completed:0,
     successes:0,
     failures:0,
