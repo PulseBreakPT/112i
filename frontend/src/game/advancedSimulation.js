@@ -204,6 +204,16 @@ export function tickAdvancedState(game,dt,log=()=>{},random=Math.random) {
         patient.vitals.gcs=Math.round(Math.max(3,Math.min(15,16-severity*1.2-instability*3+improving*1.5)));
       }
       patient.vitals.updated_at=game.elapsed;
+      if(patient.stability<=0&&patient.severity>=4&&!patient.treatment_complete){
+        const deathChance=patient.clinical_state==='pcr'?.72:.28;
+        if(random()<deathChance){
+          patient.status='deceased';patient.outcome='deceased';patient.closed_at=game.elapsed;patient.deceased_at=game.elapsed;
+          game.trust=Math.max(0,(game.trust||0)-(patient.severity>=5?4:2));
+          log(game,'Óbito registado após deterioração clínica grave.','alert');
+          return;
+        }
+        patient.stability=8;
+      }
       if(patient.stability<40&&!patient.deteriorated){patient.deteriorated=true;patient.severity=Math.min(5,(patient.severity||1)+1);patient.clinical_state=['','light','moderate','severe','critical','pcr'][patient.severity]||patient.clinical_state;game.trust=Math.max(0,(game.trust||0)-2);log(game,'Uma vítima deteriorou enquanto aguardava estabilização/evacuação.','alert');}
     }
     if(patient.treatment_progress>=100&&!patient.treatment_complete){
