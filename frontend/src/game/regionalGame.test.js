@@ -12,7 +12,7 @@ test('new careers start with one command center and all resources assigned to it
 
 test('mission unlocks are isolated between command centers', () => {
   let game = newGame();
-  game.money = 100000;
+  game.money = 30000000;
   game.level = 4;
   game = applyAction(game,'create_command_center',{name:'Comando do Algarve',site_id:'faro',radius_km:45});
   const faro = game.command_centers.find(center => center.city === 'Faro');
@@ -31,7 +31,7 @@ test('planned missions start at their scheduled time', () => {
   const center = game.command_centers[0];
   const beforeMoney=game.money;
   game = applyAction(game,'create_planned_mission',{title:'Jogo de teste',scenario:5,delay:300,site_id:'porto-aliados',command_center_id:center.id});
-  expect(game.money).toBe(beforeMoney-100);
+  expect(game.money).toBe(beforeMoney-2500);
   const planned = game.planned_missions[0];
   expect(planned.status).toBe('scheduled');
   game = tickGame(game,301);
@@ -69,7 +69,7 @@ test('personnel are individual, assigned to vehicles and can be recruited or dis
   expect(game.units.every(unit => unit.personnel_ids.length === unit.crew_assigned)).toBe(true);
   const base = game.bases.find(item => item.service === 'medical');
   const before = game.personnel.length;
-  game.money = 100000;
+  game.money = 30000000;
   game = applyAction(game,'recruit_personnel',{base_id:base.id,amount:2});
   expect(game.personnel).toHaveLength(before+2);
   const free = game.personnel.find(person => person.base_id === base.id && !person.unit_id && person.status === 'available');
@@ -139,7 +139,7 @@ test('extra personnel increase operational resolution speed', () => {
 });
 
 test('progressive recruitment only adds personnel after its completion time', () => {
-  let game=newGame();game.money=100000;
+  let game=newGame();game.money=30000000;
   const base=game.bases[0],before=game.personnel.length;
   game=applyAction(game,'queue_recruitment',{base_id:base.id,amount:2});
   expect(game.personnel).toHaveLength(before);
@@ -195,7 +195,7 @@ test('spawn zones can be created and removed', () => {
 });
 
 test('custom coordinate POIs must belong to their command area', () => {
-  let game=newGame();game.money=100000;
+  let game=newGame();game.money=30000000;
   const porto=game.command_centers[0];
   expect(()=>applyAction(game,'create_player_poi',{name:'PDI Faro',type:'stadium',custom:true,lng:-7.93,lat:37.02,city:'Faro',command_center_id:porto.id})).toThrow(/área|região/i);
   game=applyAction(game,'create_command_center',{name:'Comando do Algarve',site_id:'faro',radius_km:45});
@@ -242,7 +242,7 @@ test('operating costs are co-financed instead of creating a debt spiral', () => 
   game.next_upkeep=game.elapsed;
   game=tickGame(game,1);
   expect(game.operating_debt).toBe(0);
-  expect(game.money).toBeGreaterThanOrEqual(5000);
+  expect(game.money).toBeGreaterThanOrEqual(250000);
   expect(game.public_funding).toBeGreaterThan(0);
 });
 
@@ -278,7 +278,7 @@ test('suspended bases no longer provide dispatch capacity', () => {
 });
 
 test('vehicle transfers reserve capacity and take time', () => {
-  let game=newGame();game.money=100000;
+  let game=newGame();game.money=30000000;
   const center=game.command_centers[0];
   game=applyAction(game,'build_base',{service:'fire',site_id:'porto-campanha',command_center_id:center.id});
   game=tickGame(game,181);
@@ -292,7 +292,7 @@ test('vehicle transfers reserve capacity and take time', () => {
 });
 
 test('routed vehicle transfers move along the prepared road route and finish at the target base', () => {
-  let game=newGame();game.money=100000;
+  let game=newGame();game.money=30000000;
   const center=game.command_centers[0];
   game=applyAction(game,'build_base',{service:'fire',site_id:'porto-campanha',command_center_id:center.id});
   game=tickGame(game,181);
@@ -340,14 +340,14 @@ test('protected reserve funding is not counted as operational earnings', () => {
   game.money=0;game.next_upkeep=999999;
   const earned=game.earned;
   game=tickGame(game,1);
-  expect(game.money).toBeGreaterThanOrEqual(5000);
+  expect(game.money).toBeGreaterThanOrEqual(250000);
   expect(game.public_funding).toBeGreaterThan(0);
   expect(game.earned).toBe(earned);
 });
 
 test('cooperative academy capacity can support training', () => {
   let game=newGame();
-  game.money=100000;game.cooperation.funds=10000;
+  game.money=30000000;game.cooperation.funds=1000000;
   game=applyAction(game,'build_alliance_facility',{type:'academy',name:'Academia de rede'});
   const base=game.bases.find(item=>item.service==='medical');
   game=applyAction(game,'start_training',{base_id:base.id,course:'advanced-care',count:1});
@@ -356,7 +356,7 @@ test('cooperative academy capacity can support training', () => {
 
 
 test('empty command centers do not increase global incident capacity', () => {
-  let game=newGame();game.money=100000;
+  let game=newGame();game.money=30000000;
   const before=progressionSnapshot(game,{fire:{base_price:10000},medical:{base_price:8000},police:{base_price:8000}}).mission_cap;
   game=applyAction(game,'create_command_center',{name:'Comando vazio',site_id:'faro',radius_km:45});
   const after=progressionSnapshot(game,{fire:{base_price:10000},medical:{base_price:8000},police:{base_price:8000}}).mission_cap;
@@ -383,7 +383,7 @@ test('response preparation delay affects recommended dispatch order', () => {
 });
 
 test('critical transfer cancellation releases the reserved destination bed', () => {
-  let game=newGame();game.money=100000;
+  let game=newGame();game.money=30000000;
   const center=game.command_centers[0];
   game=applyAction(game,'build_facility',{type:'hospital',site_id:'porto-campanha',command_center_id:center.id});
   game=applyAction(game,'build_facility',{type:'hospital',site_id:'porto-foz',command_center_id:center.id});
@@ -403,46 +403,47 @@ test('critical transfer cancellation releases the reserved destination bed', () 
 
 test('new careers start with a healthy operating budget', () => {
   const game=newGame();
-  expect(game.money).toBe(40000);
+  expect(game.money).toBe(2500000);
   expect(game.operating_debt).toBe(0);
   expect(game.next_public_funding).toBeGreaterThan(0);
 });
 
-test('eligible investments are co-financed instead of exhausting the player', () => {
+test('capital investments require the player contribution while recording public co-financing', () => {
   let game=newGame();
-  game.money=100;
-  const center=game.command_centers[0];
+  game.money=30000000;
+  const before=game.money,center=game.command_centers[0];
   game=applyAction(game,'build_base',{service:'fire',site_id:'porto-campanha',command_center_id:center.id});
-  expect(game.money).toBeGreaterThanOrEqual(5000);
-  expect(game.public_funding).toBeGreaterThan(0);
+  expect(game.money).toBeLessThan(before);
+  expect(game.capital_grants).toBeGreaterThan(0);
+  expect(game.capital_investment).toBeGreaterThan(3000000);
+  expect(game.vat_paid).toBeGreaterThan(0);
   expect(game.bases.some(base=>base.node==='porto-campanha'&&base.service==='fire')).toBe(true);
 });
 
 test('operating costs can never drain the protected reserve', () => {
   let game=newGame();
-  game.money=5000;
+  game.money=250000;
   game.next_upkeep=game.elapsed;
   game=tickGame(game,1);
-  expect(game.money).toBeGreaterThanOrEqual(5000);
+  expect(game.money).toBeGreaterThanOrEqual(250000);
   expect(game.operating_debt).toBe(0);
 });
 
 test('periodic public funding creates sustainable positive cash flow', () => {
   let game=newGame();
-  game.money=5000;
+  game.money=250000;
   game.next_public_funding=game.elapsed;
   const beforeFunding=game.public_funding||0;
   game=tickGame(game,1);
-  expect(game.money).toBeGreaterThan(5000);
+  expect(game.money).toBeGreaterThan(250000);
   expect(game.public_funding).toBeGreaterThan(beforeFunding);
 });
 
-test('base prices scale smoothly even for a nationwide network', () => {
+test('base reference prices remain tied to real construction cost instead of artificial network inflation', () => {
   const game=newGame();
   game.bases=Array.from({length:30},(_,index)=>({id:String(index),service:index%3===0?'fire':index%3===1?'medical':'police'}));
-  const price=nextBuildingCost(game,'fire',10000);
-  expect(price).toBeLessThanOrEqual(25000);
-  expect(price).toBeGreaterThan(10000);
+  const price=nextBuildingCost(game,'fire',3500000);
+  expect(price).toBe(3500000);
 });
 
 
