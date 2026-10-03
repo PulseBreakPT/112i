@@ -31,6 +31,7 @@ const dispatchable = (g, unit, incident, distanceMeters) =>
   (unit.condition||100)>20 &&
   crewFatigue(g,unit)<90 &&
   hasOperationalResources(unit) &&
+  !(unit.vehicle_class==='air'&&['storm','fog'].includes(g.conditions?.weather)) &&
   withinResponseRange(g, unit, incident, distanceMeters);
 
 export function selectArrUnitIds(g,incidentId,arrId,{requireValue,distanceMeters}){
