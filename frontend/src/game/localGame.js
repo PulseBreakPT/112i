@@ -405,7 +405,9 @@ const crewAdjustedRoute=(g,unit,plan,incident=null)=>{
   const communicationsPenalty=g.infrastructure_state?.communications==='degraded'?1.08:1;
   const closurePenalty=incident?.road_closure?1.1:1;
   const factor=crewFactor*weatherPenalty*terrainPenalty*communicationsPenalty*closurePenalty;
-  return {...plan,duration:Math.max(1,(Number(plan.duration)||0)*factor),times:plan.times.map(time=>Math.max(0,Number(time)||0)*factor)};
+  const preparation=Math.max(0,(Number(unit.preparation_time)||0)+(Number(unit.response_delay)||0));
+  const travelDuration=Math.max(1,(Number(plan.duration)||0)*factor),duration=preparation+travelDuration;
+  return {...plan,duration,times:plan.times.map((time,index)=>index===0?0:preparation+Math.max(0,Number(time)||0)*factor),preparation_time:preparation};
 };
 const mobilize=(g,incident,units,routes={},returnRoutes={})=>{
   requireValue(units.length&&units.every(unit=>operationalUnit(unit,g.dispatch_policy?.allow_returning_redirect===true)&&unitBaseOperational(g,unit)),'Não existem meios disponíveis para este despacho.');
