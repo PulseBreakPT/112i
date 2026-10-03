@@ -3,7 +3,6 @@ import { LOGISTICS_STOCKS, ensureLogisticsState, logisticsCapacity, consumeBaseS
 
 const clamp=(value,min=0,max=100)=>Math.max(min,Math.min(max,Number(value)||0));
 const daySeconds=86400;
-const yearSeconds=365*daySeconds;
 const uid=(prefix='real')=>`${prefix}-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
 const hash=value=>{let h=2166136261;for(const char of String(value)){h^=char.charCodeAt(0);h=Math.imul(h,16777619);}return (h>>>0)/4294967295;};
 const simulatedDate=game=>new Date(Date.parse(game.calendar_started_at||game.saved_at||new Date().toISOString())+Math.max(0,Number(game.elapsed)||0)*1000);
@@ -306,11 +305,6 @@ export function markReconnaissance(game,incident,unit){
   }
   incident.timeline.push({time:game.elapsed,type:'recon',text:'Reconhecimento concluído; situação operacional confirmada.'});
 }
-
-const currentShiftKey=(game,service)=>{
-  const date=simulatedDate(game),shift=activeShift(service,localParts(date).hour);
-  return `${dateKey(date)}:${shift.id}`;
-};
 
 const allocateCrews=(game)=>{
   if(game.realism?.modules?.shifts===false||game.realism?.auto_crew===false)return;
