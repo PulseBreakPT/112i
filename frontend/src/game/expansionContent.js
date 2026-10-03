@@ -268,7 +268,7 @@ CURATED_PORTUGAL_MISSIONS.forEach((mission,localIndex) => {
     service:mission.service === 'multi' ? 'fire' : mission.service,
     priority:mission.tier>=3?1:mission.tier===2?2:3,
     needs:mission.needs,
-    reward:[1200,2600,6200,11000][mission.tier-1]+localIndex*180,
+    reward:[2200,5000,12000,28000][mission.tier-1]+localIndex*100,
     xp:[55,115,230,380][mission.tier-1]+localIndex*5,
     description:mission.description,
     caller:call.caller,
