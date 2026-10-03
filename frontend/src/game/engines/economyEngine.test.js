@@ -137,3 +137,17 @@ describe('weekly fixed-cost invoice', () => {
     expect(after.total-before.total).toBe(after.hem_contracts);
   });
 });
+
+
+test('fleet insurance is weekly fixed while wear and mileage stay variable',()=>{
+  const game={
+    personnel:[],bases:[],facilities:[],command_centers:[],complexes:[],
+    units:[{id:'u',enabled:true,vehicle_type:'patrol',purchase_price:38000,insurance:{active:true,type:'public-fleet'},wear:5,mileage_km:1000}],
+  };
+  const first=weeklyFixedCostBreakdown(game);
+  game.units[0].wear=95;game.units[0].mileage_km=250000;
+  const second=weeklyFixedCostBreakdown(game);
+  expect(first.insurance).toBeGreaterThan(0);
+  expect(second.insurance).toBe(first.insurance);
+  expect(second.total).toBe(first.total);
+});
