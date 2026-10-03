@@ -586,6 +586,15 @@ const objectiveTemplates=[
   {id:'response',title:'Manter confiança pública ≥ 90%',metric:'trust',target:90},
 ];
 
+const processBudgetCycle=game=>{
+  const year=localParts(simulatedDate(game)).year||2026;
+  if(game.budget_cycle?.year===year)return;
+  const bases=(game.bases||[]).filter(item=>item.enabled!==false).length,facilities=(game.facilities||[]).filter(item=>item.enabled!==false).length,personnel=(game.personnel||[]).length;
+  const auditScore=game.operational_audits?.[0]?.score??90,trust=game.trust??90;
+  const approved=Math.round((1800000+bases*420000+facilities*600000+personnel*22000)*(0.85+trust/500)*(0.9+auditScore/1000)/1000)*1000;
+  game.budget_cycle={year,approved_envelope:approved,approved_at:game.elapsed,capital_priority:auditScore<70?'compliance':game.coverage_state?.overall<55?'coverage':'renewal',note:'Envelope anual de referência; a tesouraria recebe dotações periódicas. Não é uma cobrança anual.'};
+};
+
 const processObjectives=game=>{
   const year=localParts(simulatedDate(game)).year;
   if(game.realism.objective_year!==year||!(game.strategic_objectives||[]).length){
@@ -747,6 +756,7 @@ export function tickRealism(game,dt,{log=null,addUnit=null,vehicleDefinition=nul
   processPlannedEvents(game,log);
   processPublicEvents(game,log,spawn);
   processAudits(game,log);
+  processBudgetCycle(game);
   processObjectives(game);
   processPoliceCases(game,dt,log);
   processIncidentDynamics(game,dt,log);
