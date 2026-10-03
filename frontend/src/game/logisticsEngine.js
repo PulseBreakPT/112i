@@ -329,7 +329,7 @@ const incidentConsumption=(incident,service,unitCount)=>{
 
 export function consumeIncidentLogistics(game,incident,assignedUnits,log=()=>{}){
   ensureLogisticsState(game);
-  const usageFactor=incident?.false_alarm?.18:1;
+  const usageFactor=(incident?.false_alarm?.18:1)*Math.max(.55,Math.min(1.5,Number(incident?.consumption_multiplier)||1));
   const byBase=new Map();
   for(const unit of assignedUnits||[]){
     if(!byBase.has(unit.base_id))byBase.set(unit.base_id,[]);
