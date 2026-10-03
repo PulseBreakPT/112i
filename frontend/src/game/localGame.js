@@ -497,7 +497,8 @@ export function tickGame(input,seconds){
       distanceCost+=distanceDelta*Math.max(0,unit.operating_cost_per_km||0);
       unit.billed_mileage_km=unit.mileage_km||0;
       const annualRate=vehicleMaintenanceReserveRate(unit.vehicle_class);
-      return sum+((unit.purchase_price||0)*annualRate/12)*(1-discount);
+      const reserve=unit.vehicle_type==='medical-helicopter'?(unit.purchase_price||PORTUGAL_ECONOMY.vehicles['medical-helicopter'])/12:(unit.purchase_price||0)*annualRate/12;
+      return sum+reserve*(1-discount);
     },0);
     const infrastructure=g.bases.filter(base=>base.enabled!==false).reduce((sum,base)=>{
       const asset=PORTUGAL_ECONOMY.buildings[base.service]||0,annualRate=base.service==='medical'?.04:.035;
