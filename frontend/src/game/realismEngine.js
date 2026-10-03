@@ -524,7 +524,7 @@ const processPlannedEvents=(game,log)=>{
   if(log)log(game,`Evento planeado: ${event.name}. Prepara cobertura preventiva.`,'info');
 };
 
-const processPublicEvents=(game,log)=>{
+const processPublicEvents=(game,log,spawn)=>{
   for(const event of game.planned_public_events||[]){
     if(event.status==='planned'&&game.elapsed>=event.starts_at){event.status='active';if(log)log(game,`${event.name} iniciou. Dispositivo preventivo em avaliação.`,'info');}
     if(event.status==='active'&&game.elapsed>=event.ends_at){event.status='completed';event.completed_at=game.elapsed;}
@@ -534,7 +534,18 @@ const processPublicEvents=(game,log)=>{
     if(gap&&game.elapsed-event.starts_at>600&&hash(event.id+Math.floor((game.elapsed-event.starts_at)/600))<.12*gap){
       event.risk_event_spawned=true;
       event.uncovered=true;
-      if(log)log(game,`${event.name}: dispositivo preventivo insuficiente; risco operacional aumentado.`,'alert');
+      const scenarioByRisk={public_order:5,multi:10,water_rescue:4},scenario=scenarioByRisk[event.risk]??3;
+      const center=(game.command_centers||[]).find(item=>item.id===event.command_center_id)||game.command_centers?.[0];
+      const created=spawn?.(scenario,center?.center_node,center?.id);
+      if(created){
+        created.title=`${event.name} · ocorrência associada`;
+        created.definition=created.title;
+        created.public_event_id=event.id;
+        created.event_uncovered=true;
+        created.reward=Math.round((created.reward||0)*.9);
+        created.timeline=[...(created.timeline||[]),{time:game.elapsed,type:'event',text:`Ocorrência associada a ${event.name}.`}].slice(-30);
+      }
+      if(log)log(game,`${event.name}: dispositivo preventivo insuficiente; foi gerada pressão operacional adicional.`,'alert');
     }
   }
 };
@@ -701,7 +712,7 @@ const updatePowerAndEnergy=(game,log)=>{
   if(previous!==game.infrastructure_state.power&&log)log(game,game.infrastructure_state.power==='grid-failure'?'Falha de energia na rede: geradores de contingência ativados.':'Rede elétrica estabilizada.',game.infrastructure_state.power==='grid-failure'?'alert':'success');
 };
 
-export function tickRealism(game,dt,{log=null,addUnit=null,vehicleDefinition=null,vehicleCatalog=null,returnToBase=null}={}){
+export function tickRealism(game,dt,{log=null,addUnit=null,vehicleDefinition=null,vehicleCatalog=null,returnToBase=null,spawn=null}={}){
   ensureRealismState(game);
   ensureLogisticsState(game);
   const date=simulatedDate(game);
@@ -714,7 +725,7 @@ export function tickRealism(game,dt,{log=null,addUnit=null,vehicleDefinition=nul
   processCommunications(game,dt,log);
   processRiskForecast(game);
   processPlannedEvents(game,log);
-  processPublicEvents(game,log);
+  processPublicEvents(game,log,spawn);
   processAudits(game,log);
   processObjectives(game);
   processPoliceCases(game,dt,log);
