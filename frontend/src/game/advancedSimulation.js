@@ -1,6 +1,7 @@
 import { payCost, reserveFloor } from './engines/economyEngine';
 import { PERSONNEL_PROFILES, normalizePersonnelProfile } from './personnelProfiles';
 import { PORTUGAL_ECONOMY, capitalQuote, recruitmentCost } from './portugalEconomy';
+import { ensureLogisticsState, tickLogistics, applyLogisticsAction, stockKeyForUnitResource, consumeBaseStock } from './logisticsEngine';
 
 const id = () => globalThis.crypto?.randomUUID?.() || `adv-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
@@ -17,8 +18,6 @@ const RESOURCE_PROFILE = {
   medical:{oxygen:{capacity:100,label:'Oxigénio',unit:'%'},medical:{capacity:100,label:'Material clínico',unit:'%'},fuel:{capacity:100,label:'Combustível',unit:'%'}},
   police:{equipment:{capacity:100,label:'Equipamento',unit:'%'},fuel:{capacity:100,label:'Combustível',unit:'%'}},
 };
-const SUPPLY_CAPACITY={fuel:1200,medical:700,water:24000,foam:2600,equipment:700,oxygen:700};
-const SUPPLY_COST={fuel:PORTUGAL_ECONOMY.dieselPerLitre,medical:3.5,water:PORTUGAL_ECONOMY.waterPerLitre,foam:PORTUGAL_ECONOMY.foamPerLitre,equipment:2.5,oxygen:1.8};
 const DAILY_TASKS = [
   {metric:'completed',title:'Resolver 4 ocorrências',target:4,reward:6000},
   {metric:'transported',title:'Concluir 2 transportes',target:2,reward:4000},
@@ -68,7 +67,6 @@ export function initializeAdvancedState(game) {
   game.recruitment_queue=game.recruitment_queue||[];
   game.medical_transfers=game.medical_transfers||[];
   game.next_auto_planned=game.next_auto_planned||900;
-  game.next_supply_order=game.next_supply_order||300;
   game.operations_metrics={transported:0,trained:0,...(game.operations_metrics||{})};
   game.rotating_tasks=game.rotating_tasks||{
     cycle:Math.floor((game.elapsed||0)/86400),
@@ -97,7 +95,8 @@ export function initializeAdvancedState(game) {
   game.cooperation.events=game.cooperation.events||[];
   game.cooperation.large_scale_missions=game.cooperation.large_scale_missions||[];
   (game.command_centers||[]).forEach(center=>{center.mission_ranges={default:center.radius_km||35,...(center.mission_ranges||{})};center.spawn_zones=center.spawn_zones||[];});
-  (game.bases||[]).forEach(base=>{base.mission_generation_enabled=base.mission_generation_enabled!==false;base.supply_capacity={...SUPPLY_CAPACITY,...(base.supply_capacity||{})};base.supply_reserve={fuel:1000,medical:500,water:20000,foam:2000,equipment:500,oxygen:500,...(base.supply_reserve||{})};});
+  (game.bases||[]).forEach(base=>{base.mission_generation_enabled=base.mission_generation_enabled!==false;});
+  ensureLogisticsState(game);
   (game.facilities||[]).forEach(facility=>{facility.enabled=facility.enabled!==false;facility.queue_limit=facility.queue_limit||facility.capacity||5;});
   (game.units||[]).forEach(unit=>{
     unit.shift=unit.shift||{start:0,end:24,days:[0,1,2,3,4,5,6]};
@@ -166,31 +165,22 @@ export function tickAdvancedState(game,dt,log=()=>{},random=Math.random) {
       if(base?.enabled===false)return;
       Object.entries(RESOURCE_PROFILE[unit.service]||{}).forEach(([key,profile])=>{
         const capacity=Math.max(0,Number(unit.resource_capacity?.[key])||profile.capacity),current=unit.resources[key]||0,missing=Math.max(0,capacity-current),rate=dt*capacity/180;
-        const available=Math.max(0,base?.supply_reserve?.[key]||0);
+        const stockId=stockKeyForUnitResource(unit.service,key);
+        const available=Math.max(0,Number(base?.logistics?.stock?.[stockId])||0);
         if(key==='fuel'){
           const tankLitres=Math.max(1,Number(unit.fuel_capacity_l)||70),maxPercentFromStock=available/tankLitres*100;
           const transferPercent=Math.min(missing,rate,maxPercentFromStock),litres=transferPercent/100*tankLitres;
           unit.resources[key]=current+transferPercent;
-          if(base)base.supply_reserve[key]=Math.max(0,available-litres);
+          if(base)consumeBaseStock(base,stockId,litres);
           return;
         }
         const transfer=Math.min(missing,rate,available);
         unit.resources[key]=current+transfer;
-        if(base)base.supply_reserve[key]=Math.max(0,available-transfer);
+        if(base)consumeBaseStock(base,stockId,transfer);
       });
     }
   });
-  if(game.elapsed>=game.next_supply_order){
-    let spent=0;
-    (game.bases||[]).filter(base=>base.enabled!==false).forEach(base=>{
-      Object.entries(base.supply_capacity||SUPPLY_CAPACITY).forEach(([key,capacity])=>{
-        const target=capacity*.75,current=Math.max(0,base.supply_reserve?.[key]||0),wanted=Math.max(0,target-current),unitCost=SUPPLY_COST[key]||1;
-        if(wanted>0){base.supply_reserve[key]=current+wanted;spent+=Math.ceil(wanted*unitCost);}
-      });
-    });
-    if(spent>0){payCost(game,spent,{label:'reposição logística',log});log(game,`Reposição logística automática: -${spent} €.`);}
-    game.next_supply_order=game.elapsed+600;
-  }
+  tickLogistics(game,log);
   (game.patients||[]).forEach(patient=>{
     if(patient.status!=='waiting')return;
     const care=Math.max(.25,Math.min(1.5,Number(patient.care_quality)||.5));
@@ -224,6 +214,7 @@ export function tickAdvancedState(game,dt,log=()=>{},random=Math.random) {
 const assert = (condition,message) => {if(!condition)throw new Error(message);};
 export function applyAdvancedAction(game,kind,data,log=()=>{}) {
   initializeAdvancedState(game);
+  if(applyLogisticsAction(game,kind,data,log))return true;
   if(kind==='update_dispatch_policy'){
     const next={...game.dispatch_policy};
     if(data.max_response_km!==undefined)next.max_response_km=Math.max(5,Math.min(300,Number(data.max_response_km)||80));
