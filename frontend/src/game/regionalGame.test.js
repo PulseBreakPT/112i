@@ -225,15 +225,15 @@ test('recommended dispatch respects the configured maximum response distance', (
   expect(()=>selectRecommendedUnitIds(game,incident.id,'minimum')).toThrow(/raio|disponíveis|compatíveis/i);
 });
 
-test('base stock is consumed when an idle vehicle is resupplied', () => {
+test('detailed base stock is consumed when an idle vehicle is resupplied', () => {
   let game=newGame();
   const unit=game.units.find(item=>item.service==='fire'),base=game.bases.find(item=>item.id===unit.base_id);
   unit.resources.water=1000;
-  const before=base.supply_reserve.water;
+  const before=base.logistics.stock.fire_water;
   game=tickGame(game,10);
   const afterUnit=game.units.find(item=>item.id===unit.id),afterBase=game.bases.find(item=>item.id===base.id);
   expect(afterUnit.resources.water).toBeGreaterThan(1000);
-  expect(afterBase.supply_reserve.water).toBeLessThan(before);
+  expect(afterBase.logistics.stock.fire_water).toBeLessThan(before);
 });
 
 test('weekly fixed costs are charged once when Monday crosses 20:00 Portugal time', () => {
