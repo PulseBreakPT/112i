@@ -171,7 +171,10 @@ export function tickAdvancedState(game,dt,log=()=>{},random=Math.random) {
           const tankLitres=Math.max(1,Number(unit.fuel_capacity_l)||70),maxPercentFromStock=available/tankLitres*100;
           const transferPercent=Math.min(missing,rate,maxPercentFromStock),litres=transferPercent/100*tankLitres;
           unit.resources[key]=current+transferPercent;
-          if(base)consumeBaseStock(base,stockId,litres);
+          if(base){
+            consumeBaseStock(base,stockId,litres);
+            if(!['medical-motorcycle','medical-helicopter'].includes(unit.vehicle_type))consumeBaseStock(base,'adblue',litres*.018);
+          }
           return;
         }
         const transfer=Math.min(missing,rate,available);
