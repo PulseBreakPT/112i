@@ -1,10 +1,9 @@
 import { useMemo, useState } from 'react';
-import { Activity, Building2, CarFront, Clock3, HeartPulse, Plus, RadioTower, ShieldCheck, Users, Wrench } from 'lucide-react';
+import { Activity, CarFront, HeartPulse, Plus, RadioTower, ShieldCheck, Users, Wrench } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { toast } from 'sonner';
 import { money, duration, SERVICE } from './common';
 import { REALISM_MODULES, SHIFT_MODELS, tacticalOptionsFor, coverageSnapshot } from './realismEngine';
-import { logisticsCapacity, LOGISTICS_STOCKS } from './logisticsEngine';
 import './RealismCenter.css';
 
 const percent=value=>`${Math.round(Number(value)||0)}%`;
@@ -12,7 +11,7 @@ const stateTone=value=>value>=75?'positive':value>=50?'neutral':value>=30?'warni
 const orderStatus=status=>status==='ordered'?'Em adjudicação':status==='awaiting-garage'?'Aguardar garagem':status==='delivered'?'Entregue':status==='cancelled'?'Cancelado':status;
 const personDutyLabel=state=>({'on-duty':'Em turno','off-duty':'Fora de turno',recalled:'Convocado',sick:'Baixa',leave:'Férias/licença'}[state]||state||'—');
 
-export default function RealismCenter({game,world,act,busy}){
+export default function RealismCenter({game,act,busy}){
   const [tab,setTab]=useState('central');
   const [offerBases,setOfferBases]=useState({});
   const [recall,setRecall]=useState({});
