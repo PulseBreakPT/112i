@@ -85,7 +85,7 @@ export function selectRecommendedUnitIds(g,incidentId,mode='safe',{requireValue,
       return (inc.recommended_trainings||[]).some(training=>(person?.qualifications||[]).includes(training));
     });
     const distancePenalty=responseDistanceKm(unit,inc,distanceMeters)*1000*(preferFastest?1:.28);
-    const preparationPenalty=(Number(unit.response_delay)||0)*(preferFastest?15:5);
+    const preparationPenalty=((Number(unit.preparation_time)||0)+(Number(unit.response_delay)||0))*(preferFastest?15:5);
     const fatigue=crewFatigue(g,unit);
     const recommended=Math.max(1,Number(unit.recommended_response_km)||Number(unit.max_response_km)||80);
     const distanceKm=responseDistanceKm(unit,inc,distanceMeters);
