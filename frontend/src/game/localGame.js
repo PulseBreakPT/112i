@@ -820,7 +820,22 @@ export function saveLocalGame(game){
   const saved={...game,saved_at:new Date().toISOString(),save_warning:null};
   try{localStorage.setItem(SAVE_KEY,JSON.stringify(saved));return saved;}
   catch(error){
-    const reduced={...saved,history:compact(saved.history).slice(0,60),logs:compact(saved.logs).slice(0,30),planned_missions:compact(saved.planned_missions).filter(item=>['scheduled','active'].includes(item.status)).concat(compact(saved.planned_missions).filter(item=>!['scheduled','active'].includes(item.status)).slice(-80)),trainings:compact(saved.trainings).filter(item=>item.status==='active').concat(compact(saved.trainings).filter(item=>item.status!=='active').slice(-60)),recruitment_queue:compact(saved.recruitment_queue).filter(item=>item.status==='pending').concat(compact(saved.recruitment_queue).filter(item=>item.status!=='pending').slice(-50)),medical_transfers:compact(saved.medical_transfers).filter(item=>['scheduled','waiting','transporting'].includes(item.status)).concat(compact(saved.medical_transfers).filter(item=>!['scheduled','waiting','transporting'].includes(item.status)).slice(-60))};
+    const reduced={...saved,
+      history:compact(saved.history).slice(0,60),
+      logs:compact(saved.logs).slice(0,30),
+      after_action_reports:compact(saved.after_action_reports).slice(0,60),
+      operational_audits:compact(saved.operational_audits).slice(0,26),
+      planned_public_events:compact(saved.planned_public_events).filter(item=>['planned','active'].includes(item.status)).concat(compact(saved.planned_public_events).filter(item=>!['planned','active'].includes(item.status)).slice(-30)),
+      police_cases:compact(saved.police_cases).filter(item=>item.status!=='closed').concat(compact(saved.police_cases).filter(item=>item.status==='closed').slice(-60)),
+      mutual_aid:compact(saved.mutual_aid).filter(item=>['requested','active'].includes(item.status)).concat(compact(saved.mutual_aid).filter(item=>!['requested','active'].includes(item.status)).slice(-40)),
+      vehicle_procurements:compact(saved.vehicle_procurements).filter(item=>['ordered','awaiting-garage'].includes(item.status)).concat(compact(saved.vehicle_procurements).filter(item=>!['ordered','awaiting-garage'].includes(item.status)).slice(-50)),
+      drone_missions:compact(saved.drone_missions).filter(item=>item.status==='active').concat(compact(saved.drone_missions).filter(item=>item.status!=='active').slice(-40)),
+      supply_orders:compact(saved.supply_orders).filter(item=>['pending','transit'].includes(item.status)).concat(compact(saved.supply_orders).filter(item=>!['pending','transit'].includes(item.status)).slice(0,100)),
+      planned_missions:compact(saved.planned_missions).filter(item=>['scheduled','active'].includes(item.status)).concat(compact(saved.planned_missions).filter(item=>!['scheduled','active'].includes(item.status)).slice(-80)),
+      trainings:compact(saved.trainings).filter(item=>item.status==='active').concat(compact(saved.trainings).filter(item=>item.status!=='active').slice(-60)),
+      recruitment_queue:compact(saved.recruitment_queue).filter(item=>item.status==='pending').concat(compact(saved.recruitment_queue).filter(item=>item.status!=='pending').slice(-50)),
+      medical_transfers:compact(saved.medical_transfers).filter(item=>['scheduled','waiting','transporting'].includes(item.status)).concat(compact(saved.medical_transfers).filter(item=>!['scheduled','waiting','transporting'].includes(item.status)).slice(-60))
+    };
     if(reduced.cooperation)reduced.cooperation={...reduced.cooperation,log:compact(reduced.cooperation.log).slice(0,60),chat:compact(reduced.cooperation.chat).slice(0,40),events:compact(reduced.cooperation.events).slice(-60),large_scale_missions:compact(reduced.cooperation.large_scale_missions).slice(-60)};
     try{localStorage.setItem(SAVE_KEY,JSON.stringify(reduced));return {...reduced,save_warning:'O save foi compactado automaticamente porque o armazenamento do browser estava quase cheio.'};}
     catch{return {...game,saved_at:new Date().toISOString(),save_warning:'Não foi possível guardar a carreira: armazenamento local sem espaço disponível.'};}
