@@ -5,6 +5,8 @@ import {
   baseUpgradeNet,
   recruitmentCost,
   monthlyEmployerCost,
+  weeklyEmployerCost,
+  weeklyBuildingFixedCost,
 } from './portugalEconomy';
 
 describe('Portuguese real-economy model', () => {
@@ -41,7 +43,15 @@ describe('Portuguese real-economy model', () => {
   test('recruitment and payroll are meaningful recurring costs', () => {
     expect(recruitmentCost('fire',1,false)).toBe(2500);
     expect(recruitmentCost('medical',1,false)).toBe(1800);
-    expect(monthlyEmployerCost(PORTUGAL_ECONOMY.salaries.police)).toBeGreaterThan(2500);
+    const monthly=monthlyEmployerCost(PORTUGAL_ECONOMY.salaries.police);
+    expect(monthly).toBeGreaterThan(2500);
+    expect(weeklyEmployerCost(PORTUGAL_ECONOMY.salaries.police)).toBe(Math.round(monthly*12/52));
+  });
+
+  test('building references are converted to a weekly fixed charge only', () => {
+    expect(weeklyBuildingFixedCost('fire')).toBe(Math.round(PORTUGAL_ECONOMY.buildings.fire*.035/52));
+    expect(weeklyBuildingFixedCost('hospital')).toBe(Math.round(PORTUGAL_ECONOMY.buildings.hospital*.06/52));
+    expect(PORTUGAL_ECONOMY.upkeepInterval).toBeUndefined();
   });
 
   test('base upgrades scale from real construction references', () => {
