@@ -7,6 +7,7 @@ const AREAS = [
   { to:'/frota', icon:CarFront, title:'Frota', text:'Viaturas, aquisição, tripulações, turnos, manutenção e logística.' },
   { to:'/funcionarios', icon:Users, title:'Funcionários', text:'Efetivo, recrutamento, formação, qualificações e distribuição.' },
   { to:'/infraestruturas', icon:HeartPulse, title:'Infraestruturas', text:'Hospitais, prisões, escolas e capacidade de apoio.' },
+  { to:'/logistica', icon:RadioTower, title:'Logística', text:'Loja, 18 stocks operacionais, encomendas, armazéns e reposição automática.' },
 ];
 
 export default function ManagementHub({ game }) {
