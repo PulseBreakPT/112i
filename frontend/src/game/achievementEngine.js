@@ -1,11 +1,11 @@
 const ROMAN = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV','XVI','XVII','XVIII','XIX','XX'];
 
 export const ACHIEVEMENT_RARITIES = {
-  common:{id:'common',label:'Comum',money:100,xp:8},
-  uncommon:{id:'uncommon',label:'Incomum',money:225,xp:15},
-  rare:{id:'rare',label:'Rara',money:450,xp:30},
-  epic:{id:'epic',label:'Épica',money:900,xp:55},
-  legendary:{id:'legendary',label:'Lendária',money:1800,xp:100},
+  common:{id:'common',label:'Comum',money:1000,xp:8},
+  uncommon:{id:'uncommon',label:'Incomum',money:2500,xp:15},
+  rare:{id:'rare',label:'Rara',money:5000,xp:30},
+  epic:{id:'epic',label:'Épica',money:10000,xp:55},
+  legendary:{id:'legendary',label:'Lendária',money:20000,xp:100},
 };
 
 export const ACHIEVEMENT_GROUPS = {
@@ -34,8 +34,8 @@ const SCALE = {
   people:[5,8,10,12,15,18,22,26,31,37,44,52,61,72,85,100,120,145,175,210],
   reputation:[10,25,50,75,100,150,225,300,400,525,675,850,1050,1300,1600,1950,2350,2800,3300,4000],
   xp:[200,500,1000,2000,3500,5000,7500,10000,15000,22500,32500,45000,60000,80000,105000,135000,175000,225000,300000,400000],
-  money:[5000,10000,20000,35000,50000,75000,100000,150000,225000,325000,450000,600000,800000,1000000,1300000,1700000,2200000,2800000,3600000,5000000],
-  contribution:[100,500,1000,2500,5000,7500,10000,15000,22500,32500,45000,60000,80000,100000,135000,175000,225000,300000,400000,550000],
+  money:[10000,25000,50000,100000,200000,350000,500000,750000,1000000,1500000,2500000,4000000,6000000,10000000,15000000,25000000,40000000,75000000,150000000,300000000],
+  contribution:[5000,10000,25000,50000,100000,200000,350000,500000,750000,1000000,1500000,2250000,3250000,4500000,6000000,8000000,11000000,15000000,20000000,30000000],
   streak:[2,3,4,5,6,8,10,12,15,18,22,27,33,40,50,62,75,90,110,140],
 };
 
@@ -227,7 +227,7 @@ export function achievementMetricSnapshot(game){
     operational_xp:Math.max(0,(game.xp||0)-(game.achievement_state?.xp_awarded||0)),
     earned:game.earned||0,
     expenses:game.expenses||0,
-    public_funding:game.public_funding||0,
+    public_funding:(game.public_funding||0)+(game.capital_grants||0),
     debt_relief:game.debt_relief||0,
     asset_sales:game.asset_sales||0,
     network_level:(game.bases||[]).reduce((sum,item)=>sum+(item.level||1),0),
