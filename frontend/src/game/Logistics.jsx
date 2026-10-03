@@ -25,6 +25,7 @@ export default function Logistics({ game, act, busy }) {
   const [group,setGroup]=useState('Todos');
   const [packs,setPacks]=useState({});
   const [query,setQuery]=useState('');
+  const [transfer,setTransfer]=useState({stock_id:'fuel',target_base_id:'',quantity:100});
 
   const base=game.bases.find(item=>item.id===baseId)||game.bases[0];
   const groups=['Todos',...new Set(LOGISTICS_STOCKS.map(item=>item.group))];
@@ -35,6 +36,9 @@ export default function Logistics({ game, act, busy }) {
   }),[group,query]);
 
   const activeOrders=(game.supply_orders||[]).filter(order=>['pending','transit'].includes(order.status));
+  const transferTargets=game.bases.filter(item=>item.id!==base?.id&&item.land===base?.land);
+  const transferTarget=transfer.target_base_id&&transferTargets.some(item=>item.id===transfer.target_base_id)?transfer.target_base_id:transferTargets[0]?.id||'';
+  const disruptions=(game.logistics_disruptions||[]).filter(item=>item.status==='active'&&item.ends_at>game.elapsed);
   const criticalCount=game.bases.reduce((sum,item)=>sum+LOGISTICS_STOCKS.filter(stock=>baseStockPercent(item,stock.id)<15).length,0);
   const inventoryValue=game.bases.reduce((total,item)=>total+LOGISTICS_STOCKS.reduce((sum,stock)=>sum+(item.logistics?.stock?.[stock.id]||0)*stock.unit_price,0),0);
   const run=async(kind,data,message)=>{const next=await act(kind,data);if(next&&message)toast.success(message);return next;};
@@ -77,6 +81,7 @@ export default function Logistics({ game, act, busy }) {
         <div className="supplier-heading"><CarFront size={18}/><div><strong>Fornecedor</strong><small>Preço, prazo e transporte variam por fornecedor e região.</small></div></div>
         <div className="supplier-options">{LOGISTICS_SUPPLIERS.map(supplier=><button key={supplier.id} className={supplierId===supplier.id?'active':''} onClick={()=>setSupplierId(supplier.id)}><strong>{supplier.name}</strong><small>{supplier.price_factor<1?'−'+Math.round((1-supplier.price_factor)*100)+'%':supplier.price_factor>1?'+'+Math.round((supplier.price_factor-1)*100)+'%':'Preço normal'} · ~{Math.round(supplier.lead_seconds/60)} min base</small><span>{supplier.description}</span></button>)}</div>
       </section>
+      {disruptions.length>0&&<section className="logistics-disruption"><strong>Cadeia de abastecimento condicionada</strong><span>{disruptions.map(item=>item.stock_id==='all'?'Perturbação geral':LOGISTICS_STOCKS.find(stock=>stock.id===item.stock_id)?.name||item.stock_id).join(' · ')}</span><small>Preços ou prazos podem aumentar temporariamente.</small></section>}
 
       <div className="catalog-tools">
         <input value={query} onChange={event=>setQuery(event.target.value)} placeholder="Pesquisar consumível…" aria-label="Pesquisar consumível"/>
@@ -110,8 +115,15 @@ export default function Logistics({ game, act, busy }) {
     {view==='inventory'&&<section className="logistics-panel">
       <header><div><h2>Inventário de {base?.name}</h2><p>Estado físico do armazém, capacidade e encomendas em trânsito.</p></div></header>
       <div className="inventory-table">
-        <div className="inventory-head"><span>Stock</span><span>Atual</span><span>Em trânsito</span><span>Capacidade</span><span>Nível</span></div>
-        {LOGISTICS_STOCKS.map(stock=>{const current=base?.logistics?.stock?.[stock.id]||0,cap=base?logisticsCapacity(base,stock.id):0,pct=base?baseStockPercent(base,stock.id):0,inbound=base?inboundStock(game,base.id,stock.id):0;return <div className="inventory-row" key={stock.id} data-tone={pctTone(pct)}><div><strong>{stock.name}</strong><small>{stock.group}{stock.critical?' · crítico':''}</small></div><span>{quantity(current,stock.unit)}</span><span>{quantity(inbound,stock.unit)}</span><span>{quantity(cap,stock.unit)}</span><div className="inventory-level"><i style={{width:`${Math.min(100,pct)}%`}}/><b>{Math.round(pct)}%</b></div></div>})}
+        <div className="inventory-head"><span>Stock</span><span>Atual</span><span>Em trânsito</span><span>Capacidade</span><span>Validade</span><span>Nível</span></div>
+        {LOGISTICS_STOCKS.map(stock=>{const current=base?.logistics?.stock?.[stock.id]||0,cap=base?logisticsCapacity(base,stock.id):0,pct=base?baseStockPercent(base,stock.id):0,inbound=base?inboundStock(game,base.id,stock.id):0,lots=base?.logistics?.lots?.[stock.id]||[],expiring=lots.filter(lot=>lot.expires_at&&lot.expires_at-game.elapsed<30*86400).reduce((sum,lot)=>sum+(lot.quantity||0),0);return <div className="inventory-row" key={stock.id} data-tone={pctTone(pct)}><div><strong>{stock.name}</strong><small>{stock.group}{stock.critical?' · crítico':''}</small></div><span>{quantity(current,stock.unit)}</span><span>{quantity(inbound,stock.unit)}</span><span>{quantity(cap,stock.unit)}</span><span>{expiring>0?`${quantity(expiring,stock.unit)} <30d`:'—'}</span><div className="inventory-level"><i style={{width:`${Math.min(100,pct)}%`}}/><b>{Math.round(pct)}%</b></div></div>})}
+      </div>
+      <div className="stock-transfer-panel">
+        <div><strong>Transferência entre bases</strong><small>Move stock físico na mesma região sem comprar novamente ao fornecedor.</small></div>
+        <label><span>Stock</span><select value={transfer.stock_id} onChange={event=>{const stock=LOGISTICS_STOCKS.find(item=>item.id===event.target.value);setTransfer(current=>({...current,stock_id:event.target.value,quantity:stock?.pack||1}))}}>{LOGISTICS_STOCKS.map(stock=><option value={stock.id} key={stock.id}>{stock.name}</option>)}</select></label>
+        <label><span>Destino</span><select value={transferTarget} onChange={event=>setTransfer(current=>({...current,target_base_id:event.target.value}))}>{transferTargets.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+        <label><span>Quantidade</span><input type="number" min="1" value={transfer.quantity} onChange={event=>setTransfer(current=>({...current,quantity:event.target.value}))}/></label>
+        <Button disabled={busy||!base||!transferTarget} onClick={()=>run('transfer_supply_stock',{source_base_id:base.id,target_base_id:transferTarget,stock_id:transfer.stock_id,quantity:Number(transfer.quantity)},'Transferência logística iniciada.')}><CarFront size={14}/> Transferir</Button>
       </div>
     </section>}
 
