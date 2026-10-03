@@ -91,13 +91,69 @@ export const applyPeriodicFunding = (game, log) => {
   return amount;
 };
 
+const MISSION_COMPENSATION_BANDS = Object.freeze({
+  1:{base:900,min:1200,max:4000,payoutMax:5000},
+  2:{base:1600,min:2200,max:6500,payoutMax:8000},
+  3:{base:2800,min:3500,max:10000,payoutMax:13000},
+  4:{base:5000,min:6500,max:18000,payoutMax:24000},
+  5:{base:9000,min:12000,max:35000,payoutMax:45000},
+  6:{base:16000,min:25000,max:65000,payoutMax:85000},
+});
+
+const MISSION_CATEGORY_FACTOR = Object.freeze({
+  disaster:1.55,
+  hazmat:1.25,
+  explosives:1.25,
+  weather:1.15,
+  multi:1.15,
+  water_rescue:1.10,
+  public_order:1.10,
+  rescue:1.08,
+  urban_fire:1.05,
+  wildfire:1.05,
+  road:1.04,
+  medical:1.00,
+  crime:1.00,
+  traffic:.96,
+  police_patrol:.94,
+  search:1.00,
+  infrastructure:1.05,
+});
+
+export const missionCompensationBase = incident => {
+  const rarity=Math.max(1,Math.min(6,Number(incident?.rarity_level)||1));
+  const band=MISSION_COMPENSATION_BANDS[rarity];
+  const needs=Object.values(incident?.needs||{}).reduce((sum,count)=>sum+Math.max(0,Number(count)||0),0);
+  const activeServices=Object.values(incident?.needs||{}).filter(count=>(Number(count)||0)>0).length;
+  const mandatoryVehicles=new Set(incident?.required_vehicle_types||[]).size;
+  const mandatoryTrainings=new Set(incident?.required_trainings||[]).size;
+  const casualties=Math.min(20,Math.max(0,Number(incident?.casualties)||0));
+  const detainees=Math.min(20,Math.max(0,Number(incident?.detainees)||0));
+  const risk=Math.max(0,Math.min(100,Number(incident?.risk_score)||0));
+  const categoryFactor=MISSION_CATEGORY_FACTOR[incident?.category]||1;
+  const operational=
+    band.base+
+    needs*450+
+    Math.max(0,activeServices-1)*700+
+    mandatoryVehicles*550+
+    mandatoryTrainings*300+
+    casualties*350+
+    detainees*175+
+    risk*10;
+  const adjusted=operational*categoryFactor;
+  return Math.round(Math.max(band.min,Math.min(band.max,adjusted))/50)*50;
+};
+
+export const missionCompensationBand = rarity => {
+  const level=Math.max(1,Math.min(6,Number(rarity)||1));
+  return {...MISSION_COMPENSATION_BANDS[level]};
+};
+
 export const missionPayout = (game, incident, basePayout) => {
   const base=Math.max(0,Math.round(basePayout||0));
-  const responseDeadline=incident.response_deadline||incident.deadline||incident.created;
-  const responseAt=incident.response_arrived_at||game.elapsed||responseDeadline;
-  const window=Math.max(1,responseDeadline-(incident.created||0));
-  const speed=Math.max(0,Math.min(1,(responseDeadline-responseAt)/window));
-  const triage=incident.call_result?.correct===true?.08:0;
-  const performance=1.10+speed*.12+triage;
-  return Math.round(base*performance);
+  const rarity=Math.max(1,Math.min(6,Number(incident?.rarity_level)||1));
+  const cap=MISSION_COMPENSATION_BANDS[rarity].payoutMax;
+  const triage=incident.call_result?.correct===true?.03:0;
+  const coordinated=1+triage;
+  return Math.round(Math.min(cap,base*coordinated)/50)*50;
 };
