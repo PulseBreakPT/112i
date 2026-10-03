@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Building2, CarFront, RadioTower, Users, HeartPulse } from 'lucide-react';
+import { Building2, CarFront, RadioTower, Users, HeartPulse, ShieldCheck } from 'lucide-react';
 
 const AREAS = [
   { to:'/comando', icon:RadioTower, title:'Comandos', text:'Centros de comando, cobertura territorial, atribuições e PDIs.' },
@@ -8,6 +8,7 @@ const AREAS = [
   { to:'/funcionarios', icon:Users, title:'Funcionários', text:'Efetivo, recrutamento, formação, qualificações e distribuição.' },
   { to:'/infraestruturas', icon:HeartPulse, title:'Infraestruturas', text:'Hospitais, prisões, escolas e capacidade de apoio.' },
   { to:'/logistica', icon:RadioTower, title:'Logística', text:'Loja, 18 stocks operacionais, encomendas, armazéns e reposição automática.' },
+  { to:'/realismo', icon:ShieldCheck, title:'Realismo', text:'Turnos, hospitais, procurement, cobertura, inteligência 112, auditorias e resiliência.' },
 ];
 
 export default function ManagementHub({ game }) {
