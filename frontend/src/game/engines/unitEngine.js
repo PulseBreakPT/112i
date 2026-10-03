@@ -16,7 +16,7 @@ export const locate = unit => {
 };
 
 export const returnToBase = (g,unit,startRouteFn=startRoute) => {
-  const base=g.bases.find(b=>b.id===unit.base_id);unit.incident_id=null;unit.staging_area_id=null;delete unit.onscene_since;delete unit.rotation_due;delete unit.last_provision_interval;delete unit.dispatched_at;
+  const base=g.bases.find(b=>b.id===unit.base_id);unit.incident_id=null;unit.staging_area_id=null;delete unit.onscene_since;delete unit.rotation_due;delete unit.last_provision_interval;delete unit.dispatched_at;delete unit.dispatch_overtime_start;
   if(unit.road_return_plan){const plan=unit.road_return_plan;unit.road_return_plan=null;startRouteFn(unit,plan,'returning',base.node);return;}
   unit.status='available';unit.node=base.node;unit.lng=base.lng;unit.lat=base.lat;unit.x=base.lng;unit.y=base.lat;unit.route=[];unit.route_times=[];
 };
