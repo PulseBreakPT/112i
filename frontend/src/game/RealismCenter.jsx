@@ -19,6 +19,7 @@ export default function RealismCenter({game,world,act,busy}){
   const [eventCounts,setEventCounts]=useState({});
   const [aid,setAid]=useState({service:'fire',units:1,base_id:game.bases?.[0]?.id||'',incident_id:game.incidents?.[0]?.id||''});
   const [chargerBase,setChargerBase]=useState(game.bases?.[0]?.id||'');
+  const [droneCenter,setDroneCenter]=useState(game.active_command_center_id||game.command_centers?.[0]?.id||'');
   const coverage=useMemo(()=>game.coverage_state?.overall!==undefined?game.coverage_state:coverageSnapshot(game),[game]);
   const realism=game.realism||{};
   const onDuty=(game.personnel||[]).filter(person=>['on-duty','recalled'].includes(person.duty_state)).length;
@@ -141,11 +142,16 @@ export default function RealismCenter({game,world,act,busy}){
 
     {tab==='operations'&&<div className="realism-grid two">
       <section className="realism-panel wide">
-        <header><div><h2>Ocorrências ativas · inteligência e comando</h2><p>Informação inicial imperfeita, reconhecimento e decisão tática.</p></div></header>
+        <header><div><h2>Ocorrências ativas · inteligência e comando</h2><p>Informação inicial imperfeita, reconhecimento, drones e decisão tática.</p></div><div className="drone-procurement"><select value={droneCenter} onChange={event=>setDroneCenter(event.target.value)}>{game.command_centers.filter(center=>center.active!==false).map(center=><option key={center.id} value={center.id}>{center.name}</option>)}</select><Button disabled={busy||!droneCenter} onClick={()=>run('acquire_drone',{command_center_id:droneCenter},'Drone operacional adquirido.')}><Plus size={14}/>Drone · {money(12000)}</Button></div></header>
         <div className="incident-realism-list">{game.incidents.map(incident=>{
           const options=tacticalOptionsFor(incident);
-          return <article key={incident.id}><header><div><strong>{incident.title}</strong><small>{incident.district} · P{incident.priority} · {incident.rarity_label}</small></div><b>{Math.round(incident.intel_confidence||0)}% intel</b></header><div className="incident-realism-meta"><span>{incident.reconnaissance?.complete?'Situação confirmada':'Informação preliminar'}</span><span>{incident.caller_reports?.length||1} chamada(s)</span><span>{incident.escalation_stage||0} agravamento(s)</span><span>{incident.command_structure?.established?'COS estabelecido':'Comando inicial'}</span></div><div className="tactic-options">{options.map(option=><button key={option.id} className={incident.tactical_plan?.option===option.id?'active':''} disabled={busy} onClick={()=>run('set_incident_tactic',{incident_id:incident.id,option:option.id})}><strong>{option.name}</strong><small>{option.description}</small><span>Vel. ×{option.speed.toFixed(2)} · risco ×{option.risk.toFixed(2)}</span></button>)}</div></article>;
+          return <article key={incident.id}><header><div><strong>{incident.title}</strong><small>{incident.district} · P{incident.priority} · {incident.rarity_label}</small></div><div className="incident-intel-actions"><b>{Math.round(incident.intel_confidence||0)}% intel</b><Button disabled={busy||['storm','fog'].includes(game.conditions?.weather)||!(game.drone_assets||[]).some(drone=>drone.command_center_id===incident.command_center_id&&drone.status==='available'&&(drone.battery??100)>=25)} onClick={()=>run('deploy_drone',{incident_id:incident.id},'Drone lançado para reconhecimento.')}><RadioTower size={13}/>UAS</Button></div></header><div className="incident-realism-meta"><span>{incident.reconnaissance?.complete?'Situação confirmada':'Informação preliminar'}</span><span>{incident.caller_reports?.length||1} chamada(s)</span><span>{incident.escalation_stage||0} agravamento(s)</span><span>{incident.command_structure?.established?'COS estabelecido':'Comando inicial'}</span></div><div className="tactic-options">{options.map(option=><button key={option.id} className={incident.tactical_plan?.option===option.id?'active':''} disabled={busy} onClick={()=>run('set_incident_tactic',{incident_id:incident.id,option:option.id})}><strong>{option.name}</strong><small>{option.description}</small><span>Vel. ×{option.speed.toFixed(2)} · risco ×{option.risk.toFixed(2)}</span></button>)}</div></article>;
         })}{!game.incidents.length&&<p className="realism-empty">Sem ocorrências ativas.</p>}</div>
+      </section>
+
+      <section className="realism-panel">
+        <header><div><h2>Frota UAS</h2><p>Drones térmicos para reconhecimento remoto e melhoria da inteligência.</p></div></header>
+        <div className="drone-list">{(game.drone_assets||[]).map(drone=><article key={drone.id}><div><strong>{drone.name}</strong><small>{game.command_centers.find(center=>center.id===drone.command_center_id)?.name||'Comando'} · {drone.missions||0} missões</small></div><span>{drone.status==='available'?'Disponível':'Em missão'}</span><b>{Math.round(drone.battery??100)}%</b></article>)}{!(game.drone_assets||[]).length&&<p className="realism-empty">Ainda não existem drones operacionais.</p>}</div>
       </section>
 
       <section className="realism-panel wide">
