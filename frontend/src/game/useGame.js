@@ -4,8 +4,19 @@ import { hasOperationalResources } from './engines/dispatchEngine';
 import { localGameApi } from './gameApi';
 import { operationalText, presentGameCopy, presentWorldCopy } from './operationalLanguage';
 import { detectGameFeedback, failureFeedback } from './eventFeedback';
+import { distanceMeters, routeTimes } from './engines/mapEngine';
 
 const DISPLAY_WORLD = presentWorldCopy(WORLD);
+const directFlightRoute=(origin,destination)=>{
+  const a=typeof origin==='string'?gamePoint(origin):origin,b=typeof destination==='string'?gamePoint(destination):destination;
+  if(!a||!b)throw new Error('Localização aérea inválida.');
+  const coordinates=[[a.lng,a.lat],[b.lng,b.lat]],distance=distanceMeters(a,b),duration=Math.max(30,Math.round(distance/45));
+  return {coordinates,distance,duration,times:routeTimes(coordinates,duration),source:'Rota aérea direta'};
+};
+const routeForUnit=(unit,origin,destination,conditions)=>unit?.vehicle_class==='air'
+  ? Promise.resolve(directFlightRoute(origin,destination))
+  : fetchRoadRoute(origin,destination,conditions);
+
 
 export function useGame() {
   const [game, setGame] = useState(() => localGameApi.load());
@@ -65,8 +76,8 @@ export function useGame() {
           const unit=current.current.units.find(item=>item.id===id);
           if(!unit)throw new Error('Unidade indisponível.');
           const base=current.current.bases.find(item=>item.id===unit.base_id);
-          const outward=prepared[id]||await fetchRoadRoute({lng:unit.lng,lat:unit.lat},incident.node,current.current.conditions);
-          const back=await fetchRoadRoute(incident.node,base.node,current.current.conditions);
+          const outward=prepared[id]||await routeForUnit(unit,{lng:unit.lng,lat:unit.lat},incident.node,current.current.conditions);
+          const back=await routeForUnit(unit,incident.node,base.node,current.current.conditions);
           return [id,outward,back];
         }));
         data={...data,routes:Object.fromEntries(plans.map(([id,outward])=>[id,outward])),return_routes:Object.fromEntries(plans.map(([id,,back])=>[id,back]))};
@@ -74,12 +85,12 @@ export function useGame() {
       if(type==='recall_unit'){
         const unit=current.current.units.find(item=>item.id===data.unit_id),base=unit&&current.current.bases.find(item=>item.id===unit.base_id);
         if(!unit||!base)throw new Error('Viatura ou base indisponível.');
-        data={...data,route:await fetchRoadRoute({lng:unit.lng,lat:unit.lat},base.node,current.current.conditions)};
+        data={...data,route:await routeForUnit(unit,{lng:unit.lng,lat:unit.lat},base.node,current.current.conditions)};
       }
       if(type==='redirect_unit'){
         const unit=current.current.units.find(item=>item.id===data.unit_id),incident=current.current.incidents.find(item=>item.id===data.incident_id),base=unit&&current.current.bases.find(item=>item.id===unit.base_id);
         if(!unit||!incident||!base)throw new Error('Viatura, ocorrência ou base indisponível.');
-        const [route,returnRoute]=await Promise.all([fetchRoadRoute({lng:unit.lng,lat:unit.lat},incident.node,current.current.conditions),fetchRoadRoute(incident.node,base.node,current.current.conditions)]);
+        const [route,returnRoute]=await Promise.all([routeForUnit(unit,{lng:unit.lng,lat:unit.lat},incident.node,current.current.conditions),routeForUnit(unit,incident.node,base.node,current.current.conditions)]);
         data={...data,route,return_route:returnRoute};
       }
       if(type==='transport_patient'||type==='transport_prisoner'){
@@ -92,9 +103,9 @@ export function useGame() {
         if(!task||!facility||!source||facility.land!==source.land||!unit)throw new Error(isPatient?'Sem ambulâncias compatíveis na mesma região.':'Sem viaturas policiais compatíveis na mesma região.');
         const base=current.current.bases.find(item=>item.id===unit.base_id);
         const [pickup,delivery,back]=await Promise.all([
-          fetchRoadRoute({lng:unit.lng,lat:unit.lat},task.source_node,current.current.conditions),
-          fetchRoadRoute(task.source_node,facility.node,current.current.conditions),
-          fetchRoadRoute(facility.node,base.node,current.current.conditions),
+          routeForUnit(unit,{lng:unit.lng,lat:unit.lat},task.source_node,current.current.conditions),
+          routeForUnit(unit,task.source_node,facility.node,current.current.conditions),
+          routeForUnit(unit,facility.node,base.node,current.current.conditions),
         ]);
         data={...data,unit_id:unit.id,routes:{pickup,delivery,back}};
       }
@@ -103,7 +114,7 @@ export function useGame() {
         const eligible=unit=>{const base=current.current.bases.find(item=>item.id===unit.base_id);return unit.service==='medical'&&(unit.patient_capacity||0)>0&&['available','patrol'].includes(unit.status)&&unit.enabled!==false&&base?.enabled!==false&&unit.land===source?.land&&hasOperationalResources(unit);};
         const requested=current.current.units.find(item=>item.id===data.unit_id),unit=requested&&eligible(requested)?requested:current.current.units.find(eligible);
         if(!transfer||!patient||!origin||!facility||!source||origin.land!==facility.land||facility.land!==source.land||!unit)throw new Error('Sem meio médico compatível para a transferência.');
-        const base=current.current.bases.find(item=>item.id===unit.base_id),[pickup,delivery,back]=await Promise.all([fetchRoadRoute({lng:unit.lng,lat:unit.lat},transfer.source_node,current.current.conditions),fetchRoadRoute(transfer.source_node,facility.node,current.current.conditions),fetchRoadRoute(facility.node,base.node,current.current.conditions)]);
+        const base=current.current.bases.find(item=>item.id===unit.base_id),[pickup,delivery,back]=await Promise.all([routeForUnit(unit,{lng:unit.lng,lat:unit.lat},transfer.source_node,current.current.conditions),routeForUnit(unit,transfer.source_node,facility.node,current.current.conditions),routeForUnit(unit,facility.node,base.node,current.current.conditions)]);
         data={...data,unit_id:unit.id,routes:{pickup,delivery,back}};
       }
       if(type==='toggle_patrol'){
@@ -122,7 +133,7 @@ export function useGame() {
       if(type==='deploy_to_staging'){
         const unit=current.current.units.find(item=>item.id===data.unit_id),staging=current.current.staging_areas?.find(item=>item.id===data.staging_id);
         if(!unit||!staging)throw new Error('Zona ou unidade indisponível.');
-        data={...data,route:await fetchRoadRoute({lng:unit.lng,lat:unit.lat},{lng:staging.lng,lat:staging.lat},current.current.conditions)};
+        data={...data,route:await routeForUnit(unit,{lng:unit.lng,lat:unit.lat},{lng:staging.lng,lat:staging.lat},current.current.conditions)};
       }
       if(type==='return_from_staging'){
         const unit=current.current.units.find(item=>item.id===data.unit_id),base=unit&&current.current.bases.find(item=>item.id===unit.base_id);
