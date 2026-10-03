@@ -3,6 +3,7 @@ import { Clock3, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '../components/ui/button';
 import { SERVICE, duration, money } from './common';
+import { reserveFloor } from './engines/economyEngine';
 
 export default function TrainingPanel({ game, world, act, busy }) {
   const firstCourse=world.training_catalog[0];
@@ -27,7 +28,7 @@ export default function TrainingPanel({ game, world, act, busy }) {
       <label>Curso<select value={course} onChange={event=>chooseCourse(event.target.value)}>{world.training_catalog.map(item=><option value={item.id} key={item.id}>{item.name} · {SERVICE[item.service].name}</option>)}</select></label>
       <label>Base<select value={trainingBase} onChange={event=>setTrainingBase(event.target.value)}>{compatibleBases.map(base=><option value={base.id} key={base.id}>{base.name}</option>)}</select></label>
       <label>Elementos<input type="number" min="1" max="5" value={trainingCount} onChange={event=>setTrainingCount(event.target.value)}/></label>
-      <Button data-action-tone={(game.money||0) >= trainingPrice ? 'positive' : 'supported'} disabled={busy||!academy||!trainingBase} onClick={()=>run('start_training',{base_id:trainingBase,course,count:Number(trainingCount)},'Formação iniciada.')}><Users size={15}/>{academy?'Iniciar · '+money(trainingPrice):'Requer escola de formação'}</Button>
+      <Button data-action-tone={(game.money||0)-reserveFloor(game) >= trainingPrice ? 'positive' : 'supported'} disabled={busy||!academy||!trainingBase} onClick={()=>run('start_training',{base_id:trainingBase,course,count:Number(trainingCount)},'Formação iniciada.')}><Users size={15}/>{academy?'Iniciar · '+money(trainingPrice):'Requer escola de formação'}</Button>
     </div>
     <div className="section-line"><h2>Formações em curso</h2><span>{trainings.filter(item=>item.status==='active').length} CURSOS</span></div>
     <div className="training-list">{trainings.filter(item=>item.status==='active').map(item=><article key={item.id}><Clock3 size={18}/><div><strong>{world.training_catalog.find(itemCourse=>itemCourse.id===item.course)?.name}</strong><small>{game.bases.find(base=>base.id===item.base_id)?.name} · {item.count} elemento(s)</small></div><b>{duration(item.completes_at-game.elapsed)}</b></article>)}{!trainings.some(item=>item.status==='active')&&<div className="operations-empty compact"><Users size={23}/><p>Sem formações em curso.</p></div>}</div>
