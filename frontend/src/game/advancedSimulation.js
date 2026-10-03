@@ -1,5 +1,6 @@
 import { payCost, reserveFloor } from './engines/economyEngine';
 import { PERSONNEL_PROFILES, normalizePersonnelProfile } from './personnelProfiles';
+import { PORTUGAL_ECONOMY, capitalQuote, recruitmentCost } from './portugalEconomy';
 
 const id = () => globalThis.crypto?.randomUUID?.() || `adv-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
@@ -17,15 +18,15 @@ const RESOURCE_PROFILE = {
   police:{equipment:{capacity:100,label:'Equipamento',unit:'%'},fuel:{capacity:100,label:'Combustível',unit:'%'}},
 };
 const SUPPLY_CAPACITY={fuel:1200,medical:700,water:24000,foam:2600,equipment:700,oxygen:700};
-const SUPPLY_COST={fuel:.55,medical:1.2,water:.018,foam:.28,equipment:.6,oxygen:.8};
+const SUPPLY_COST={fuel:PORTUGAL_ECONOMY.dieselPerLitre,medical:3.5,water:PORTUGAL_ECONOMY.waterPerLitre,foam:PORTUGAL_ECONOMY.foamPerLitre,equipment:2.5,oxygen:1.8};
 const DAILY_TASKS = [
-  {metric:'completed',title:'Resolver 4 ocorrências',target:4,reward:1600},
-  {metric:'transported',title:'Concluir 2 transportes',target:2,reward:1100},
-  {metric:'trained',title:'Formar 2 elementos',target:2,reward:1000},
+  {metric:'completed',title:'Resolver 4 ocorrências',target:4,reward:6000},
+  {metric:'transported',title:'Concluir 2 transportes',target:2,reward:4000},
+  {metric:'trained',title:'Formar 2 elementos',target:2,reward:4000},
 ];
 const WEEKLY_TASKS = [
-  {metric:'completed',title:'Resolver 20 ocorrências',target:20,reward:7000},
-  {metric:'trust_hold',title:'Manter confiança ≥95% durante 1 hora',threshold:95,target:3600,reward:3200},
+  {metric:'completed',title:'Resolver 20 ocorrências',target:20,reward:30000},
+  {metric:'trust_hold',title:'Manter confiança ≥95% durante 1 hora',threshold:95,target:3600,reward:18000},
 ];
 
 const resourceState = (service,capacity={}) => Object.fromEntries(Object.entries(RESOURCE_PROFILE[service] || {}).map(([key,value]) => [key,Number(capacity?.[key])||value.capacity]));
@@ -227,7 +228,7 @@ export function applyAdvancedAction(game,kind,data,log=()=>{}) {
     game.dispatch_policy=next;log(game,'Política de mobilização atualizada.','success');return true;
   }
   if(kind==='queue_recruitment'){
-    const base=game.bases.find(item=>item.id===data.base_id),amount=Math.max(1,Math.min(10,Number(data.amount)||1));assert(base,'Base inválida.');assert((base.personnel||0)+reservedStaff(game,base.id)+amount<=(base.staff_capacity||14),'Capacidade de pessoal atingida ou já reservada.');const cost=amount*225;payCost(game,cost,{label:'recrutamento planeado',log});game.recruitment_queue.push({id:id(),base_id:base.id,amount,cost,status:'pending',created_at:game.elapsed,completes_at:game.elapsed+180+amount*30});log(game,`Recrutamento iniciado em ${base.name}.`,'success');return true;
+    const base=game.bases.find(item=>item.id===data.base_id),amount=Math.max(1,Math.min(10,Number(data.amount)||1));assert(base,'Base inválida.');assert((base.personnel||0)+reservedStaff(game,base.id)+amount<=(base.staff_capacity||14),'Capacidade de pessoal atingida ou já reservada.');const cost=recruitmentCost(base.service,amount,false);assert((game.money||0)-cost>=reserveFloor(game),'Orçamento insuficiente para recrutamento mantendo a reserva operacional.');payCost(game,cost,{label:'recrutamento planeado',log,protectReserve:false});game.recruitment_queue.push({id:id(),base_id:base.id,amount,cost,status:'pending',created_at:game.elapsed,completes_at:game.elapsed+180+amount*30});log(game,`Recrutamento iniciado em ${base.name}.`,'success');return true;
   }
   if(kind==='transfer_personnel'){
     const person=game.personnel.find(item=>item.id===data.person_id),target=game.bases.find(item=>item.id===data.base_id);assert(person&&target&&person.service===target.service,'Transferência incompatível.');assert(!person.unit_id&&person.status==='available','O elemento tem de estar livre.');const origin=game.bases.find(item=>item.id===person.base_id);assert(origin&&origin.land===target.land&&origin.command_center_id===target.command_center_id,'A transferência de pessoal só pode ser feita dentro da mesma área operacional.');assert((target.personnel||0)+reservedStaff(game,target.id)+1<=(target.staff_capacity||14),'Base de destino sem capacidade disponível.');origin.personnel=Math.max(0,(origin.personnel||0)-1);target.personnel=(target.personnel||0)+1;person.base_id=target.id;for(const base of [origin,target]){const counts={};game.personnel.filter(item=>item.base_id===base.id).forEach(item=>(item.qualifications||[]).forEach(q=>{counts[q]=(counts[q]||0)+1;}));base.qualifications=counts;base.personnel=game.personnel.filter(item=>item.base_id===base.id).length;}log(game,`${person.name} transferido para ${target.name}.`,'success');return true;
@@ -277,17 +278,21 @@ export function applyAdvancedAction(game,kind,data,log=()=>{}) {
     const task=[...(game.rotating_tasks.daily||[]),...(game.rotating_tasks.weekly||[])].find(item=>item.id===data.task_id);assert(task&&!task.claimed,'Objetivo inválido.');const progress=taskProgress(game,task);assert(progress>=task.target,'Objetivo ainda não concluído.');task.claimed=true;game.money+=task.reward;game.task_rewards=(game.task_rewards||0)+task.reward;log(game,`Objetivo concluído: ${task.title}.`,'success');return true;
   }
   if(kind==='contribute_cooperation'){
-    const raw=Number(data.amount);assert(Number.isFinite(raw)&&raw>=100,'A contribuição mínima é 100 €.');const amount=Math.min(100000,Math.round(raw));assert((game.money||0)-amount>=reserveFloor(game),'Mantém a reserva operacional antes de contribuir para a rede.');game.money-=amount;game.cooperation.funds+=amount;game.cooperation.contribution+=amount;game.cooperation.level=1+Math.floor(game.cooperation.funds/10000);game.cooperation.log.unshift({id:id(),text:`Contribuição operacional de ${amount} €.`,time:game.elapsed,real_time:new Date().toISOString()});log(game,'Contribuição registada na rede cooperativa.','success');return true;
+    const raw=Number(data.amount);assert(Number.isFinite(raw)&&raw>=5000,'A contribuição mínima é 5 000 €.');const amount=Math.min(1000000,Math.round(raw));assert((game.money||0)-amount>=reserveFloor(game),'Mantém a reserva operacional antes de contribuir para a rede.');game.money-=amount;game.cooperation.funds+=amount;game.cooperation.contribution+=amount;game.cooperation.level=1+Math.floor(game.cooperation.funds/500000);game.cooperation.log.unshift({id:id(),text:`Contribuição operacional de ${amount} €.`,time:game.elapsed,real_time:new Date().toISOString()});log(game,'Contribuição registada na rede cooperativa.','success');return true;
   }
   if(kind==='send_alliance_message'){
     const text=String(data.text||'').trim().slice(0,180);assert(text,'Escreve uma mensagem para a rede.');game.cooperation.chat.unshift({id:id(),author:'Operador 01',text,time:game.elapsed,real_time:new Date().toISOString()});game.cooperation.chat=game.cooperation.chat.slice(0,40);game.cooperation.log.unshift({id:id(),text:'Mensagem enviada no canal operacional.',time:game.elapsed,real_time:new Date().toISOString()});return true;
   }
   if(kind==='build_alliance_facility'){
     const type=String(data.type||'hospital'),name=String(data.name||'').trim().slice(0,48)||({hospital:'Hospital partilhado',prison:'Celas partilhadas',academy:'Escola partilhada'}[type]||'Instalação partilhada');
-    const catalog={hospital:{cost:9000,capacity:8},prison:{cost:7500,capacity:10},academy:{cost:6500,capacity:12}};const definition=catalog[type];assert(definition,'Tipo de instalação inválido.');assert(game.cooperation.funds>=definition.cost,'Fundos cooperativos insuficientes.');game.cooperation.funds-=definition.cost;game.cooperation.buildings.push({id:id(),type,name,capacity:definition.capacity,level:1,enabled:true,created_at:game.elapsed});refreshNetworkSupport(game);game.cooperation.log.unshift({id:id(),text:`Instalação coletiva criada: ${name}.`,time:game.elapsed,real_time:new Date().toISOString()});log(game,`${name} disponível na rede cooperativa.`,'success');return true;
+    const catalog={
+      hospital:{cost:capitalQuote(PORTUGAL_ECONOMY.buildings.hospital,'mainland','hospital').own,capacity:8},
+      prison:{cost:capitalQuote(PORTUGAL_ECONOMY.buildings.prison,'mainland','facility').own,capacity:10},
+      academy:{cost:capitalQuote(PORTUGAL_ECONOMY.buildings.academy,'mainland','facility').own,capacity:12},
+    };const definition=catalog[type];assert(definition,'Tipo de instalação inválido.');assert(game.cooperation.funds>=definition.cost,'Fundos cooperativos insuficientes para a componente própria do investimento.');game.cooperation.funds-=definition.cost;game.cooperation.buildings.push({id:id(),type,name,capacity:definition.capacity,level:1,enabled:true,created_at:game.elapsed});refreshNetworkSupport(game);game.cooperation.log.unshift({id:id(),text:`Instalação coletiva criada: ${name}.`,time:game.elapsed,real_time:new Date().toISOString()});log(game,`${name} disponível na rede cooperativa.`,'success');return true;
   }
   if(kind==='upgrade_alliance_facility'){
-    const building=game.cooperation.buildings.find(item=>item.id===data.building_id);assert(building,'Instalação coletiva inválida.');const cost=3500*(building.level||1);assert(game.cooperation.funds>=cost,'Fundos cooperativos insuficientes.');game.cooperation.funds-=cost;building.level=(building.level||1)+1;building.capacity+=building.type==='academy'?6:4;refreshNetworkSupport(game);game.cooperation.log.unshift({id:id(),text:`${building.name} ampliada para nível ${building.level}.`,time:game.elapsed,real_time:new Date().toISOString()});log(game,`${building.name} ampliada pela rede cooperativa.`,'success');return true;
+    const building=game.cooperation.buildings.find(item=>item.id===data.building_id);assert(building,'Instalação coletiva inválida.');const upgradeNet=PORTUGAL_ECONOMY.facilityUpgrade[building.type]||1000000,cost=capitalQuote(upgradeNet*(building.level||1),'mainland',building.type==='hospital'?'hospital':'upgrade').own;assert(game.cooperation.funds>=cost,'Fundos cooperativos insuficientes.');game.cooperation.funds-=cost;building.level=(building.level||1)+1;building.capacity+=building.type==='academy'?6:4;refreshNetworkSupport(game);game.cooperation.log.unshift({id:id(),text:`${building.name} ampliada para nível ${building.level}.`,time:game.elapsed,real_time:new Date().toISOString()});log(game,`${building.name} ampliada pela rede cooperativa.`,'success');return true;
   }
   if(kind==='rebalance_complex'){
     const complex=game.complexes.find(item=>item.id===data.complex_id);assert(complex,'Complexo inválido.');const bases=game.bases.filter(base=>(complex.base_ids||[]).includes(base.id));assert(bases.length>1,'O complexo necessita de pelo menos duas bases.');for(const service of ['fire','medical','police']){const serviceBases=bases.filter(base=>base.service===service);if(serviceBases.length<2)continue;const people=game.personnel.filter(person=>serviceBases.some(base=>base.id===person.base_id)&&!person.unit_id&&person.status==='available');people.forEach((person,index)=>{person.base_id=serviceBases[index%serviceBases.length].id;});serviceBases.forEach(base=>{base.personnel=game.personnel.filter(person=>person.base_id===base.id).length;});}updateComplexes(game);log(game,`${complex.name}: efetivo livre redistribuído.`,'success');return true;
