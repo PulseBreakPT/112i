@@ -1,3 +1,5 @@
+import { PORTUGAL_ECONOMY, vehicleMaintenanceReserveRate } from './portugalEconomy';
+
 // Sistema central de atributos e lógica das viaturas do Distrito 112.
 // Mantém o catálogo, os saves antigos, o despacho e a manutenção a usar a mesma fonte de verdade.
 
@@ -58,6 +60,13 @@ export function applyVehicleSpec(definition,service){
   const base=SERVICE_DEFAULTS[service]||SERVICE_DEFAULTS.police,override=OVERRIDES[definition.id]||{};
   const merged={...base,...definition,...override};
   merged.service=service;
+  merged.price=PORTUGAL_ECONOMY.vehicles[definition.id] ?? definition.price ?? 0;
+  const maintenanceRate=vehicleMaintenanceReserveRate(merged.vehicle_class);
+  const fuelCostPerKm=(merged.fuel_consumption_l_100km||15)/100*PORTUGAL_ECONOMY.dieselPerLitre;
+  const maintenancePerKm=merged.price*maintenanceRate/Math.max(1,merged.service_life_km||180000);
+  const classOverhead=['heavy','special'].includes(merged.vehicle_class)?.16:merged.vehicle_class==='air'?.55:.08;
+  merged.operating_cost_per_km=Math.max(Number(merged.operating_cost_per_km)||0,Number((fuelCostPerKm+maintenancePerKm+classOverhead).toFixed(2)));
+  merged.maintenance_base_cost=Math.max(Number(merged.maintenance_base_cost)||0,Math.round(merged.price*maintenanceRate/4));
   merged.crew_min=Math.max(1,Number(definition.crew)||1);
   merged.crew_max=Math.max(merged.crew_min,Number(override.crew_max||definition.max_crew||definition.crew)||merged.crew_min);
   merged.resource_capacity={...base.resource_capacity,...(definition.resource_capacity||{}),...(override.resource_capacity||{})};
