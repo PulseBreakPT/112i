@@ -1,23 +1,24 @@
 import { NEW_VEHICLES, NEW_MISSION_DEFINITIONS } from './expansionContent';
 import { applyVehicleSpec } from './vehicleSystems';
 import { rarityLevelFor, RARITY_LEVELS } from './engines/missionDoctrine';
+import { PORTUGAL_ECONOMY } from './portugalEconomy';
 
 export const EXTENSIONS = {
   fire: [
-    { id: 'aerial', name: 'Meios aéreos e altura', cost: 7000, level: 2 },
-    { id: 'wildfire', name: 'Combate florestal', cost: 6000, level: 2 },
-    { id: 'hazmat', name: 'Matérias perigosas', cost: 9500, level: 3 },
-    { id: 'water', name: 'Salvamento aquático', cost: 8500, level: 3 },
+    { id: 'aerial', name: 'Meios aéreos e altura', cost: PORTUGAL_ECONOMY.extensions.aerial, level: 2 },
+    { id: 'wildfire', name: 'Combate florestal', cost: PORTUGAL_ECONOMY.extensions.wildfire, level: 2 },
+    { id: 'hazmat', name: 'Matérias perigosas', cost: PORTUGAL_ECONOMY.extensions.hazmat, level: 3 },
+    { id: 'water', name: 'Salvamento aquático', cost: PORTUGAL_ECONOMY.extensions.water, level: 3 },
   ],
   medical: [
-    { id: 'advanced-care', name: 'Suporte avançado de vida', cost: 7500, level: 2 },
-    { id: 'hospital-network', name: 'Rede hospitalar', cost: 9000, level: 3 },
-    { id: 'mass-casualty', name: 'Catástrofe e triagem', cost: 11000, level: 4 },
+    { id: 'advanced-care', name: 'Suporte avançado de vida', cost: PORTUGAL_ECONOMY.extensions['advanced-care'], level: 2 },
+    { id: 'hospital-network', name: 'Rede hospitalar', cost: PORTUGAL_ECONOMY.extensions['hospital-network'], level: 3 },
+    { id: 'mass-casualty', name: 'Catástrofe e triagem', cost: PORTUGAL_ECONOMY.extensions['mass-casualty'], level: 4 },
   ],
   police: [
-    { id: 'canine', name: 'Unidade cinotécnica', cost: 6000, level: 2 },
-    { id: 'public-order', name: 'Ordem pública', cost: 8000, level: 2 },
-    { id: 'explosives', name: 'Inativação de explosivos', cost: 10500, level: 3 },
+    { id: 'canine', name: 'Unidade cinotécnica', cost: PORTUGAL_ECONOMY.extensions.canine, level: 2 },
+    { id: 'public-order', name: 'Ordem pública', cost: PORTUGAL_ECONOMY.extensions['public-order'], level: 2 },
+    { id: 'explosives', name: 'Inativação de explosivos', cost: PORTUGAL_ECONOMY.extensions.explosives, level: 3 },
   ],
 };
 
@@ -45,22 +46,22 @@ export const SPECIALIZATIONS = {
 
 const RAW_VEHICLE_CATALOG = {
   fire: [
-    { id: 'fire-engine', name: 'VUCI · Combate Urbano', level: 1, price: 5000, crew: 5 },
-    { id: 'ladder', name: 'VE · Auto-Escada', level: 2, price: 8500, crew: 3, extension: 'aerial' },
-    { id: 'wildfire-unit', name: 'VFCI · Combate Florestal', level: 2, price: 7000, crew: 5, extension: 'wildfire', training: 'wildfire' },
-    { id: 'hazmat-unit', name: 'VECI · Risco Industrial', level: 3, price: 11000, crew: 4, extension: 'hazmat', training: 'hazmat' },
+    { id: 'fire-engine', name: 'VUCI · Combate Urbano', level: 1, price: PORTUGAL_ECONOMY.vehicles['fire-engine'], crew: 5 },
+    { id: 'ladder', name: 'VE · Auto-Escada', level: 2, price: PORTUGAL_ECONOMY.vehicles.ladder, crew: 3, extension: 'aerial' },
+    { id: 'wildfire-unit', name: 'VFCI · Combate Florestal', level: 2, price: PORTUGAL_ECONOMY.vehicles['wildfire-unit'], crew: 5, extension: 'wildfire', training: 'wildfire' },
+    { id: 'hazmat-unit', name: 'VECI · Risco Industrial', level: 3, price: PORTUGAL_ECONOMY.vehicles['hazmat-unit'], crew: 4, extension: 'hazmat', training: 'hazmat' },
     ...NEW_VEHICLES.fire,
   ],
   medical: [
-    { id: 'ambulance', name: 'AEM / ABSC', level: 1, price: 4000, crew: 2 },
-    { id: 'vmer', name: 'VMER', level: 2, price: 9000, crew: 2, extension: 'advanced-care', training: 'advanced-care' },
-    { id: 'mass-casualty-unit', name: 'VIC · Intervenção em Catástrofe', level: 4, price: 14000, crew: 6, extension: 'mass-casualty', training: 'triage' },
+    { id: 'ambulance', name: 'AEM / ABSC', level: 1, price: PORTUGAL_ECONOMY.vehicles.ambulance, crew: 2 },
+    { id: 'vmer', name: 'VMER', level: 2, price: PORTUGAL_ECONOMY.vehicles.vmer, crew: 2, extension: 'advanced-care', training: 'advanced-care' },
+    { id: 'mass-casualty-unit', name: 'VIC · Intervenção em Catástrofe', level: 4, price: PORTUGAL_ECONOMY.vehicles['mass-casualty-unit'], crew: 6, extension: 'mass-casualty', training: 'triage' },
     ...NEW_VEHICLES.medical,
   ],
   police: [
-    { id: 'patrol', name: 'Carro-patrulha', level: 1, price: 3000, crew: 2 },
-    { id: 'canine-unit', name: 'Unidade Cinotécnica', level: 2, price: 6500, crew: 2, extension: 'canine', training: 'canine' },
-    { id: 'riot-unit', name: 'Ordem Pública', level: 2, price: 8500, crew: 6, extension: 'public-order', training: 'public-order' },
+    { id: 'patrol', name: 'Carro-patrulha', level: 1, price: PORTUGAL_ECONOMY.vehicles.patrol, crew: 2 },
+    { id: 'canine-unit', name: 'Unidade Cinotécnica', level: 2, price: PORTUGAL_ECONOMY.vehicles['canine-unit'], crew: 2, extension: 'canine', training: 'canine' },
+    { id: 'riot-unit', name: 'Ordem Pública', level: 2, price: PORTUGAL_ECONOMY.vehicles['riot-unit'], crew: 6, extension: 'public-order', training: 'public-order' },
     ...NEW_VEHICLES.police,
   ],
 };
@@ -124,10 +125,7 @@ export function missionCap(game, commandCenterId = null) {
 }
 
 export function nextBuildingCost(game, service, basePrice) {
-  const total = game.bases.length;
-  const sameService = game.bases.filter(base => base.service === service).length;
-  const multiplier = Math.min(2.5, 1 + Math.max(0, sameService - 1) * 0.12 + total * 0.015);
-  return Math.round(basePrice * multiplier);
+  return Math.max(0, Math.round(Number(basePrice) || PORTUGAL_ECONOMY.buildings[service] || 0));
 }
 
 export function activeExtensions(game, commandCenterId = null) {
