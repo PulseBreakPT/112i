@@ -199,3 +199,6 @@
 .mission-doctrine-summary>span:not(.rarity-badge){display:inline-flex;align-items:center;min-height:20px;padding:2px 7px;border-radius:5px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);font-size:10px;color:rgba(255,255,255,.6)}
 .specialized-requirements.doctrine-recommended>div>span{border-style:dashed;opacity:.9}
 .specialized-requirements.doctrine-support>div>span{opacity:.62}
+
+.dispatch-explanation-mini{display:grid;gap:3px;margin-top:7px;padding-top:6px;border-top:1px solid var(--line,#2b2f35);text-align:left}.dispatch-explanation-mini small{font-size:9px;line-height:1.35;color:var(--muted,#9399a1)}
+.geo-operational-layer-summary{display:grid;gap:3px;padding:8px 0;border-top:1px solid var(--line,#2b2f35);border-bottom:1px solid var(--line,#2b2f35)}.geo-operational-layer-summary>span{font-size:9px;letter-spacing:.08em;color:var(--muted,#9298a1)}
