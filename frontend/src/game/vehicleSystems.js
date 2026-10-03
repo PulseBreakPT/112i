@@ -146,9 +146,12 @@ export function resaleValue(unit,definition=unit,elapsed=0){
 
 export function breakdownChance(unit,dt){
   const reliability=clamp(unit.reliability??85),condition=clamp(unit.condition??100),wear=clamp(unit.wear||0);
-  const overdue=unit.maintenance_due?1:0,lifeRatio=Math.max(0,(unit.mileage_km||0)/Math.max(1,unit.service_life_km||180000));
-  const rate=.0000008+(100-reliability)*.0000012+Math.max(0,55-condition)*.0000025+wear*.0000007+overdue*.00002+Math.max(0,lifeRatio-.75)*.000035;
-  return Math.min(.08,1-Math.exp(-Math.max(0,Number(dt)||0)*rate));
+  const overdue=unit.maintenance_due?1:0,inspection=unit.inspection_overdue?1:0,lifeRatio=Math.max(0,(unit.mileage_km||0)/Math.max(1,unit.service_life_km||180000));
+  const tyres=Math.max(0,45-clamp(unit.tyre_condition??100)),brakes=Math.max(0,45-clamp(unit.brake_condition??100)),battery=Math.max(0,40-clamp(unit.battery_condition??100));
+  const age=Math.max(0,Number(unit.age_years)||0);
+  const rate=.0000008+(100-reliability)*.0000012+Math.max(0,55-condition)*.0000025+wear*.0000007+overdue*.00002+inspection*.000028+
+    Math.max(0,lifeRatio-.75)*.000035+tyres*.0000016+brakes*.0000018+battery*.000001+Math.max(0,age-12)*.0000014;
+  return Math.min(.12,1-Math.exp(-Math.max(0,Number(dt)||0)*rate));
 }
 
 export function vehicleAccessPenalty(unit,incident,conditions){
