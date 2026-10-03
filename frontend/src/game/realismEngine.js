@@ -422,10 +422,10 @@ const processHospitals=(game,log)=>{
     const capacity=Math.max(1,facility.capacity||1);
     facility.external_occupancy=Math.min(Math.max(0,capacity-1),Math.round(capacity*(facility.ed_pressure/100)*.62));
     facility.handover_minutes=Math.round(8+facility.ed_pressure*.42);
-    facility.diversion=facility.ed_pressure>=88;
+    facility.diversion=facility.manual_diversion===true||facility.ed_pressure>=88;
     for(const specialty of facility.specialties||[]){
       const key=`${facility.id}:${specialty}:${dateKey(simulatedDate(game))}`;
-      facility.specialty_status[specialty]=hash(key)<.025?'limited':'open';
+      const sample=hash(key);facility.specialty_status[specialty]=sample<.006?'closed':sample<.035?'limited':'open';
     }
     if(previous<88&&facility.ed_pressure>=88&&log)log(game,`${facility.name}: urgência em forte pressão; transporte deve considerar alternativas.`,'alert');
   }
@@ -514,7 +514,7 @@ const processPlannedEvents=(game,log)=>{
   const template=candidates[Math.floor(hash(key+'event')*candidates.length)];
   if(!template||hash(key+'spawn')<.46)return;
   const center=(game.command_centers||[]).filter(item=>item.active!==false)[Math.floor(hash(key+'center')*Math.max(1,(game.command_centers||[]).filter(item=>item.active!==false).length))]||game.command_centers?.[0];
-  const event={id:uid('event'),type:template.id,name:template.name,risk:template.risk,command_center_id:center?.id||null,starts_at:game.elapsed+Math.round((3+hash(key+'lead')*8)*3600),ends_at:game.elapsed+Math.round((6+hash(key+'end')*10)*3600),recommended:{...template.services},prepositioned:{fire:0,medical:0,police:0},status:'planned',created_at:game.elapsed};
+  const event={id:uid('event'),type:template.id,name:template.name,risk:template.risk,command_center_id:center?.id||null,starts_at:game.elapsed+Math.round((3+hash(key+'lead')*8)*3600),ends_at:game.elapsed+Math.round((6+hash(key+'end')*10)*3600),recommended:{...template.services},prepositioned:{fire:0,medical:0,police:0},prepositioned_unit_ids:[],status:'planned',created_at:game.elapsed};
   game.planned_public_events.unshift(event);
   game.planned_public_events=game.planned_public_events.slice(0,30);
   if(log)log(game,`Evento planeado: ${event.name}. Prepara cobertura preventiva.`,'info');
@@ -523,7 +523,11 @@ const processPlannedEvents=(game,log)=>{
 const processPublicEvents=(game,log,spawn)=>{
   for(const event of game.planned_public_events||[]){
     if(event.status==='planned'&&game.elapsed>=event.starts_at){event.status='active';if(log)log(game,`${event.name} iniciou. Dispositivo preventivo em avaliação.`,'info');}
-    if(event.status==='active'&&game.elapsed>=event.ends_at){event.status='completed';event.completed_at=game.elapsed;}
+    if(event.status==='active'&&game.elapsed>=event.ends_at){
+      event.status='completed';event.completed_at=game.elapsed;
+      for(const unitId of event.prepositioned_unit_ids||[]){const unit=game.units.find(item=>item.id===unitId);if(unit&&unit.status==='event_standby'){unit.status='available';delete unit.public_event_id;}}
+      event.prepositioned_unit_ids=[];event.prepositioned={fire:0,medical:0,police:0};
+    }
     if(event.status!=='active'||event.risk_event_spawned)continue;
     const totalRecommended=Object.values(event.recommended||{}).reduce((a,b)=>a+b,0),totalReady=Object.values(event.prepositioned||{}).reduce((a,b)=>a+b,0);
     const gap=Math.max(0,totalRecommended-totalReady);
@@ -1050,9 +1054,25 @@ export function applyRealismAction(game,kind,data={},ctx={}){
     game.mutual_aid.unshift(aid);game.realism.metrics.mutual_aid_calls++;if(incident){incident.cost_ledger.external_support=(incident.cost_ledger.external_support||0)+cost;}log(game,`Apoio mútuo solicitado: ${units} meio(s) de ${service}.`,'success');return true;
   }
   if(kind==='set_event_preposition'){
-    const event=game.planned_public_events.find(item=>item.id===data.event_id);if(!event)throw new Error('Evento inválido.');
+    const event=game.planned_public_events.find(item=>item.id===data.event_id);if(!event||event.status==='completed')throw new Error('Evento inválido ou já concluído.');
     const service=data.service;if(!['fire','medical','police'].includes(service))throw new Error('Serviço inválido.');
-    event.prepositioned[service]=Math.max(0,Math.min(9,Number(data.count)||0));log(game,`${event.name}: dispositivo preventivo atualizado.`,'success');return true;
+    const target=Math.max(0,Math.min(9,Number(data.count)||0));
+    event.prepositioned_unit_ids=event.prepositioned_unit_ids||[];
+    const current=event.prepositioned_unit_ids.map(id=>game.units.find(unit=>unit.id===id)).filter(unit=>unit?.service===service);
+    if(target>current.length){
+      const inOtherEvents=new Set((game.planned_public_events||[]).filter(item=>item.id!==event.id&&item.status!=='completed').flatMap(item=>item.prepositioned_unit_ids||[]));
+      const candidates=(game.units||[]).filter(unit=>unit.service===service&&unit.enabled!==false&&unit.status==='available'&&!inOtherEvents.has(unit.id));
+      const preferred=candidates.sort((a,b)=>{
+        const aBase=game.bases.find(base=>base.id===a.base_id),bBase=game.bases.find(base=>base.id===b.base_id);
+        return Number(bBase?.command_center_id===event.command_center_id)-Number(aBase?.command_center_id===event.command_center_id);
+      }).slice(0,target-current.length);
+      if(preferred.length<target-current.length)throw new Error('Não existem meios disponíveis suficientes sem comprometer os já mobilizados.');
+      for(const unit of preferred){unit.status='event_standby';unit.public_event_id=event.id;event.prepositioned_unit_ids.push(unit.id);}
+    }else if(target<current.length){
+      for(const unit of current.slice(target)){unit.status='available';delete unit.public_event_id;event.prepositioned_unit_ids=event.prepositioned_unit_ids.filter(id=>id!==unit.id);}
+    }
+    event.prepositioned[service]=target;
+    log(game,`${event.name}: ${target} meio(s) reais de ${service} reservados no dispositivo preventivo.`,'success');return true;
   }
   if(kind==='set_communications_redundancy'){
     const value=['low','normal','high'].includes(data.value)?data.value:'normal';game.realism.communications_redundancy=value;
