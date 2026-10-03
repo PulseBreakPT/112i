@@ -294,7 +294,8 @@ test('vehicle transfers reserve capacity and take time', () => {
   game=tickGame(game,181);
   const target=game.bases.find(base=>base.service==='fire'&&base.node==='porto-campanha'),unit=game.units.find(item=>item.service==='fire');
   const originId=unit.base_id;
-  game.units.find(item=>item.id===unit.id).status='available';
+  const transferUnit=game.units.find(item=>item.id===unit.id),originBase=game.bases.find(base=>base.id===transferUnit.base_id);
+  transferUnit.status='available';transferUnit.node=originBase.node;transferUnit.lng=originBase.lng;transferUnit.lat=originBase.lat;
   game=applyAction(game,'transfer_unit',{unit_id:unit.id,base_id:target.id});
   expect(game.units.find(item=>item.id===unit.id).status).toBe('base_transfer');
   expect(game.units.find(item=>item.id===unit.id).base_id).toBe(originId);
@@ -310,7 +311,8 @@ test('routed vehicle transfers move along the prepared road route and finish at 
   const target=game.bases.find(base=>base.service==='fire'&&base.node==='porto-campanha');
   const unit=game.units.find(item=>item.service==='fire');
   const origin=game.bases.find(base=>base.id===unit.base_id);
-  game.units.find(item=>item.id===unit.id).status='available';
+  const routedUnit=game.units.find(item=>item.id===unit.id);
+  routedUnit.status='available';routedUnit.node=origin.node;routedUnit.lng=origin.lng;routedUnit.lat=origin.lat;
   const route={coordinates:[[origin.lng,origin.lat],[(origin.lng+target.lng)/2,(origin.lat+target.lat)/2],[target.lng,target.lat]],times:[0,60,120],duration:120,distance:2400};
   game=applyAction(game,'transfer_unit',{unit_id:unit.id,base_id:target.id,route});
   let moving=game.units.find(item=>item.id===unit.id);
