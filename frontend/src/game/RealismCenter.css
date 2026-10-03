@@ -30,3 +30,7 @@
 @media(max-width:1200px){.realism-kpis{grid-template-columns:repeat(4,1fr)}.mutual-aid-form{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:900px){.case-persistence-list article{grid-template-columns:1fr 1fr}.mutual-aid-form{grid-template-columns:1fr 1fr}.fleet-health-head,.fleet-health-row{min-width:1020px}}
 @media(max-width:620px){.mutual-aid-form{grid-template-columns:1fr}.case-persistence-list article{grid-template-columns:1fr}.mutual-aid-list article{grid-template-columns:1fr 1fr}.charger-install{display:grid}}
+
+.drone-procurement{display:flex;gap:6px;align-items:center}.drone-procurement select{background:#101215;border:1px solid #30343a;color:#eef1f4;padding:7px;max-width:260px}
+.incident-intel-actions{display:flex;gap:6px;align-items:center}.incident-intel-actions b{white-space:nowrap}.drone-list{display:grid;gap:7px}.drone-list article{display:grid;grid-template-columns:1fr auto auto;gap:9px;align-items:center;padding:9px;border:1px solid #292d32}.drone-list article>div{display:grid}.drone-list small{font-size:10px;color:var(--muted,#9298a1)}
+@media(max-width:620px){.drone-procurement{display:grid}.incident-intel-actions{align-items:flex-end;flex-direction:column}.drone-list article{grid-template-columns:1fr auto}}
