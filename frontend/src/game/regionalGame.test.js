@@ -236,14 +236,24 @@ test('base stock is consumed when an idle vehicle is resupplied', () => {
   expect(afterBase.supply_reserve.water).toBeLessThan(before);
 });
 
-test('operating costs are co-financed instead of creating a debt spiral', () => {
+test('weekly fixed costs are charged once when Monday crosses 20:00 Portugal time', () => {
   let game=newGame();
-  game.money=0;
-  game.next_upkeep=game.elapsed;
-  game=tickGame(game,1);
-  expect(game.operating_debt).toBe(0);
-  expect(game.money).toBeGreaterThanOrEqual(250000);
-  expect(game.public_funding).toBeGreaterThan(0);
+  game.money=30000000;
+  game.calendar_started_at='2026-10-05T18:59:00.000Z';
+  game.elapsed=0;
+  game.last_weekly_fixed_cost_key='2026-09-28';
+  game.incidents=[];game.next_spawn=999999;game.next_crisis_wave=999999;
+  const before=game.money;
+  game=tickGame(game,120);
+  expect(game.weekly_fixed_cost_history).toHaveLength(1);
+  expect(game.weekly_fixed_cost_history[0].week).toBe('2026-10-05');
+  expect(game.weekly_fixed_expenses).toBeGreaterThan(0);
+  expect(game.money).toBeLessThan(before);
+  const afterFirst=game.money,expense=game.weekly_fixed_expenses;
+  game=tickGame(game,3600);
+  expect(game.weekly_fixed_cost_history).toHaveLength(1);
+  expect(game.weekly_fixed_expenses).toBe(expense);
+  expect(game.money).toBe(afterFirst);
 });
 
 test('seeded simulation state advances deterministically', () => {
@@ -337,7 +347,7 @@ test('vehicle crew can be removed and assigned individually while the unit is at
 
 test('protected reserve funding is not counted as operational earnings', () => {
   let game=newGame();
-  game.money=0;game.next_upkeep=999999;
+  game.money=0;
   const earned=game.earned;
   game=tickGame(game,1);
   expect(game.money).toBeGreaterThanOrEqual(250000);
@@ -420,13 +430,17 @@ test('capital investments require the player contribution while recording public
   expect(game.bases.some(base=>base.node==='porto-campanha'&&base.service==='fire')).toBe(true);
 });
 
-test('operating costs can never drain the protected reserve', () => {
+test('weekly fixed invoice can never drain the protected reserve', () => {
   let game=newGame();
   game.money=250000;
-  game.next_upkeep=game.elapsed;
-  game=tickGame(game,1);
+  game.calendar_started_at='2026-10-05T18:59:00.000Z';
+  game.elapsed=0;
+  game.last_weekly_fixed_cost_key='2026-09-28';
+  game.incidents=[];game.next_spawn=999999;game.next_crisis_wave=999999;
+  game=tickGame(game,120);
   expect(game.money).toBeGreaterThanOrEqual(250000);
   expect(game.operating_debt).toBe(0);
+  expect(game.weekly_fixed_expenses).toBeGreaterThan(0);
 });
 
 test('periodic public funding creates sustainable positive cash flow', () => {
