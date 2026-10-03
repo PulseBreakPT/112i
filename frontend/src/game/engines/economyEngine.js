@@ -1,10 +1,9 @@
-import { PORTUGAL_ECONOMY, capitalQuote } from '../portugalEconomy';
+import { PORTUGAL_ECONOMY, capitalQuote, weeklyEmployerCost, weeklyBuildingFixedCost } from '../portugalEconomy';
 
 export const ECONOMY = Object.freeze({
   startingCash: PORTUGAL_ECONOMY.startingBudget,
   reserveFloor: PORTUGAL_ECONOMY.reserveFloor,
   fundingInterval: PORTUGAL_ECONOMY.fundingInterval,
-  upkeepInterval: PORTUGAL_ECONOMY.upkeepInterval,
 });
 
 export const reserveFloor = game => Math.max(
@@ -63,6 +62,69 @@ export const payCapitalCost = (game, netAmount, {
     'success'
   );
   return {...quote,ok:true};
+};
+
+export const weeklyFixedCostBreakdown = game => {
+  const complexDiscount=(kind,id)=>Math.max(
+    0,
+    ...(game.complexes||[])
+      .filter(complex=>complex.shared_services!==false&&(complex[kind]||[]).includes(id))
+      .map(complex=>Math.max(0,Math.min(.35,Number(complex.operating_cost_discount)||0)))
+  );
+
+  const salaries=(game.personnel||[]).reduce(
+    (sum,person)=>sum+weeklyEmployerCost(person.salary||PORTUGAL_ECONOMY.salaries[person.service]),
+    0
+  );
+
+  const bases=(game.bases||[])
+    .filter(base=>base.enabled!==false)
+    .reduce((sum,base)=>sum+weeklyBuildingFixedCost(base.service)*(1-complexDiscount('base_ids',base.id)),0);
+
+  const facilities=(game.facilities||[])
+    .filter(facility=>facility.enabled!==false)
+    .reduce((sum,facility)=>sum+weeklyBuildingFixedCost(facility.type)*(1-complexDiscount('facility_ids',facility.id)),0);
+
+  const commandCenters=(game.command_centers||[])
+    .filter(center=>center.active!==false)
+    .reduce(sum=>sum+weeklyBuildingFixedCost('command_center'),0);
+
+  const hemContracts=(game.units||[])
+    .filter(unit=>unit.enabled!==false&&unit.vehicle_type==='medical-helicopter')
+    .reduce(sum=>sum+PORTUGAL_ECONOMY.hemWeeklyContract,0);
+
+  const rounded={
+    salaries:Math.round(salaries),
+    bases:Math.round(bases),
+    facilities:Math.round(facilities),
+    command_centers:Math.round(commandCenters),
+    hem_contracts:Math.round(hemContracts),
+  };
+  return {...rounded,total:Object.values(rounded).reduce((sum,value)=>sum+value,0)};
+};
+
+export const chargeWeeklyFixedCosts = (game, billingKey, log=null) => {
+  const breakdown=weeklyFixedCostBreakdown(game);
+  const result=payCost(game,breakdown.total,{label:'encargos fixos semanais',log});
+  game.weekly_fixed_expenses=(game.weekly_fixed_expenses||0)+breakdown.total;
+  game.last_weekly_fixed_cost_key=billingKey;
+  game.weekly_fixed_cost_history=[
+    {
+      id:`weekly-${billingKey}`,
+      week:billingKey,
+      charged_at:game.elapsed||0,
+      total:breakdown.total,
+      breakdown,
+      support:result.support||0,
+    },
+    ...(game.weekly_fixed_cost_history||[]),
+  ].slice(0,104);
+  if(log)log(
+    game,
+    `Encargos fixos semanais · ${billingKey}: -${breakdown.total.toLocaleString('pt-PT')} € · salários ${breakdown.salaries.toLocaleString('pt-PT')} € · instalações ${(breakdown.bases+breakdown.facilities+breakdown.command_centers).toLocaleString('pt-PT')} € · contratos ${breakdown.hem_contracts.toLocaleString('pt-PT')} €.`,
+    'info'
+  );
+  return breakdown;
 };
 
 export const publicFundingAmount = game => {
