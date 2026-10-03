@@ -173,4 +173,4 @@ export const monthlySalaryFor = (service, serviceYears=0, skill=60) => {
 
 export const monthlyEmployerCost = salary => Math.round(Math.max(0,Number(salary)||0)*PORTUGAL_ECONOMY.employerCostFactor);
 
-export const vehicleMaintenanceReserveRate = vehicleClass => vehicleClass==='air' ? .18 : ['heavy','special'].includes(vehicleClass) ? .10 : .075;
+export const vehicleMaintenanceReserveRate = vehicleClass => vehicleClass==='air' ? .04 : ['heavy','special'].includes(vehicleClass) ? .10 : .075;
