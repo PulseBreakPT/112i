@@ -97,7 +97,7 @@ export function ensureBaseLogistics(base){
 export function ensureLogisticsState(game){
   game.supply_orders=game.supply_orders||[];
   game.logistics_metrics={ordered:0,delivered:0,auto_orders:0,spent:0,shortages:0,...(game.logistics_metrics||{})};
-  game.next_logistics_check=game.next_logistics_check||60;
+  game.next_logistics_check=game.next_logistics_check??60;
   (game.bases||[]).forEach(ensureBaseLogistics);
   return game;
 }
