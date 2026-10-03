@@ -176,6 +176,17 @@ export default function RealismCenter({game,world,act,busy}){
         <div className="resilience-controls"><label><span>Redundância</span><select value={realism.communications_redundancy||'normal'} onChange={event=>run('set_communications_redundancy',{value:event.target.value},'Redundância atualizada.')}><option value="low">Baixa</option><option value="normal">Normal</option><option value="high">Alta</option></select></label><label className="check-row"><input type="checkbox" checked={game.infrastructure_state?.backup_power!==false} onChange={event=>run('set_infrastructure_backup',{enabled:event.target.checked})}/><span>Geradores / energia de contingência</span></label><div className="infra-state"><span>Rede elétrica <b>{game.infrastructure_state?.power||'normal'}</b></span><span>Comunicações <b>{game.infrastructure_state?.communications||'normal'}</b></span><span>SIRESP <b>{game.infrastructure_state?.sirensp||'normal'}</b></span></div></div>
       </section>
 
+      <section className="realism-panel">
+        <header><div><h2>Sustentabilidade e energia</h2><p>Consumo estimado da frota e infraestrutura elétrica.</p></div></header>
+        <div className="sustainability-grid"><span>Gasóleo <b>{Math.round(game.sustainability_state?.diesel_litres||0).toLocaleString('pt-PT')} L</b></span><span>Gasolina <b>{Math.round(game.sustainability_state?.petrol_litres||0).toLocaleString('pt-PT')} L</b></span><span>Eletricidade <b>{Math.round(game.sustainability_state?.electric_kwh||0).toLocaleString('pt-PT')} kWh</b></span><span>CO₂ operacional <b>{Math.round(game.sustainability_state?.co2_kg||0).toLocaleString('pt-PT')} kg</b></span></div>
+        <div className="charger-install"><select value={chargerBase} onChange={event=>setChargerBase(event.target.value)}>{game.bases.map(base=><option key={base.id} value={base.id}>{base.name}</option>)}</select><Button disabled={busy||!chargerBase} onClick={()=>run('install_ev_charger',{base_id:chargerBase,count:1},'Carregador instalado.')}>Instalar carregador · {money(25000)}</Button></div>
+      </section>
+
+      <section className="realism-panel">
+        <header><div><h2>Camadas operacionais</h2><p>Informação estratégica disponível para o mapa e planeamento.</p></div></header>
+        <div className="module-list">{Object.entries(game.operational_layers||{}).map(([layer,enabled])=><label key={layer}><input type="checkbox" checked={!!enabled} onChange={event=>run('toggle_operational_layer',{layer,enabled:event.target.checked})}/><span><strong>{layer}</strong><small>{enabled?'Visível':'Oculta'}</small></span></label>)}</div>
+      </section>
+
       <section className="realism-panel wide">
         <header><div><h2>Auditorias operacionais</h2><p>Não conformidades de frota, formação e logística.</p></div></header>
         <div className="audit-list">{(game.operational_audits||[]).map(audit=><article key={audit.id} data-tone={audit.score>=85?'positive':audit.score>=65?'warning':'danger'}><header><strong>Semana {audit.week}</strong><b>{percent(audit.score)}</b></header>{audit.findings?.length?<div>{audit.findings.map((finding,index)=><span key={index}>{finding.severity==='major'?'●':'○'} {finding.text}</span>)}</div>:<small>Sem não conformidades.</small>}{!audit.acknowledged&&audit.findings?.length>0&&<Button disabled={busy} onClick={()=>run('acknowledge_audit',{audit_id:audit.id})}>Tomar conhecimento</Button>}</article>)}{!(game.operational_audits||[]).length&&<p className="realism-empty">A primeira auditoria será gerada no ciclo semanal.</p>}</div>
