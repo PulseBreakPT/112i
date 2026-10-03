@@ -166,7 +166,15 @@ export function tickAdvancedState(game,dt,log=()=>{},random=Math.random) {
       if(base?.enabled===false)return;
       Object.entries(RESOURCE_PROFILE[unit.service]||{}).forEach(([key,profile])=>{
         const capacity=Math.max(0,Number(unit.resource_capacity?.[key])||profile.capacity),current=unit.resources[key]||0,missing=Math.max(0,capacity-current),rate=dt*capacity/180;
-        const available=Math.max(0,base?.supply_reserve?.[key]||0),transfer=Math.min(missing,rate,available);
+        const available=Math.max(0,base?.supply_reserve?.[key]||0);
+        if(key==='fuel'){
+          const tankLitres=Math.max(1,Number(unit.fuel_capacity_l)||70),maxPercentFromStock=available/tankLitres*100;
+          const transferPercent=Math.min(missing,rate,maxPercentFromStock),litres=transferPercent/100*tankLitres;
+          unit.resources[key]=current+transferPercent;
+          if(base)base.supply_reserve[key]=Math.max(0,available-litres);
+          return;
+        }
+        const transfer=Math.min(missing,rate,available);
         unit.resources[key]=current+transfer;
         if(base)base.supply_reserve[key]=Math.max(0,available-transfer);
       });
