@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Building2, CarFront, Settings2, Clock3, Plus, Wallet, RadioTower, ShieldCheck, Info } from 'lucide-react';
+import { Building2, CarFront, Clock3, Plus, Wallet, RadioTower, ShieldCheck, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '../components/ui/button';
 import { money, duration } from './common';
