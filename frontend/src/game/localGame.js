@@ -14,36 +14,44 @@ import { normalizeVehicleUnit, fuelPercentForDistance, breakdownChance, maintena
 import { GAME_SAVE_KEY as SAVE_KEY } from './storageCompatibility';
 import { PERSONNEL_PROFILES, normalizePersonnelProfile, personnelLevel, personnelRank } from './personnelProfiles';
 import { recordAchievementIncident, recordAchievementTriage, recordAchievementTransport, syncAchievements } from './achievementEngine';
+import { PORTUGAL_ECONOMY, baseUpgradeNet, facilityUpgradeNet, recruitmentCost } from './portugalEconomy';
 
 const SERVICES = {
-  fire: { name: 'Bombeiros', vehicle: 'Veículo de combate a incêndios', short: 'VFCI', price: 5000, base_price: 10000 },
-  medical: { name: 'Emergência médica', vehicle: 'Ambulância de socorro', short: 'ABSC', price: 4000, base_price: 8000 },
-  police: { name: 'Polícia', vehicle: 'Carro-patrulha', short: 'PSP', price: 3000, base_price: 8000 },
+  fire: { name: 'Bombeiros', vehicle: 'Veículo de combate a incêndios', short: 'VFCI', price: PORTUGAL_ECONOMY.vehicles['wildfire-unit'], base_price: PORTUGAL_ECONOMY.buildings.fire },
+  medical: { name: 'Emergência médica', vehicle: 'Ambulância de socorro', short: 'ABSC', price: PORTUGAL_ECONOMY.vehicles.ambulance, base_price: PORTUGAL_ECONOMY.buildings.medical },
+  police: { name: 'Polícia', vehicle: 'Carro-patrulha', short: 'PSP', price: PORTUGAL_ECONOMY.vehicles.patrol, base_price: PORTUGAL_ECONOMY.buildings.police },
 };
 
 const FACILITY_CATALOG = {
-  hospital: { name:'Hospital', cost:6000, capacity:5, service:'medical' },
-  prison: { name:'Estabelecimento prisional', cost:5000, capacity:6, service:'police' },
-  academy: { name:'Escola de formação', cost:4500, capacity:10, service:'all' },
+  hospital: { name:'Hospital', cost:PORTUGAL_ECONOMY.buildings.hospital, capacity:5, service:'medical' },
+  prison: { name:'Estabelecimento prisional', cost:PORTUGAL_ECONOMY.buildings.prison, capacity:6, service:'police' },
+  academy: { name:'Escola de formação', cost:PORTUGAL_ECONOMY.buildings.academy, capacity:10, service:'all' },
 };
 const HOSPITAL_SPECIALTIES = [
-  {id:'urgency',name:'Urgência geral',cost:0},{id:'trauma',name:'Trauma',cost:2800},{id:'burns',name:'Queimados',cost:3200},{id:'pediatrics',name:'Pediatria',cost:2500},{id:'cardiology',name:'Cardiologia',cost:3000},{id:'neurology',name:'Neurologia',cost:3400},{id:'obstetrics',name:'Obstetrícia',cost:2700},{id:'intensive-care',name:'Cuidados intensivos',cost:4200},
+  {id:'urgency',name:'Urgência geral',cost:PORTUGAL_ECONOMY.hospitalSpecialties.urgency},
+  {id:'trauma',name:'Trauma',cost:PORTUGAL_ECONOMY.hospitalSpecialties.trauma},
+  {id:'burns',name:'Queimados',cost:PORTUGAL_ECONOMY.hospitalSpecialties.burns},
+  {id:'pediatrics',name:'Pediatria',cost:PORTUGAL_ECONOMY.hospitalSpecialties.pediatrics},
+  {id:'cardiology',name:'Cardiologia',cost:PORTUGAL_ECONOMY.hospitalSpecialties.cardiology},
+  {id:'neurology',name:'Neurologia',cost:PORTUGAL_ECONOMY.hospitalSpecialties.neurology},
+  {id:'obstetrics',name:'Obstetrícia',cost:PORTUGAL_ECONOMY.hospitalSpecialties.obstetrics},
+  {id:'intensive-care',name:'Cuidados intensivos',cost:PORTUGAL_ECONOMY.hospitalSpecialties['intensive-care']},
 ];
 const TRAINING_CATALOG = [
-  {id:'hazmat',name:'Matérias perigosas',service:'fire',duration:420,cost:700},
-  {id:'rescue',name:'Desencarceramento e salvamento',service:'fire',duration:390,cost:720},
-  {id:'wildfire',name:'Combate rural/florestal',service:'fire',duration:360,cost:650},
-  {id:'command',name:'Comando e coordenação',service:'fire',duration:540,cost:1000},
-  {id:'advanced-care',name:'Suporte avançado de vida',service:'medical',duration:360,cost:800},
-  {id:'triage',name:'Triagem e catástrofe',service:'medical',duration:480,cost:900},
-  {id:'aeromedical',name:'Evacuação aeromédica',service:'medical',duration:540,cost:1100},
-  {id:'psychology',name:'Intervenção psicológica de emergência',service:'medical',duration:420,cost:760},
-  {id:'pediatric-transport',name:'Transporte pediátrico crítico',service:'medical',duration:480,cost:900},
-  {id:'canine',name:'Unidade cinotécnica',service:'police',duration:360,cost:650},
-  {id:'traffic',name:'Trânsito e cortes de via',service:'police',duration:300,cost:550},
-  {id:'custody',name:'Transporte de detidos',service:'police',duration:300,cost:500},
-  {id:'investigation',name:'Investigação criminal',service:'police',duration:420,cost:760},
-  {id:'public-order',name:'Ordem pública',service:'police',duration:420,cost:750},
+  {id:'hazmat',name:'Matérias perigosas',service:'fire',duration:420,cost:PORTUGAL_ECONOMY.training.hazmat},
+  {id:'rescue',name:'Desencarceramento e salvamento',service:'fire',duration:390,cost:PORTUGAL_ECONOMY.training.rescue},
+  {id:'wildfire',name:'Combate rural/florestal',service:'fire',duration:360,cost:PORTUGAL_ECONOMY.training.wildfire},
+  {id:'command',name:'Comando e coordenação',service:'fire',duration:540,cost:PORTUGAL_ECONOMY.training.command},
+  {id:'advanced-care',name:'Suporte avançado de vida',service:'medical',duration:360,cost:PORTUGAL_ECONOMY.training['advanced-care']},
+  {id:'triage',name:'Triagem e catástrofe',service:'medical',duration:480,cost:PORTUGAL_ECONOMY.training.triage},
+  {id:'aeromedical',name:'Evacuação aeromédica',service:'medical',duration:540,cost:PORTUGAL_ECONOMY.training.aeromedical},
+  {id:'psychology',name:'Intervenção psicológica de emergência',service:'medical',duration:420,cost:PORTUGAL_ECONOMY.training.psychology},
+  {id:'pediatric-transport',name:'Transporte pediátrico crítico',service:'medical',duration:480,cost:PORTUGAL_ECONOMY.training['pediatric-transport']},
+  {id:'canine',name:'Unidade cinotécnica',service:'police',duration:360,cost:PORTUGAL_ECONOMY.training.canine},
+  {id:'traffic',name:'Trânsito e cortes de via',service:'police',duration:300,cost:PORTUGAL_ECONOMY.training.traffic},
+  {id:'custody',name:'Transporte de detidos',service:'police',duration:300,cost:PORTUGAL_ECONOMY.training.custody},
+  {id:'investigation',name:'Investigação criminal',service:'police',duration:420,cost:PORTUGAL_ECONOMY.training.investigation},
+  {id:'public-order',name:'Ordem pública',service:'police',duration:420,cost:PORTUGAL_ECONOMY.training['public-order']},
 ];
 const DEFAULT_ARRS = [
   {id:'arr-incendio',name:'Incêndio urbano',resources:{fire:2,medical:1,police:0}},
