@@ -234,6 +234,7 @@ export function seedIncidentRealism(game,incident,random=Math.random){
   const confidence=clamp(32+random()*26,20,65);
   incident.realism_seeded=true;
   incident.intel_confidence=Math.round(confidence);
+  incident.location_confidence=Math.round(45+random()*38);
   incident.intel_revealed=false;
   incident.reported_needs=reportedNeeds(incident.needs,confidence/100,random);
   incident.reported_casualties=Math.max(0,Math.round((incident.casualties||0)+(random()<.4?(random()<.5?-1:1):0)));
@@ -271,6 +272,7 @@ export function revealIncidentIntel(incident,amount=25,source='central'){
 export function onCallTriage(game,incident,correct){
   ensureRealismState(game);
   revealIncidentIntel(incident,correct?28:10,'triagem 112');
+  incident.location_confidence=clamp((incident.location_confidence||55)+(correct?24:8),0,100);
   if(correct&&incident.caller_reports?.length<3&&hash(incident.id+'second-caller')>.48){
     incident.caller_reports.push({
       id:uid('caller'),
@@ -298,6 +300,7 @@ export function markReconnaissance(game,incident,unit){
   if(!incident||incident.reconnaissance?.complete)return;
   incident.reconnaissance={complete:true,started_at:incident.reconnaissance?.started_at||game.elapsed,completed_at:game.elapsed,unit_id:unit?.id||null};
   revealIncidentIntel(incident,100,'reconhecimento no local');
+  incident.location_confidence=100;
   if(incident.category==='hazmat')incident.operational_zones={hot:true,warm:true,cold:true};
   if(incident.water_supply&&unit?.service==='fire'){
     incident.water_supply.continuous=incident.water_supply.source==='hydrant-network';
@@ -768,7 +771,7 @@ export function tickRealism(game,dt,{log=null,addUnit=null,vehicleDefinition=nul
   processHandover(game,{returnToBase,log});
 
   for(const unit of game.units||[]){
-    if(!['enroute','onscene','transporting','patrol','staging_enroute'].includes(unit.status))continue;
+    if(!['enroute','onscene','transporting','patrol','staging_enroute','event_standby'].includes(unit.status))continue;
     for(const id of unit.personnel_ids||[]){
       const person=game.personnel.find(item=>item.id===id);if(!person)continue;
       if(!personOnDuty(person,date,game.elapsed)){person.overtime_minutes=(person.overtime_minutes||0)+dt/60;game.realism.metrics.overtime_minutes+=dt/60;}
