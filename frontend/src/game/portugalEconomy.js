@@ -14,8 +14,19 @@ export const PORTUGAL_ECONOMY = Object.freeze({
   startingBudget: 2500000,
   reserveFloor: 250000,
   fundingInterval: 600,
-  upkeepInterval: 600,
   employerCostFactor: 1.40,
+  weeklyFixedBuildingRate: Object.freeze({
+    fire:.035/52,
+    medical:.04/52,
+    police:.035/52,
+    command_center:.04/52,
+    hospital:.06/52,
+    prison:.04/52,
+    academy:.04/52,
+    workshop_logistics:.03/52,
+    heliport:.03/52,
+  }),
+  hemWeeklyContract: Math.round(3900000/52),
   dieselPerLitre: 2.221,
   petrol95PerLitre: 2.115,
   waterPerLitre: .00137,
@@ -172,5 +183,12 @@ export const monthlySalaryFor = (service, serviceYears=0, skill=60) => {
 };
 
 export const monthlyEmployerCost = salary => Math.round(Math.max(0,Number(salary)||0)*PORTUGAL_ECONOMY.employerCostFactor);
+export const weeklyEmployerCost = salary => Math.round(monthlyEmployerCost(salary)*12/52);
+
+export const weeklyBuildingFixedCost = type => {
+  const asset=PORTUGAL_ECONOMY.buildings[type]||0;
+  const rate=PORTUGAL_ECONOMY.weeklyFixedBuildingRate[type]||0;
+  return Math.round(asset*rate);
+};
 
 export const vehicleMaintenanceReserveRate = vehicleClass => vehicleClass==='air' ? .04 : ['heavy','special'].includes(vehicleClass) ? .10 : .075;
