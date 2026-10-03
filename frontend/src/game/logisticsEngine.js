@@ -32,6 +32,25 @@ export const LOGISTICS_SUPPLIERS = Object.freeze([
 
 export const LOGISTICS_SUPPLIER_MAP = Object.freeze(Object.fromEntries(LOGISTICS_SUPPLIERS.map(item=>[item.id,item])));
 
+export const STOCK_SHELF_LIFE_DAYS=Object.freeze({
+  hazmat:1825,
+  medical_oxygen:1825,
+  medical:730,
+  medicines:365,
+  trauma:1095,
+  airway:1095,
+  diagnostics:730,
+  disposable_ppe:1095,
+  police:1825,
+  forensics:730,
+  provisions:30,
+  general_logistics:1095,
+});
+const stableHash=value=>{let h=2166136261;for(const ch of String(value)){h^=ch.charCodeAt(0);h=Math.imul(h,16777619);}return (h>>>0)/4294967295;};
+const logisticsDay=game=>Math.floor(Math.max(0,Number(game.elapsed)||0)/86400);
+const shelfLifeSeconds=stockId=>(STOCK_SHELF_LIFE_DAYS[stockId]||0)*86400;
+
+
 const serviceCapacityFactor=(stock,service)=>{
   if(stock.services.includes(service))return 1;
   if(['fuel','adblue','disposable_ppe','provisions','general_logistics'].includes(stock.id))return .45;
@@ -77,10 +96,12 @@ export function ensureBaseLogistics(base){
   base.logistics=base.logistics||{};
   base.logistics.stock=base.logistics.stock||{};
   base.logistics.policy=base.logistics.policy||{};
+  base.logistics.lots=base.logistics.lots||{};
   for(const item of LOGISTICS_STOCKS){
     const capacity=logisticsCapacity(base,item.id);
     if(!Number.isFinite(Number(base.logistics.stock[item.id])))base.logistics.stock[item.id]=Math.round(capacity*initialPercent(item.id));
     else base.logistics.stock[item.id]=Math.max(0,Math.min(capacity,Number(base.logistics.stock[item.id])||0));
+    base.logistics.lots[item.id]=Array.isArray(base.logistics.lots[item.id])?base.logistics.lots[item.id]:[];
     base.logistics.policy[item.id]={
       enabled:item.critical===true,
       min_percent:item.critical?30:20,
@@ -96,7 +117,10 @@ export function ensureBaseLogistics(base){
 
 export function ensureLogisticsState(game){
   game.supply_orders=game.supply_orders||[];
-  game.logistics_metrics={ordered:0,delivered:0,auto_orders:0,spent:0,shortages:0,...(game.logistics_metrics||{})};
+  game.logistics_metrics={ordered:0,delivered:0,auto_orders:0,spent:0,shortages:0,expired:0,transferred:0,recalls:0,...(game.logistics_metrics||{})};
+  game.logistics_disruptions=game.logistics_disruptions||[];
+  game.regional_warehouses=game.regional_warehouses||[];
+  (game.command_centers||[]).forEach(center=>{if(!game.regional_warehouses.some(item=>item.command_center_id===center.id))game.regional_warehouses.push({id:`warehouse-${center.id}`,command_center_id:center.id,name:`Reserva logística · ${center.name}`,active:true,created_at:game.elapsed||0});});
   game.next_logistics_check=game.next_logistics_check??60;
   (game.bases||[]).forEach(ensureBaseLogistics);
   return game;
@@ -115,6 +139,14 @@ export const inboundStock=(game,baseId,stockId)=>(game.supply_orders||[])
 export function consumeBaseStock(base,stockId,amount){
   ensureBaseLogistics(base);
   const requested=Math.max(0,Number(amount)||0),available=Math.max(0,Number(base.logistics.stock[stockId])||0),used=Math.min(requested,available);
+  let remaining=used;
+  const lots=(base.logistics.lots[stockId]||[]).filter(lot=>(lot.quantity||0)>0).sort((a,b)=>(a.expires_at||Infinity)-(b.expires_at||Infinity));
+  for(const lot of lots){
+    if(remaining<=0)break;
+    const take=Math.min(remaining,Math.max(0,Number(lot.quantity)||0));
+    lot.quantity=Math.max(0,(lot.quantity||0)-take);remaining-=take;
+  }
+  base.logistics.lots[stockId]=lots.filter(lot=>(lot.quantity||0)>.0001);
   base.logistics.stock[stockId]=Math.max(0,available-used);
   return {requested,used,shortage:Math.max(0,requested-used)};
 }
@@ -144,12 +176,14 @@ function createOrder(game,{base,stockId,packs,supplierId,auto=false},log=()=>{})
   if(!stock||!base)throw new Error('Artigo ou base logística inválida.');
   ensureBaseLogistics(base);
   const quote=logisticsPackPrice(stockId,supplier.id,packs,base.land);
+  const disruption=(game.logistics_disruptions||[]).find(item=>item.status==='active'&&(item.stock_id===stockId||item.stock_id==='all')&&(item.supplier_id===supplier.id||item.supplier_id==='all'));
+  if(disruption){quote.total=Math.round(quote.total*(disruption.price_factor||1));quote.transport=Math.round(quote.transport*(disruption.price_factor||1));}
   const capacity=logisticsCapacity(base,stockId),current=base.logistics.stock[stockId]||0,inbound=inboundStock(game,base.id,stockId);
   if(current+inbound+quote.quantity>capacity+stock.pack*.01)throw new Error('A encomenda excede a capacidade disponível do armazém.');
   if((game.money||0)-quote.total<reserveFloor(game))throw new Error('Orçamento insuficiente mantendo a reserva operacional.');
   const payment=payCost(game,quote.total,{label:`encomenda logística · ${stock.name}`,log,protectReserve:false});
   if(!payment.ok)throw new Error('Não foi possível processar a encomenda.');
-  const lead=logisticsLeadSeconds(supplier.id,base.land);
+  const lead=Math.round(logisticsLeadSeconds(supplier.id,base.land)*(disruption?.lead_factor||1));
   const order={id:orderId(),base_id:base.id,stock_id:stockId,supplier_id:supplier.id,packs:quote.packs,quantity:quote.quantity,unit:stock.unit,subtotal:quote.subtotal,transport:quote.transport,total:quote.total,status:'transit',auto,created_at:game.elapsed||0,arrives_at:(game.elapsed||0)+lead};
   game.supply_orders.unshift(order);
   game.logistics_metrics.ordered+=quote.quantity;
@@ -184,6 +218,15 @@ export function tickLogistics(game,log=()=>{}){
     const before=base.logistics.stock[order.stock_id]||0;
     const received=Math.max(0,Math.min(order.quantity,capacity-before));
     base.logistics.stock[order.stock_id]=before+received;
+    const life=shelfLifeSeconds(order.stock_id);
+    if(received>0&&life>0)base.logistics.lots[order.stock_id].push({
+      id:order.lot_id||`lot-${order.id}`,
+      quantity:received,
+      received_at:game.elapsed||0,
+      expires_at:(game.elapsed||0)+life,
+      supplier_id:order.supplier_id||'internal',
+      recalled:false,
+    });
     order.received=received;order.status='delivered';order.delivered_at=game.elapsed||0;
     game.logistics_metrics.delivered+=received;
     log(game,`Entrega logística concluída em ${base.name}: ${LOGISTICS_STOCK_MAP[order.stock_id]?.name||order.stock_id} +${received.toLocaleString('pt-PT')} ${order.unit}.`,'success');
@@ -191,6 +234,49 @@ export function tickLogistics(game,log=()=>{}){
 
   if((game.elapsed||0)<(game.next_logistics_check||0))return game;
   game.next_logistics_check=(game.elapsed||0)+60;
+  const day=logisticsDay(game);
+  if(game.last_logistics_disruption_day!==day){
+    game.last_logistics_disruption_day=day;
+    game.logistics_disruptions=(game.logistics_disruptions||[]).filter(item=>item.ends_at>(game.elapsed||0));
+    const storm=game.conditions?.weather==='storm',sample=stableHash(`${day}:supply-disruption`);
+    if(storm||sample>.94){
+      const item=LOGISTICS_STOCKS[Math.floor(stableHash(`${day}:stock`)*LOGISTICS_STOCKS.length)]||LOGISTICS_STOCKS[0];
+      const supplier=LOGISTICS_SUPPLIERS[Math.floor(stableHash(`${day}:supplier`)*LOGISTICS_SUPPLIERS.length)]||LOGISTICS_SUPPLIERS[0];
+      const disruption={id:`disruption-${day}`,stock_id:storm?'all':item.id,supplier_id:storm?'all':supplier.id,price_factor:storm?1.08:1.12,lead_factor:storm?1.45:1.3,status:'active',starts_at:game.elapsed||0,ends_at:(game.elapsed||0)+86400};
+      game.logistics_disruptions.push(disruption);
+      log(game,`Perturbação na cadeia logística: ${storm?'tempestade afeta entregas':item.name+' com disponibilidade condicionada'}.`,'alert');
+    }
+  }
+  for(const base of (game.bases||[])){
+    ensureBaseLogistics(base);
+    for(const item of LOGISTICS_STOCKS){
+      const lots=base.logistics.lots[item.id]||[];
+      let expired=0;
+      for(const lot of lots){
+        if(!lot.recalled&&lot.expires_at&&(game.elapsed||0)>=lot.expires_at&&lot.quantity>0){expired+=lot.quantity;lot.quantity=0;}
+      }
+      if(expired>0){
+        base.logistics.stock[item.id]=Math.max(0,(base.logistics.stock[item.id]||0)-expired);
+        game.logistics_metrics.expired+=expired;
+        log(game,`${base.name}: ${expired.toLocaleString('pt-PT')} ${item.unit} de ${item.name} expirou e foi retirado do stock.`,'alert');
+      }
+      base.logistics.lots[item.id]=lots.filter(lot=>(lot.quantity||0)>.0001);
+    }
+  }
+  const recallWeek=Math.floor(day/7);
+  if(game.last_logistics_recall_week!==recallWeek){
+    game.last_logistics_recall_week=recallWeek;
+    if(stableHash(`${recallWeek}:recall`)>.985){
+      const candidateBases=(game.bases||[]).filter(base=>Object.values(base.logistics?.lots||{}).some(lots=>lots?.some(lot=>(lot.quantity||0)>0)));
+      const base=candidateBases[Math.floor(stableHash(`${recallWeek}:recall-base`)*candidateBases.length)];
+      if(base){
+        const stockIds=Object.entries(base.logistics.lots).filter(([,lots])=>lots.some(lot=>(lot.quantity||0)>0)).map(([id])=>id);
+        const stockId=stockIds[Math.floor(stableHash(`${recallWeek}:recall-stock`)*stockIds.length)],lot=(base.logistics.lots[stockId]||[]).find(item=>(item.quantity||0)>0);
+        if(lot){const removed=lot.quantity;lot.recalled=true;lot.quantity=0;base.logistics.stock[stockId]=Math.max(0,(base.logistics.stock[stockId]||0)-removed);game.logistics_metrics.recalls++;log(game,`Recall de fornecedor: lote de ${LOGISTICS_STOCK_MAP[stockId]?.name||stockId} retirado em ${base.name}.`,'alert');}
+      }
+    }
+  }
+
   for(const base of (game.bases||[]).filter(item=>item.enabled!==false)){
     ensureBaseLogistics(base);
     if(!base.logistics.auto_reorder)continue;
@@ -295,15 +381,39 @@ export function applyLogisticsAction(game,kind,data={},log=()=>{}){
     log(game,`Política logística atualizada em ${base.name}.`,'success');
     return true;
   }
-  if(kind==='cancel_supply_order'){
+  if(kind==='transfer_supply_stock'){
+    const source=game.bases.find(item=>item.id===data.source_base_id),target=game.bases.find(item=>item.id===data.target_base_id),stock=LOGISTICS_STOCK_MAP[data.stock_id];
+    if(!source||!target||!stock||source.id===target.id)throw new Error('Transferência logística inválida.');
+    if(source.land!==target.land)throw new Error('Transferências entre continente e ilhas exigem cadeia logística externa.');
+    ensureBaseLogistics(source);ensureBaseLogistics(target);
+    const quantity=Math.max(stock.pack,Math.round(Number(data.quantity)||stock.pack));
+    if((source.logistics.stock[stock.id]||0)<quantity)throw new Error('Stock insuficiente na base de origem.');
+    const capacity=logisticsCapacity(target,stock.id),inbound=inboundStock(game,target.id,stock.id);
+    if((target.logistics.stock[stock.id]||0)+inbound+quantity>capacity)throw new Error('A base de destino não tem capacidade suficiente.');
+    const transferCost=Math.max(35,Math.round(quantity*stock.unit_price*.025));
+    if((game.money||0)-transferCost<reserveFloor(game))throw new Error('Orçamento insuficiente para a transferência logística.');
+    payCost(game,transferCost,{label:`transferência logística · ${stock.name}`,log,protectReserve:false});
+    consumeBaseStock(source,stock.id,quantity);
+    const order={id:orderId(),base_id:target.id,source_base_id:source.id,stock_id:stock.id,supplier_id:'internal',packs:Math.ceil(quantity/stock.pack),quantity,unit:stock.unit,subtotal:0,transport:transferCost,total:transferCost,status:'transit',auto:false,internal_transfer:true,created_at:game.elapsed||0,arrives_at:(game.elapsed||0)+Math.max(60,Math.round(90+quantity/Math.max(1,stock.pack)*8))};
+    game.supply_orders.unshift(order);game.logistics_metrics.transferred+=quantity;
+    log(game,`Transferência iniciada: ${stock.name} · ${quantity.toLocaleString('pt-PT')} ${stock.unit} · ${source.name} → ${target.name}.`,'success');
+    return true;
+  }
+    if(kind==='cancel_supply_order'){
     const order=game.supply_orders.find(item=>item.id===data.order_id);
     if(!order||order.status!=='transit')throw new Error('A encomenda já não pode ser cancelada.');
     if((game.elapsed||0)-order.created_at>30)throw new Error('O fornecedor já processou a encomenda.');
     order.status='cancelled';order.cancelled_at=game.elapsed||0;
-    const refund=Math.round(order.total*.95);
-    game.money=(game.money||0)+refund;
-    game.logistics_metrics.spent=Math.max(0,(game.logistics_metrics.spent||0)-refund);
-    log(game,`Encomenda cancelada · reembolso ${refund.toLocaleString('pt-PT')} €.`,'success');
+    if(order.internal_transfer){
+      const source=game.bases.find(item=>item.id===order.source_base_id);
+      if(source){ensureBaseLogistics(source);source.logistics.stock[order.stock_id]=Math.min(logisticsCapacity(source,order.stock_id),(source.logistics.stock[order.stock_id]||0)+(order.quantity||0));}
+      log(game,'Transferência interna cancelada; stock devolvido à origem.','success');
+    }else{
+      const refund=Math.round(order.total*.95);
+      game.money=(game.money||0)+refund;
+      game.logistics_metrics.spent=Math.max(0,(game.logistics_metrics.spent||0)-refund);
+      log(game,`Encomenda cancelada · reembolso ${refund.toLocaleString('pt-PT')} €.`,'success');
+    }
     return true;
   }
   return false;
