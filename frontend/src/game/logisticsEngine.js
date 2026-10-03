@@ -243,6 +243,7 @@ const incidentConsumption=(incident,service,unitCount)=>{
 
 export function consumeIncidentLogistics(game,incident,assignedUnits,log=()=>{}){
   ensureLogisticsState(game);
+  const usageFactor=incident?.false_alarm?.18:1;
   const byBase=new Map();
   for(const unit of assignedUnits||[]){
     if(!byBase.has(unit.base_id))byBase.set(unit.base_id,[]);
@@ -258,7 +259,7 @@ export function consumeIncidentLogistics(game,incident,assignedUnits,log=()=>{})
       const usage=incidentConsumption(incident,service,serviceUnits.length);
       for(const [stockId,amount] of Object.entries(usage)){
         if(amount<=0)continue;
-        const result=consumeBaseStock(base,stockId,amount);
+        const result=consumeBaseStock(base,stockId,amount*usageFactor);
         totalShortage+=result.shortage;
       }
     }
