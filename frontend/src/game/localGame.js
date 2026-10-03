@@ -516,9 +516,9 @@ export function tickGame(input,seconds){
   applyPeriodicFunding(g,log);
   ensureReserve(g,log,'garantia mínima de continuidade operacional');
   refreshProgression(g);
-  if(g.elapsed>=g.next_spawn){const cap=g.progression.mission_cap;if(g.incidents.length<cap)spawn(g);if(g.level>=3&&g.incidents.length<Math.max(1,cap-2)&&gameRandom(g)<.28)spawn(g);g.next_spawn=g.elapsed+Math.max(100,210-g.level*8);}
+  if(g.elapsed>=g.next_spawn){const cap=g.progression.mission_cap,riskIndex=Math.max(1,...Object.values(g.risk_forecast||{}).map(item=>Number(item?.index)||1));if(g.incidents.length<cap)spawn(g);if(g.level>=3&&g.incidents.length<Math.max(1,cap-2)&&gameRandom(g)<Math.min(.5,.22+riskIndex*.06))spawn(g);g.next_spawn=g.elapsed+Math.max(75,Math.round((210-g.level*8)/riskIndex));}
   tickAdvancedState(g,dt,log,()=>gameRandom(g));
-  tickRealism(g,dt,{log,addUnit,vehicleDefinition,vehicleCatalog:VEHICLE_CATALOG,returnToBase});
+  tickRealism(g,dt,{log,addUnit,vehicleDefinition,vehicleCatalog:VEHICLE_CATALOG,returnToBase,spawn:(scenario,node,commandId)=>{if(g.incidents.length>=g.progression.mission_cap)return null;return spawn(g,scenario,node,commandId);}});
   syncBaseQualifications(g);
   return refreshProgression(g);
 }
