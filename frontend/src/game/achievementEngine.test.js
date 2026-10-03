@@ -10,7 +10,7 @@ import {
 
 const baseGame = () => ({
   elapsed:0,
-  money:40000,
+  money:2500000,
   xp:0,
   level:1,
   completed:0,
@@ -51,8 +51,8 @@ describe('1000 achievement system', () => {
   test('total rewards remain bounded compared with long-term operational income', () => {
     const money=ACHIEVEMENT_CATALOG.reduce((sum,item)=>sum+item.reward_money,0);
     const xp=ACHIEVEMENT_CATALOG.reduce((sum,item)=>sum+item.reward_xp,0);
-    expect(money).toBeGreaterThan(250000);
-    expect(money).toBeLessThan(600000);
+    expect(money).toBeGreaterThan(3000000);
+    expect(money).toBeLessThan(10000000);
     expect(xp).toBeGreaterThan(15000);
     expect(xp).toBeLessThan(40000);
   });
@@ -61,7 +61,7 @@ describe('1000 achievement system', () => {
     const game=baseGame();
     const unlocked=syncAchievements(game);
     expect(unlocked).toHaveLength(0);
-    expect(game.money).toBe(40000);
+    expect(game.money).toBe(2500000);
     expect(game.xp).toBe(0);
   });
 
