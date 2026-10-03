@@ -769,7 +769,13 @@ export function tickRealism(game,dt,{log=null,addUnit=null,vehicleDefinition=nul
 export function incidentOperationalCost(game,incident,assignedUnits=[]){
   const fuel=assignedUnits.reduce((sum,unit)=>sum+Math.max(0,unit.route_distance||0)/1000*Math.max(1,unit.fuel_consumption_l_100km||12)/100*2.221,0);
   const consumables=(incident.rarity_level||1)*65+(incident.casualties||0)*80+assignedUnits.length*28;
-  const overtime=assignedUnits.flatMap(unit=>unit.personnel_ids||[]).map(id=>game.personnel.find(person=>person.id===id)).filter(Boolean).reduce((sum,person)=>sum+(person.overtime_minutes||0)/60*((person.salary||1500)/160)*1.5,0);
+  const overtime=assignedUnits.reduce((sum,unit)=>{
+    const current=(unit.personnel_ids||[]).reduce((minutes,id)=>minutes+(game.personnel.find(person=>person.id===id)?.overtime_minutes||0),0);
+    const delta=Math.max(0,current-(unit.dispatch_overtime_start||0));
+    const crew=(unit.personnel_ids||[]).map(id=>game.personnel.find(person=>person.id===id)).filter(Boolean);
+    const hourly=crew.length?crew.reduce((value,person)=>value+((person.salary||1500)/160),0)/crew.length:10;
+    return sum+delta/60*hourly*1.5;
+  },0);
   const repairs=assignedUnits.reduce((sum,unit)=>sum+(unit.wear||0)*1.4,0);
   const external=(game.mutual_aid||[]).filter(item=>item.incident_id===incident.id).reduce((sum,item)=>sum+(item.cost||0),0);
   const total=fuel+consumables+overtime+repairs+external;
