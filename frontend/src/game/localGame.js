@@ -405,7 +405,8 @@ const crewAdjustedRoute=(g,unit,plan,incident=null)=>{
   const communicationsPenalty=g.infrastructure_state?.communications==='degraded'?1.08:1;
   const closurePenalty=incident?.road_closure?1.1:1;
   const factor=crewFactor*weatherPenalty*terrainPenalty*communicationsPenalty*closurePenalty;
-  const preparation=Math.max(0,(Number(unit.preparation_time)||0)+(Number(unit.response_delay)||0));
+  const searchDelay=incident?Math.max(0,65-(Number(incident.location_confidence)||55))*2:0;
+  const preparation=Math.max(0,(Number(unit.preparation_time)||0)+(Number(unit.response_delay)||0)+searchDelay);
   const travelDuration=Math.max(1,(Number(plan.duration)||0)*factor),duration=preparation+travelDuration;
   return {...plan,duration,times:plan.times.map((time,index)=>index===0?0:preparation+Math.max(0,Number(time)||0)*factor),preparation_time:preparation};
 };
