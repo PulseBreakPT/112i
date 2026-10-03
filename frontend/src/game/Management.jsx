@@ -7,6 +7,8 @@ import { SERVICE, ServiceIcon, money, STATUS, duration } from './common';
 import { vehicleImage, VehicleThumbnail } from './vehicleMedia';
 import { fetchRoadRoute } from './localGame';
 import { vehicleRatings, maintenanceQuote, resaleValue, crewFatigue, adjustedRoutePlan, fuelPercentForDistance } from './vehicleSystems';
+import { capitalQuote, baseUpgradeNet } from './portugalEconomy';
+import { reserveFloor } from './engines/economyEngine';
 import FleetAdvancedControls from './FleetAdvancedControls';
 import OperationalComplexes from './OperationalComplexes';
 const VehicleArt = ({ service, vehicleType, name }) => {
@@ -18,7 +20,6 @@ const VehicleArt = ({ service, vehicleType, name }) => {
 };
 
 const installed = (base, id) => (base.extensions || []).find(extension => extension.id === id);
-const upgradeCost = base => Math.round(1800 * Math.pow(base.level || 1, 1.35));
 
 const VEHICLE_CAPABILITY_LABELS = {
   'fire-response':'Resposta a incêndio','urban-fire':'Incêndio urbano','rescue-basic':'Salvamento básico','water-supply':'Abastecimento de água',
@@ -49,7 +50,11 @@ export default function Management({ game, world, act, busy, mode }) {
   const transferRequest = useRef(0);
   const fleet = mode === 'fleet';
   const buildPrice = game.progression?.next_building_costs?.[service] || world.services[service].base_price;
+  const buildSite = world.sites.find(option => option.id === site);
+  const buildQuote = capitalQuote(buildPrice, buildSite?.land || 'mainland', 'base');
   const selectedVehicle = purchase && world.vehicle_catalog[purchase.service].find(vehicle => vehicle.id === purchase.vehicle_type);
+  const purchaseBase = baseId ? game.bases.find(base => base.id === baseId) : null;
+  const vehicleQuote = selectedVehicle && purchaseBase ? capitalQuote(selectedVehicle.price, purchaseBase.land || 'mainland', selectedVehicle.vehicle_class === 'air' ? 'aircraft' : 'vehicle') : null;
   const assigned = base => game.units.filter(unit => unit.base_id === base.id).reduce((sum, unit) => sum + (unit.crew_assigned || 0), 0);
   const capacity = base => base.capacity || 2;
   const unitCount = base => game.units.filter(unit => unit.base_id === base.id).length;
@@ -155,6 +160,7 @@ export default function Management({ game, world, act, busy, mode }) {
         const count = unitCount(base);
         const staffUsed = assigned(base);
         const specializations = world.specializations[base.service] || [];
+        const upgradeQuote = capitalQuote(baseUpgradeNet(base), base.land || 'mainland', 'upgrade');
         return <article className="base-card developed-base" key={base.id} data-testid={`base-card-${index}`} style={{ '--service-color': SERVICE[base.service].ink }}>
           <div className="base-illustration"><div className="base-skyline"><span /><span /><span /><span /><span /></div><Building2 size={62} strokeWidth={1} /><div className="base-service-label"><ServiceIcon service={base.service} size={13} />{SERVICE[base.service].short}</div></div>
           <div className="base-info">
@@ -165,7 +171,7 @@ export default function Management({ game, world, act, busy, mode }) {
             <div className="staff-line"><Users size={14} /><span>Pessoal afeto</span><strong>{staffUsed}/{base.personnel || 0}</strong><small>cap. {base.staff_capacity || 14}</small></div>
             <div className="base-actions">
               <button data-testid={`base-buy-vehicle-${index}`} disabled={base.operational_at > game.elapsed || count >= capacity(base)} onClick={() => openPurchase(base.service, world.vehicle_catalog[base.service][0])}>Adquirir viatura <ArrowUpRight size={15} /></button>
-              <button data-action-tone={(game.money||0) >= upgradeCost(base) ? 'positive' : 'supported'} disabled={busy || base.operational_at > game.elapsed || (base.level || 1) >= 10} onClick={() => run('upgrade_base', { base_id: base.id }, `${base.name} melhorada.`)}><Wrench size={14} /> Melhorar · {money(upgradeCost(base))}</button>
+              <button data-action-tone={(game.money||0)-reserveFloor(game) >= upgradeQuote.own ? 'positive' : 'supported'} disabled={busy || base.operational_at > game.elapsed || (base.level || 1) >= 10} onClick={() => run('upgrade_base', { base_id: base.id }, `${base.name} melhorada.`)}><Wrench size={14} /> Melhorar · {money(upgradeQuote.own)} próprios</button>
               
               <button className={base.mission_generation_enabled!==false?'active':''} onClick={()=>run('toggle_building_generation',{building_id:base.id,enabled:base.mission_generation_enabled===false},base.mission_generation_enabled===false?'Base reativada.':'Geração de ocorrências suspensa.')}><Power size={12}/>{base.mission_generation_enabled===false?'Reativar base':'Suspender geração'}</button>
             </div>
@@ -175,8 +181,9 @@ export default function Management({ game, world, act, busy, mode }) {
               <div className="extension-list">{(world.extensions[base.service] || []).map(extension => {
                 const state = installed(base, extension.id);
                 const locked = (base.level || 1) < extension.level;
-                return <button key={extension.id} data-action-tone={state ? 'neutral' : ((game.money||0) >= Math.round(extension.cost*.8) ? 'positive' : 'supported')} className={state?.active ? 'active' : state ? 'installed' : ''} disabled={busy || locked || !!state?.completes_at} onClick={() => run('toggle_extension', { base_id: base.id, extension_id: extension.id }, state ? null : `${extension.name}: obras iniciadas.`)}>
-                  <Power size={12} /> <span>{extension.name}<small>{locked ? `Nível ${extension.level}` : state?.completes_at ? `Obras · ${Math.ceil((state.completes_at-game.elapsed)/60)} min` : state ? (state.active ? 'Ativa' : 'Inativa') : money(Math.round(extension.cost*.8))}</small></span>
+                const extensionQuote = capitalQuote(extension.cost, base.land || 'mainland', 'extension');
+                return <button key={extension.id} data-action-tone={state ? 'neutral' : ((game.money||0)-reserveFloor(game) >= extensionQuote.own ? 'positive' : 'supported')} className={state?.active ? 'active' : state ? 'installed' : ''} disabled={busy || locked || !!state?.completes_at} onClick={() => run('toggle_extension', { base_id: base.id, extension_id: extension.id }, state ? null : `${extension.name}: obras iniciadas.`)}>
+                  <Power size={12} /> <span>{extension.name}<small>{locked ? `Nível ${extension.level}` : state?.completes_at ? `Obras · ${Math.ceil((state.completes_at-game.elapsed)/60)} min` : state ? (state.active ? 'Ativa' : 'Inativa') : money(extensionQuote.own)+' próprios'}</small></span>
                 </button>;
               })}</div>
             </div>
@@ -205,12 +212,12 @@ export default function Management({ game, world, act, busy, mode }) {
           <div className="vehicle-category"><ServiceIcon service={serviceId} size={17} />{SERVICE[serviceId].short}<span>{vehicle.level > 1 ? 'ESPECIALIZADA' : 'CONVENCIONAL'}</span></div>
           <VehicleArt service={serviceId} vehicleType={vehicle.id} name={vehicle.name} /><h3>{vehicle.name}</h3>
           <p>{vehicle.crew} elementos · {vehicle.vehicle_class} · resposta ×{Number(vehicle.speed_multiplier || 1).toFixed(2)} · {vehicle.patient_capacity || 0} vítima(s) · {vehicle.detainee_capacity || 0} detido(s) · Base nível {vehicle.level}{extensionName ? ` · ${extensionName}` : ''}{vehicle.training ? ' · Formação obrigatória' : ''}</p>
-          <div className="vehicle-price"><strong>{money(vehicle.price)}</strong><Button className="outline-button" data-testid={vehicleIndex === 0 ? `buy-vehicle-${serviceId}` : `buy-special-${serviceId}-${vehicle.id}`} onClick={() => openPurchase(serviceId, vehicle)} disabled={!eligible}><Plus size={15} /> {eligible ? 'Adquirir' : 'Bloqueado'}</Button></div>
+          <div className="vehicle-price"><strong>{money(vehicle.price)} <small>base s/ IVA</small></strong><Button className="outline-button" data-testid={vehicleIndex === 0 ? `buy-vehicle-${serviceId}` : `buy-special-${serviceId}-${vehicle.id}`} onClick={() => openPurchase(serviceId, vehicle)} disabled={!eligible}><Plus size={15} /> {eligible ? 'Adquirir' : 'Bloqueado'}</Button></div>
         </article>;
       }))}</div>
     </>}
 
-    <Dialog open={buildOpen} onOpenChange={setBuildOpen}><DialogContent className="game-modal" data-testid="build-base-modal"><div className="modal-eyebrow"><Building2 size={15} /> EXPANSÃO DA REDE</div><DialogTitle>Construir uma base</DialogTitle><DialogDescription>O preço cresce de forma moderada com a rede. A reserva operacional é protegida e o investimento elegível recebe cofinanciamento automático.</DialogDescription><label className="field-label">Centro de Comando<select value={commandCenterId} onChange={event=>setCommandCenterId(event.target.value)}>{(game.command_centers||[]).filter(center=>center.active!==false).map(center=><option value={center.id} key={center.id}>{center.name}</option>)}</select></label><label className="field-label">Serviço<select data-testid="base-service-select" value={service} onChange={event => setService(event.target.value)}>{Object.entries(SERVICE).map(([key, info]) => <option key={key} value={key}>{info.name}</option>)}</select></label><label className="field-label">Localização<select data-testid="base-site-select" value={site} onChange={event => setSite(event.target.value)}>{world.sites.map(option => <option key={option.id} value={option.id} disabled={option.unlock_level > game.level || game.bases.some(base => base.node === option.node && base.service === service)}>{option.name}{option.unlock_level > game.level ? ` · Nível ${option.unlock_level}` : game.bases.some(base => base.node === option.node && base.service === service) ? ' · Ocupado' : ''}</option>)}</select></label><div className="purchase-total"><span>Investimento progressivo</span><strong data-testid="base-price">{money(buildPrice)}</strong></div><Button data-testid="buy-station-button" data-action-tone={(game.money||0) >= buildPrice ? 'positive' : 'supported'} className="primary-button" disabled={busy || !commandCenterId || game.bases.some(base => base.node === world.sites.find(option => option.id === site)?.node && base.service === service)} onClick={build}><Building2 size={16} />Confirmar construção · cofinanciamento automático</Button></DialogContent></Dialog>
+    <Dialog open={buildOpen} onOpenChange={setBuildOpen}><DialogContent className="game-modal" data-testid="build-base-modal"><div className="modal-eyebrow"><Building2 size={15} /> EXPANSÃO DA REDE</div><DialogTitle>Construir uma base</DialogTitle><DialogDescription>Referência portuguesa 2025–2026: preço-base sem IVA, IVA regional e comparticipação pública calculados separadamente.</DialogDescription><label className="field-label">Centro de Comando<select value={commandCenterId} onChange={event=>setCommandCenterId(event.target.value)}>{(game.command_centers||[]).filter(center=>center.active!==false).map(center=><option value={center.id} key={center.id}>{center.name}</option>)}</select></label><label className="field-label">Serviço<select data-testid="base-service-select" value={service} onChange={event => setService(event.target.value)}>{Object.entries(SERVICE).map(([key, info]) => <option key={key} value={key}>{info.name}</option>)}</select></label><label className="field-label">Localização<select data-testid="base-site-select" value={site} onChange={event => setSite(event.target.value)}>{world.sites.map(option => <option key={option.id} value={option.id} disabled={option.unlock_level > game.level || game.bases.some(base => base.node === option.node && base.service === service)}>{option.name}{option.unlock_level > game.level ? ` · Nível ${option.unlock_level}` : game.bases.some(base => base.node === option.node && base.service === service) ? ' · Ocupado' : ''}</option>)}</select></label><div className="purchase-total"><span>Investimento total com IVA</span><strong data-testid="base-price">{money(buildQuote.total)}</strong><small>Preço-base {money(buildQuote.net)} · apoio público {money(buildQuote.grant)} · esforço próprio {money(buildQuote.own)}</small></div><Button data-testid="buy-station-button" data-action-tone={(game.money||0)-reserveFloor(game) >= buildQuote.own ? 'positive' : 'supported'} className="primary-button" disabled={busy || !commandCenterId || game.bases.some(base => base.node === world.sites.find(option => option.id === site)?.node && base.service === service)} onClick={build}><Building2 size={16} />Confirmar · {money(buildQuote.own)} próprios</Button></DialogContent></Dialog>
     <Dialog open={!!selectedUnit} onOpenChange={open => { if (!open) { transferRequest.current += 1; setUnitOpenId(null); setTargetBaseId(''); setTransferEstimate(null); setTransferBusy(false); } }}>
       <DialogContent className="game-modal vehicle-command-modal" data-testid="fleet-unit-modal">
         {selectedUnit && <>
@@ -416,6 +423,6 @@ export default function Management({ game, world, act, busy, mode }) {
         </>}
       </DialogContent>
     </Dialog>
-    <Dialog open={!!purchase} onOpenChange={open => !open && setPurchase(null)}><DialogContent className="game-modal" data-testid="buy-vehicle-modal"><div className="modal-eyebrow"><CarFront size={15} /> NOVA VIATURA</div><DialogTitle>Reforçar a frota</DialogTitle><DialogDescription>{selectedVehicle?.name} · {selectedVehicle?.crew} elementos</DialogDescription>{purchase && selectedVehicle && <><VehicleArt service={purchase.service} vehicleType={selectedVehicle.id} name={selectedVehicle.name} /><label className="field-label">Base de afetação<select data-testid="vehicle-base-select" value={baseId} onChange={event => setBaseId(event.target.value)}>{availableBases.map(base => <option key={base.id} value={base.id}>{base.name} ({unitCount(base)}/{capacity(base)} viaturas · {(base.personnel || 0) - assigned(base)} disponíveis)</option>)}</select></label><div className="purchase-total"><span>Viatura</span><strong data-testid="vehicle-purchase-price">{money(selectedVehicle.price)}</strong></div><Button data-testid="buy-vehicle-button" data-action-tone={(game.money||0) >= (selectedVehicle?.price||0) ? 'positive' : 'supported'} className="primary-button" disabled={busy || !baseId} onClick={buy}><Plus size={16} />Confirmar aquisição</Button></>}</DialogContent></Dialog>
+    <Dialog open={!!purchase} onOpenChange={open => !open && setPurchase(null)}><DialogContent className="game-modal" data-testid="buy-vehicle-modal"><div className="modal-eyebrow"><CarFront size={15} /> NOVA VIATURA</div><DialogTitle>Reforçar a frota</DialogTitle><DialogDescription>{selectedVehicle?.name} · {selectedVehicle?.crew} elementos</DialogDescription>{purchase && selectedVehicle && <><VehicleArt service={purchase.service} vehicleType={selectedVehicle.id} name={selectedVehicle.name} /><label className="field-label">Base de afetação<select data-testid="vehicle-base-select" value={baseId} onChange={event => setBaseId(event.target.value)}>{availableBases.map(base => <option key={base.id} value={base.id}>{base.name} ({unitCount(base)}/{capacity(base)} viaturas · {(base.personnel || 0) - assigned(base)} disponíveis)</option>)}</select></label><div className="purchase-total"><span>Investimento total com IVA</span><strong data-testid="vehicle-purchase-price">{money(vehicleQuote?.total||selectedVehicle.price)}</strong><small>Preço-base {money(selectedVehicle.price)} · apoio público {money(vehicleQuote?.grant||0)} · esforço próprio {money(vehicleQuote?.own||selectedVehicle.price)}</small></div><Button data-testid="buy-vehicle-button" data-action-tone={(game.money||0)-reserveFloor(game) >= (vehicleQuote?.own||selectedVehicle?.price||0) ? 'positive' : 'supported'} className="primary-button" disabled={busy || !baseId} onClick={buy}><Plus size={16} />Confirmar · {money(vehicleQuote?.own||selectedVehicle.price)} próprios</Button></>}</DialogContent></Dialog>
   </main>;
 }
