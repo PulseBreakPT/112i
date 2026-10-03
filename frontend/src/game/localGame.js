@@ -219,6 +219,26 @@ const incidentSpecialty=(incident,state='moderate')=>{
   if(['road','rescue','disaster','multi','water_rescue'].includes(incident?.category))return 'trauma';
   return state==='light'?'urgency':'trauma';
 };
+const initialPatientVitals=(state,severity,random=Math.random)=>{
+  const table={
+    light:{heart_rate:78,spo2:98,systolic_bp:126,respiratory_rate:15,gcs:15,bleeding:'none'},
+    moderate:{heart_rate:94,spo2:96,systolic_bp:114,respiratory_rate:19,gcs:15,bleeding:'minor'},
+    severe:{heart_rate:112,spo2:93,systolic_bp:98,respiratory_rate:24,gcs:13,bleeding:'moderate'},
+    critical:{heart_rate:128,spo2:87,systolic_bp:78,respiratory_rate:31,gcs:8,bleeding:'severe'},
+    pcr:{heart_rate:0,spo2:68,systolic_bp:0,respiratory_rate:0,gcs:3,bleeding:'critical'},
+  };
+  const base=table[state]||table[['','light','moderate','severe','critical','pcr'][severity]||'moderate'];
+  const jitter=(value,span,min=0)=>Math.max(min,Math.round(value+(random()-.5)*span));
+  return {
+    heart_rate:base.heart_rate?jitter(base.heart_rate,10,20):0,
+    spo2:jitter(base.spo2,4,45),
+    systolic_bp:base.systolic_bp?jitter(base.systolic_bp,12,45):0,
+    respiratory_rate:base.respiratory_rate?jitter(base.respiratory_rate,5,4):0,
+    gcs:jitter(base.gcs,2,3),
+    bleeding:base.bleeding,
+    updated_at:0,
+  };
+};
 const promoteIncidentRarity=(incident,steps=1)=>{
   const level=Math.max(1,Math.min(6,(incident.rarity_level||1)+Math.max(1,steps))),rarity=RARITY_LEVELS[level]||RARITY_LEVELS[1];
   incident.rarity_level=level;incident.rarity_id=rarity.id;incident.rarity_label=rarity.label;incident.reputation_reward=Math.max(incident.reputation_reward||0,level*3);
@@ -345,7 +365,7 @@ const createAftercare=(g,incident,careQuality=.5,{includeDetainees=true,failed=f
     Object.entries(severityByState).forEach(([state,severity])=>{for(let index=0;index<(states[state]||0);index++)victims.push({state,severity});});
     victims.slice(0,incident.casualties).forEach(({state,severity})=>{
       const specialty=incidentSpecialty(incident,state),quality=Math.max(.15,Math.min(1.5,careQuality*(failed?.7:1)));
-      g.patients.push({id:uid(),incident:incident.title,source_node:incident.node,city:incident.district,severity,clinical_state:state,specialty,needs_doctor:severity>=3,transport_required:severity>=2||gameRandom(g)<(incident.transport_probability||.58),treatment_progress:Math.round((failed?5:18)+quality*(failed?10:22)),care_quality:quality,stability:Math.max(5,100-severity*16+quality*8-(failed?12:0)),source_player_planned:incident.player_planned===true,status:'waiting',created:g.elapsed,hospital_id:null});
+      g.patients.push({id:uid(),incident:incident.title,source_node:incident.node,city:incident.district,severity,clinical_state:state,specialty,needs_doctor:severity>=3,transport_required:severity>=2||gameRandom(g)<(incident.transport_probability||.58),treatment_progress:Math.round((failed?5:18)+quality*(failed?10:22)),care_quality:quality,stability:Math.max(5,100-severity*16+quality*8-(failed?12:0)),vitals:{...initialPatientVitals(state,severity,()=>gameRandom(g)),updated_at:g.elapsed},mechanism:incident.category||incident.service,source_player_planned:incident.player_planned===true,status:'waiting',created:g.elapsed,hospital_id:null});
     });
     log(g,`${Math.min(victims.length,incident.casualties)} vítima(s) aguardam estabilização/transporte hospitalar.`,failed?'alert':'info');
   }
@@ -367,7 +387,7 @@ const resolveIncident=(g,incident,success)=>{
   consumeIncidentLogistics(g,incident,assignedUnits.filter(unit=>unit.status==='onscene'||unit.status==='transporting'),log);
   applyOperationalRisk(g,incident,assignedUnits,()=>gameRandom(g),log);
   recordAchievementIncident(g,incident,success,performance);
-  const rawPayout=incident.false_alarm?Math.round(incident.reward*.25):Math.round(incident.reward*trustFactor*seasonal*performance.multiplier);const payout=success?missionPayout(g,incident,rawPayout):0;const afterAction=buildAfterActionReport(g,incident,performance,assignedUnits,success);afterAction.reward=payout;incident.cost_ledger=afterAction.costs;
+  const rawPayout=incident.false_alarm?Math.round(incident.reward*.25):Math.round(incident.reward*trustFactor*seasonal*performance.multiplier);const payout=success?missionPayout(g,incident,rawPayout):0;const afterAction=buildAfterActionReport(g,incident,performance,assignedUnits,success);afterAction.reward=payout;incident.cost_ledger=afterAction.costs;if(afterAction.costs.overtime>0){payCost(g,afterAction.costs.overtime,{label:'horas extra da ocorrência',log,protectReserve:true});afterAction.costs.overtime_paid=afterAction.costs.overtime;}
   log(g,`${incident.title} — ${success?(incident.false_alarm?'falso alarme confirmado.':'resolvida.'):'prazo de resposta excedido.'}`,success?'success':'alert');
   g.history.unshift({id:incident.id,title:incident.title,service:incident.service,success,reward:payout,xp:incident.xp,rarity_level:incident.rarity_level,rarity_label:incident.rarity_label,category:incident.category,category_label:incident.category_label,performance_score:performance.score,performance_bonus:performance.bonus,operational_cost:afterAction.costs.total,tactic:incident.tactical_plan?.option||'balanced',intel_confidence:incident.intel_confidence||0,time:g.elapsed,real_time:new Date().toISOString()});g.history=g.history.slice(0,100);
   g.units.filter(u=>u.incident_id===incident.id).forEach(u=>{u.missions_total=(u.missions_total||0)+1;if(success)u.missions_success=(u.missions_success||0)+1;if(incident.priority===1)u.critical_incidents=(u.critical_incidents||0)+1;u.fatigue=Math.min(100,(u.fatigue||0)+24);u.condition=Math.max(10,(u.condition||100)-(incident.priority===1?4:2));(u.personnel_ids||[]).forEach(personId=>{const person=g.personnel.find(item=>item.id===personId);if(person){const endurance=Math.max(0,Math.min(100,person.endurance??60)),fatigueGain=Math.max(10,Math.round(18*(1-(endurance-50)/220))),stressGain=success?(incident.priority===1?6:3):(incident.priority===1?13:9),healthLoss=success?(incident.priority===1?1:0):(incident.priority===1?4:2);person.experience=(person.experience||0)+(success?12:4);person.level=personnelLevel(person.experience);person.rank=personnelRank(person.experience);person.fatigue=Math.min(100,(person.fatigue||0)+fatigueGain);person.stress=Math.min(100,(person.stress||0)+stressGain);person.morale=Math.max(0,Math.min(100,(person.morale??80)+(success?2:-5)));person.health=Math.max(20,Math.min(100,(person.health??100)-healthLoss));person.missions_completed=(person.missions_completed||0)+1;if(success)person.successes=(person.successes||0)+1;else{person.failures=(person.failures||0)+1;if(healthLoss>=3)person.injuries=(person.injuries||0)+1;}person.commendations=Math.max(person.commendations||0,Math.floor((person.successes||0)/10));}});if(u.resources){const resourceFactor=Math.max(.55,Math.min(1.5,Number(incident.consumption_multiplier)||1)),continuousWater=incident.water_supply?.continuous===true;const use=u.service==='fire'?{water:(continuousWater?180:650)*resourceFactor,foam:35*resourceFactor}:u.service==='medical'?{oxygen:14*resourceFactor,medical:18*resourceFactor}:{equipment:9*resourceFactor};Object.entries(use).forEach(([key,value])=>{u.resources[key]=Math.max(0,(u.resources[key]||0)-value);});}returnToBase(g,u);});
@@ -395,7 +415,7 @@ const mobilize=(g,incident,units,routes={},returnRoutes={})=>{
   requireValue(units.every(hasOperationalResources),'Uma das viaturas não tem combustível ou consumíveis suficientes.');
   requireValue(units.every(unit=>{const base=g.bases.find(item=>item.id===unit.base_id);return base&&baseOperationalStockReady(base,unit.service);}), 'Uma das bases está sem consumíveis críticos para sustentar a resposta.');
   requireValue(units.every(unit=>distanceMeters(unit,incident)/1000<=Math.min(Number(g.dispatch_policy?.max_response_km)||Infinity,Number(unit.max_response_km)||Infinity)),'Uma das viaturas está fora do raio máximo de resposta.');
-  units.forEach(unit=>{const plan=routes[unit.id],returnPlan=returnRoutes[unit.id];requireValue(plan?.coordinates?.length>1&&plan?.times?.length===plan.coordinates.length,'Percurso rodoviário não preparado. Tenta despachar novamente.');const returnDistance=returnPlan?.distance??plan.distance??0,requiredFuel=fuelPercentForDistance(unit,Math.max(0,plan.distance||0)+Math.max(0,returnDistance),3);requireValue((unit.resources?.fuel??100)>=requiredFuel,`Combustível insuficiente na ${unit.name} para ida e regresso estimados.`);const outbound=crewAdjustedRoute(g,unit,plan,incident),back=crewAdjustedRoute(g,unit,returnPlan?.coordinates?.length>1?returnPlan:reverseRoute(plan),incident);unit.road_return_plan=back;unit.dispatched_at=g.elapsed;startRoute(unit,outbound,'enroute',incident.node);unit.incident_id=incident.id;if(!incident.assigned.includes(unit.id))incident.assigned.push(unit.id);});
+  units.forEach(unit=>{const plan=routes[unit.id],returnPlan=returnRoutes[unit.id];requireValue(plan?.coordinates?.length>1&&plan?.times?.length===plan.coordinates.length,'Percurso rodoviário não preparado. Tenta despachar novamente.');const returnDistance=returnPlan?.distance??plan.distance??0,requiredFuel=fuelPercentForDistance(unit,Math.max(0,plan.distance||0)+Math.max(0,returnDistance),3);requireValue((unit.resources?.fuel??100)>=requiredFuel,`Combustível insuficiente na ${unit.name} para ida e regresso estimados.`);const outbound=crewAdjustedRoute(g,unit,plan,incident),back=crewAdjustedRoute(g,unit,returnPlan?.coordinates?.length>1?returnPlan:reverseRoute(plan),incident);unit.road_return_plan=back;unit.dispatched_at=g.elapsed;unit.dispatch_overtime_start=(unit.personnel_ids||[]).reduce((sum,id)=>sum+(g.personnel.find(person=>person.id===id)?.overtime_minutes||0),0);startRoute(unit,outbound,'enroute',incident.node);unit.incident_id=incident.id;if(!incident.assigned.includes(unit.id))incident.assigned.push(unit.id);});
   incident.status='enroute';log(g,`${units.length} unidade(s) mobilizada(s) pela rede rodoviária.`);
 };
 export function selectArrUnitIds(g,incidentId,arrId){
