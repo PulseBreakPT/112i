@@ -168,14 +168,29 @@ export function presentWorldCopy(world) {
 export function presentGameCopy(game) {
   return {
     ...game,
-    incidents: game.incidents.map(incident => ({
-      ...incident,
-      title: operationalText(incident.title),
-      description: operationalText(incident.description),
-      definition: operationalText(incident.definition),
-      call: incident.call && { ...incident.call, choices: incident.call.choices.map(operationalText) },
-      call_result: incident.call_result && { ...incident.call_result, feedback: operationalText(incident.call_result.feedback) },
-    })),
+    incidents: game.incidents.map(incident => {
+      const confidence=Number(incident.intel_confidence)||0;
+      const revealed=incident.intel_revealed===true||incident.reconnaissance?.complete===true;
+      const requiredVehicles=revealed
+        ? [...(incident.required_vehicle_types||[])]
+        : confidence>=58 ? (incident.required_vehicle_types||[]).slice(0,Math.max(1,Math.ceil((incident.required_vehicle_types||[]).length/2))) : [];
+      const requiredTrainings=revealed
+        ? [...(incident.required_trainings||[])]
+        : confidence>=68 ? (incident.required_trainings||[]).slice(0,1) : [];
+      return {
+        ...incident,
+        needs:revealed?{...(incident.needs||{})}:{...(incident.reported_needs||incident.needs||{})},
+        casualties:revealed?(incident.casualties||0):(incident.reported_casualties??incident.casualties??0),
+        required_vehicle_types:requiredVehicles,
+        required_trainings:requiredTrainings,
+        intelligence_limited:!revealed,
+        title: operationalText(incident.title),
+        description: operationalText(incident.description),
+        definition: operationalText(incident.definition),
+        call: incident.call && { ...incident.call, choices: incident.call.choices.map(operationalText) },
+        call_result: incident.call_result && { ...incident.call_result, feedback: operationalText(incident.call_result.feedback) },
+      };
+    }),
     units: game.units.map(unit => {
       const identifier = unit.name.match(/^(.*)-(\d+)$/);
       return { ...unit, name: identifier ? `${operationalText(identifier[1])}-${identifier[2]}` : operationalText(unit.name) };
