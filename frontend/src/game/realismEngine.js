@@ -314,6 +314,9 @@ const allocateCrews=(game)=>{
     ensurePerson(game,person);
     const operational=personOnDuty(person,date,game.elapsed||0);
     person.duty_state=(person.sick_until||0)>game.elapsed?'sick':(person.leave_until||0)>game.elapsed?'leave':operational?((person.recalled_until||0)>game.elapsed?'recalled':'on-duty'):'off-duty';
+    if(person.status!=='training'&&!person.unit_id){
+      person.status=['on-duty','recalled'].includes(person.duty_state)?'available':person.duty_state;
+    }
   }
 
   for(const base of game.bases||[]){
@@ -325,7 +328,7 @@ const allocateCrews=(game)=>{
       .sort((a,b)=>(b.skill||0)-(a.skill||0));
 
     for(const unit of units.filter(unit=>['available','uncrewed','offshift'].includes(unit.status))){
-      (unit.personnel_ids||[]).forEach(id=>{const person=game.personnel.find(item=>item.id===id);if(person&&person.unit_id===unit.id)person.unit_id=null;});
+      (unit.personnel_ids||[]).forEach(id=>{const person=game.personnel.find(item=>item.id===id);if(person&&person.unit_id===unit.id){person.unit_id=null;if(person.status!=='training')person.status=['on-duty','recalled'].includes(person.duty_state)?'available':person.duty_state;}});
       const required=Math.max(1,unit.crew_required||1),training=unit.training;
       const eligible=pool.filter(person=>!person.unit_id&&(!training||(person.qualifications||[]).includes(training)));
       const selected=eligible.slice(0,required);
@@ -640,7 +643,19 @@ const processProcurement=(game,{addUnit,vehicleDefinition,log}={})=>{
 
 const processMutualAid=(game,{log}={})=>{
   for(const aid of game.mutual_aid||[]){
-    if(aid.status==='active'&&game.elapsed>=aid.ends_at){aid.status='completed';aid.completed_at=game.elapsed;if(log)log(game,`Apoio mútuo concluído: ${aid.name}.`,'info');}
+    if(aid.status==='requested'&&game.elapsed>=aid.arrives_at){
+      aid.status='active';aid.activated_at=game.elapsed;
+      const incident=(game.incidents||[]).find(item=>item.id===aid.incident_id);
+      if(incident){
+        incident.external_support=incident.external_support||{fire:0,medical:0,police:0};
+        incident.external_support[aid.service]=(incident.external_support[aid.service]||0)+aid.units;
+        incident.needs[aid.service]=Math.max(0,(incident.needs?.[aid.service]||0)-aid.units);
+        incident.required_personnel=Math.max(1,Object.values(incident.needs||{}).reduce((sum,count)=>sum+count*2,0));
+        incident.timeline=[...(incident.timeline||[]),{time:game.elapsed,type:'mutual-aid',text:`Apoio externo chegou: ${aid.units} meio(s) de ${aid.service}.`}].slice(-30);
+      }
+      if(log)log(game,`Apoio mútuo chegou: ${aid.name} · ${aid.units} meio(s).`,'success');
+    }
+    if(['requested','active'].includes(aid.status)&&game.elapsed>=aid.ends_at){aid.status='completed';aid.completed_at=game.elapsed;if(log)log(game,`Apoio mútuo concluído: ${aid.name}.`,'info');}
   }
 };
 
@@ -718,6 +733,14 @@ export function tickRealism(game,dt,{log=null,addUnit=null,vehicleDefinition=nul
     if(incident.status==='onscene'&&!incident.reconnaissance?.complete){
       const first=(game.units||[]).find(unit=>unit.incident_id===incident.id&&unit.status==='onscene');
       if(first)markReconnaissance(game,incident,first);
+    }
+    if(incident.status==='onscene'&&!incident.command_structure?.established){
+      const commandUnit=(game.units||[]).find(unit=>unit.incident_id===incident.id&&unit.status==='onscene'&&['command-unit'].includes(unit.vehicle_type));
+      const anyUnit=(game.units||[]).find(unit=>unit.incident_id===incident.id&&unit.status==='onscene');
+      if(commandUnit||((incident.rarity_level||1)<=3&&anyUnit)){
+        incident.command_structure={established:true,commander_unit_id:(commandUnit||anyUnit)?.id||null,sectors:(incident.rarity_level||1)>=5?['Operações','Socorro','Logística']:['Operações']};
+        incident.timeline=[...(incident.timeline||[]),{time:game.elapsed,type:'command',text:'Comando da ocorrência estabelecido.'}].slice(-30);
+      }
     }
     if(incident.category==='hazmat'&&incident.status==='onscene'&&incident.operational_zones&&!incident.operational_zones.hot){
       incident.operational_zones={hot:true,warm:true,cold:true};
@@ -811,18 +834,28 @@ export function applyRealismAction(game,kind,data={},ctx={}){
   if(kind==='buy_used_vehicle'){
     const offer=(game.used_vehicle_market||[]).find(item=>item.id===data.offer_id&&item.status==='available'),base=game.bases.find(item=>item.id===data.base_id);
     if(!offer||!base||base.service!==offer.service)throw new Error('Oferta ou base incompatível.');
+    const reserved=(game.vehicle_procurements||[]).filter(order=>order.base_id===base.id&&['ordered','awaiting-garage'].includes(order.status)).length;
+    if((game.units||[]).filter(unit=>unit.base_id===base.id).length+reserved>=(base.capacity||2))throw new Error('Sem capacidade de garagem disponível ou já reservada.');
     if((game.money||0)-offer.price<reserveFloor(game))throw new Error('Orçamento insuficiente mantendo a reserva operacional.');
     payCost(game,offer.price,{label:`aquisição usada · ${offer.name}`,log,protectReserve:false});
     const definition=ctx.vehicleDefinition?.(offer.service,offer.vehicle_type);if(!definition)throw new Error('Definição de viatura indisponível.');
     queueVehicleProcurement(game,base,definition,{total:offer.price,own:offer.price,grant:0},{used:true,usedOffer:offer});offer.status='sold';log(game,`${offer.name} usada adjudicada; aguarda inspeção e entrega.`,'success');return true;
   }
-  if(kind==='request_mutual_aid'){
+  if(kind==='set_vehicle_insurance'){
+    const unit=game.units.find(item=>item.id===data.unit_id);if(!unit)throw new Error('Viatura inválida.');
+    const type=['public-fleet','comprehensive','self-insured'].includes(data.type)?data.type:'public-fleet';
+    unit.insurance=unit.insurance||{};
+    unit.insurance.type=type;unit.insurance.active=true;unit.insurance.deductible=type==='comprehensive'?250:type==='self-insured'?0:500;
+    log(game,`${unit.name}: regime de seguro atualizado para ${type}.`,'success');
+    return true;
+  }
+    if(kind==='request_mutual_aid'){
     const service=data.service,base=game.bases.find(item=>item.id===data.base_id),incident=game.incidents.find(item=>item.id===data.incident_id);
     if(!['fire','medical','police'].includes(service)||!base)throw new Error('Pedido de apoio inválido.');
     const units=Math.max(1,Math.min(5,Number(data.units)||1)),cost=units*(service==='medical'?2800:service==='fire'?3500:2200);
     if((game.money||0)-cost<reserveFloor(game))throw new Error('Orçamento insuficiente para apoio mútuo.');
     payCost(game,cost,{label:'apoio mútuo operacional',log,protectReserve:false});
-    const aid={id:uid('aid'),service,base_id:base.id,incident_id:incident?.id||null,name:`Reforço externo ${service}`,units,cost,status:'active',requested_at:game.elapsed,arrives_at:game.elapsed+180,ends_at:game.elapsed+7200};
+    const aid={id:uid('aid'),service,base_id:base.id,incident_id:incident?.id||null,name:`Reforço externo ${service}`,units,cost,status:'requested',requested_at:game.elapsed,arrives_at:game.elapsed+180,ends_at:game.elapsed+7200};
     game.mutual_aid.unshift(aid);game.realism.metrics.mutual_aid_calls++;if(incident){incident.cost_ledger.external_support=(incident.cost_ledger.external_support||0)+cost;}log(game,`Apoio mútuo solicitado: ${units} meio(s) de ${service}.`,'success');return true;
   }
   if(kind==='set_event_preposition'){
