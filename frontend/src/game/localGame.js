@@ -7,14 +7,14 @@ import { operationalPhasesFor, generatedEvolution, vehicleTraining as vehicleTra
 import { buildIncidentDoctrine, initialiseVictimStates, deteriorateVictimStates, escalationRequirementsFor, missionPerformance, RARITY_LEVELS } from './engines/missionDoctrine';
 import { operationalUnit, hasOperationalResources, selectArrUnitIds as selectArrUnitIdsEngine, selectRecommendedUnitIds as selectRecommendedUnitIdsEngine } from './engines/dispatchEngine';
 import { locate, returnToBase, startRoute } from './engines/unitEngine';
-import { ECONOMY, ensureReserve, payCost, applyPeriodicFunding, missionPayout, reserveFloor } from './engines/economyEngine';
+import { ECONOMY, ensureReserve, payCost, payCapitalCost, applyPeriodicFunding, missionPayout, reserveFloor } from './engines/economyEngine';
 import { isPortugalNight, legacyRealTime } from './engines/timeEngine';
 import { normalizeVehicleUnit, fuelPercentForDistance, breakdownChance, maintenanceQuote, resaleValue, crewFatigue } from './vehicleSystems';
 
 import { GAME_SAVE_KEY as SAVE_KEY } from './storageCompatibility';
 import { PERSONNEL_PROFILES, normalizePersonnelProfile, personnelLevel, personnelRank } from './personnelProfiles';
 import { recordAchievementIncident, recordAchievementTriage, recordAchievementTransport, syncAchievements } from './achievementEngine';
-import { PORTUGAL_ECONOMY, baseUpgradeNet, facilityUpgradeNet, recruitmentCost } from './portugalEconomy';
+import { PORTUGAL_ECONOMY, baseUpgradeNet, facilityUpgradeNet, recruitmentCost, monthlyEmployerCost, vehicleMaintenanceReserveRate } from './portugalEconomy';
 
 const SERVICES = {
   fire: { name: 'Bombeiros', vehicle: 'Veículo de combate a incêndios', short: 'VFCI', price: PORTUGAL_ECONOMY.vehicles['wildfire-unit'], base_price: PORTUGAL_ECONOMY.buildings.fire },
@@ -59,9 +59,9 @@ const DEFAULT_ARRS = [
   {id:'arr-medica',name:'Emergência médica',resources:{fire:0,medical:1,police:0}},
 ];
 const makeCareerTasks = g => [
-  {id:uid(),type:'completed',title:'Resolver 3 ocorrências',target:3,baseline:g.completed||0,progress:0,reward:1800,claimed:false},
-  {id:uid(),type:'earned',title:'Gerar 5 000 € em receita',target:5000,baseline:g.earned||0,progress:0,reward:1300,claimed:false},
-  {id:uid(),type:'personnel',title:'Recrutar 2 elementos',target:2,baseline:g.personnel?.length||0,progress:0,reward:900,claimed:false},
+  {id:uid(),type:'completed',title:'Resolver 3 ocorrências',target:3,baseline:g.completed||0,progress:0,reward:10000,claimed:false},
+  {id:uid(),type:'earned',title:'Gerar 15 000 € em compensação operacional',target:15000,baseline:g.earned||0,progress:0,reward:15000,claimed:false},
+  {id:uid(),type:'personnel',title:'Recrutar 2 elementos',target:2,baseline:g.personnel?.length||0,progress:0,reward:8000,claimed:false},
 ];
 
 const places = [
@@ -309,7 +309,7 @@ const spawn=(g,scenarioIndex=null,nodeId=null,requestedCommandCenterId=null)=>{
 };
 export function newGame(){
   const seed=randomSeed();
-  const g={id:uid(),mode:'portugal-offline-v5',rng_seed:seed,rng_state:seed,rng_counter:0,city:'Porto',money:ECONOMY.startingCash,xp:0,level:1,trust:98,reputation:0,medals:[],elapsed:0,speed:1,calendar_started_at:new Date().toISOString(),completed:0,failed:0,earned:0,expenses:0,public_funding:0,task_rewards:0,emergency_aid:0,debt_relief:0,operating_debt:0,next_public_funding:ECONOMY.fundingInterval,next_spawn:180,next_crisis_wave:900,next_upkeep:ECONOMY.upkeepInterval,sequence:101,incidents:[],units:[],bases:[],facilities:[],command_centers:[],active_command_center_id:null,player_pois:[],personnel:[],planned_missions:[],staging_areas:[],complexes:[],tasks:[],achievements:[],unit_groups:[],patients:[],prisoners:[],trainings:[],arrs:clone(DEFAULT_ARRS),logs:[],history:[],conditions:null,saved_at:new Date().toISOString()};g.conditions=freshConditions(0,null,()=>gameRandom(g),POINTS['porto-aliados'],simulatedDate(g));
+  const g={id:uid(),mode:'portugal-offline-v5',rng_seed:seed,rng_state:seed,rng_counter:0,city:'Porto',money:ECONOMY.startingCash,xp:0,level:1,trust:98,reputation:0,medals:[],elapsed:0,speed:1,calendar_started_at:new Date().toISOString(),completed:0,failed:0,earned:0,expenses:0,public_funding:0,capital_grants:0,capital_investment:0,vat_paid:0,task_rewards:0,emergency_aid:0,debt_relief:0,operating_debt:0,next_public_funding:ECONOMY.fundingInterval,next_spawn:180,next_crisis_wave:900,next_upkeep:ECONOMY.upkeepInterval,sequence:101,incidents:[],units:[],bases:[],facilities:[],command_centers:[],active_command_center_id:null,player_pois:[],personnel:[],planned_missions:[],staging_areas:[],complexes:[],tasks:[],achievements:[],unit_groups:[],patients:[],prisoners:[],trainings:[],arrs:clone(DEFAULT_ARRS),logs:[],history:[],conditions:null,saved_at:new Date().toISOString()};g.conditions=freshConditions(0,null,()=>gameRandom(g),POINTS['porto-aliados'],simulatedDate(g));
   [['fire','porto-boavista'],['medical','porto-asprela'],['police','porto-bonfim']].forEach(([service,key])=>{const base=makeBase(service,POINTS[key]);g.bases.push(base);addUnit(g,base);addUnit(g,base);});
   g.bases.forEach(base=>addPersonnel(g,base,base.personnel||0));g.units.forEach(unit=>{unit.personnel_ids=[];unit.crew_assigned=0;assignUnitCrew(g,unit,vehicleDefinition(unit.service,unit.vehicle_type));});
   g.tasks=makeCareerTasks(g);
@@ -492,12 +492,24 @@ export function tickGame(input,seconds){
   if(g.elapsed>=g.next_upkeep){
     const discountFor=(kind,id)=>Math.max(0,...(g.complexes||[]).filter(complex=>complex.shared_services!==false&&(complex[kind]||[]).includes(id)).map(complex=>complex.operating_cost_discount||0));
     let distanceCost=0;
-    const maintenance=g.units.reduce((sum,unit)=>{const discount=discountFor('base_ids',unit.base_id),fatigue=crewFatigue(g,unit),distanceDelta=Math.max(0,(unit.mileage_km||0)-(unit.billed_mileage_km||0));distanceCost+=distanceDelta*Math.max(0,unit.operating_cost_per_km||0);unit.billed_mileage_km=unit.mileage_km||0;return sum+((unit.condition<60?25:0)+(fatigue>60?10:0)+(unit.maintenance_due?30:0)+(unit.wear||0)*.15+35)*(1-discount);},0);
-    const infrastructure=g.bases.filter(base=>base.enabled!==false).reduce((sum,base)=>sum+60*(1-discountFor('base_ids',base.id)),0)+g.facilities.filter(facility=>facility.enabled!==false).reduce((sum,facility)=>sum+80*(1-discountFor('facility_ids',facility.id)),0);
-    const personnelCost=(g.personnel||[]).reduce((sum,person)=>sum+Math.max(900,Number(person.salary)||1400)/100,0);
-    const cost=Math.max(0,Math.round(maintenance+distanceCost+infrastructure+personnelCost));
-    payCost(g,cost,{label:'custos operacionais do turno',log});
-    log(g,`Custos operacionais: -${cost} €. Reserva protegida: ${reserveFloor(g)} €.`);
+    const fleetReserve=g.units.reduce((sum,unit)=>{
+      const discount=discountFor('base_ids',unit.base_id),distanceDelta=Math.max(0,(unit.mileage_km||0)-(unit.billed_mileage_km||0));
+      distanceCost+=distanceDelta*Math.max(0,unit.operating_cost_per_km||0);
+      unit.billed_mileage_km=unit.mileage_km||0;
+      const annualRate=vehicleMaintenanceReserveRate(unit.vehicle_class);
+      return sum+((unit.purchase_price||0)*annualRate/12)*(1-discount);
+    },0);
+    const infrastructure=g.bases.filter(base=>base.enabled!==false).reduce((sum,base)=>{
+      const asset=PORTUGAL_ECONOMY.buildings[base.service]||0,annualRate=base.service==='medical'?.04:.035;
+      return sum+(asset*annualRate/12)*(1-discountFor('base_ids',base.id));
+    },0)+g.facilities.filter(facility=>facility.enabled!==false).reduce((sum,facility)=>{
+      const asset=PORTUGAL_ECONOMY.buildings[facility.type]||0,annualRate=facility.type==='hospital'?.06:.04;
+      return sum+(asset*annualRate/12)*(1-discountFor('facility_ids',facility.id));
+    },0);
+    const personnelCost=(g.personnel||[]).reduce((sum,person)=>sum+monthlyEmployerCost(person.salary||PORTUGAL_ECONOMY.salaries[person.service]),0);
+    const cost=Math.max(0,Math.round(fleetReserve+distanceCost+infrastructure+personnelCost));
+    payCost(g,cost,{label:'custos mensais de operação',log});
+    log(g,`Custos mensais: -${cost.toLocaleString('pt-PT')} € · pessoal ${Math.round(personnelCost).toLocaleString('pt-PT')} € · frota ${Math.round(fleetReserve+distanceCost).toLocaleString('pt-PT')} € · instalações ${Math.round(infrastructure).toLocaleString('pt-PT')} €.`);
     g.next_upkeep=g.elapsed+ECONOMY.upkeepInterval;
   }
   applyPeriodicFunding(g,log);
@@ -535,7 +547,7 @@ export function applyAction(input,kind,data={}){
     requireValue(freePersonnel(g,base)>=definition.crew,`Recruta pelo menos ${definition.crew} elementos disponíveis.`);
     const neededTraining=vehicleTraining(definition.id);
     if(neededTraining)requireValue(freePeople(g,base,neededTraining).length>=definition.crew,`Forma ${definition.crew} elementos livres em ${TRAINING_CATALOG.find(course=>course.id===neededTraining)?.name||neededTraining}.`);
-    payCost(g,definition.price,{label:'aquisição de viatura',log});addUnit(g,base,definition.id);log(g,`Nova unidade ${definition.name} adquirida para ${base.name}.`,'success');
+    const purchase=payCapitalCost(g,definition.price,{land:base.land,kind:definition.vehicle_class==='air'?'aircraft':'vehicle',label:`Aquisição de ${definition.name}`,log});requireValue(purchase.ok,`Orçamento insuficiente. São necessários ${purchase.required_cash.toLocaleString('pt-PT')} € incluindo a reserva operacional.`);addUnit(g,base,definition.id);log(g,`Nova unidade ${definition.name} adquirida para ${base.name}.`,'success');
   }
   else if(kind==='build_base'){
     const service=data.service,site=POINTS[data.site_id];requireValue(SERVICES[service]&&site,'Seleciona um serviço e local válidos.');
@@ -544,13 +556,13 @@ export function applyAction(input,kind,data={}){
     requireValue(!g.bases.some(b=>b.node===site.node&&b.service===service),'Este serviço já tem uma base neste local.');
     const price=nextBuildingCost(g,service,SERVICES[service].base_price);
     const command=commandCenterFor(g,data.command_center_id)||commandCenterFor(g,g.active_command_center_id);requireValue(command,'Cria primeiro um Centro de Comando.');requireValue(withinCommandArea(command,site),'A base tem de ficar dentro da área e região do Centro de Comando.');
-    payCost(g,price,{label:'construção de base',log});const base=makeBase(service,site);base.command_center_id=command.id;base.operational_at=g.elapsed+180;g.bases.push(base);addPersonnel(g,base,base.personnel||0);log(g,`Construção iniciada em ${site.name}. Conclusão prevista em 3 minutos.`,'success');
+    const investment=payCapitalCost(g,price,{land:site.land,kind:'base',label:`Construção de ${SERVICES[service].name}`,log});requireValue(investment.ok,`Orçamento insuficiente para a componente própria do investimento (${investment.own.toLocaleString('pt-PT')} €).`);const base=makeBase(service,site);base.command_center_id=command.id;base.operational_at=g.elapsed+180;g.bases.push(base);addPersonnel(g,base,base.personnel||0);log(g,`Construção iniciada em ${site.name}. Conclusão prevista em 3 minutos.`,'success');
   }
   else if(kind==='upgrade_base'){
     const base=g.bases.find(b=>b.id===data.base_id);requireValue(base,'Base inválida.');
     requireValue(!base.operational_at||base.operational_at<=g.elapsed,'A base ainda está em construção.');
     const level=base.level||1;requireValue(level<10,'A base já atingiu o nível máximo.');
-    const price=Math.round(1800*Math.pow(level,1.35));payCost(g,price,{label:'ampliação de base',log});base.level=level+1;base.capacity=(base.capacity||2)+1;base.staff_capacity=(base.staff_capacity||14)+5;log(g,`${base.name} melhorada para o nível ${base.level}.`,'success');
+    const price=baseUpgradeNet(base),investment=payCapitalCost(g,price,{land:base.land,kind:'upgrade',label:`Ampliação de ${base.name}`,log});requireValue(investment.ok,`Orçamento insuficiente para a ampliação (${investment.own.toLocaleString('pt-PT')} € de esforço próprio).`);base.level=level+1;base.capacity=(base.capacity||2)+1;base.staff_capacity=(base.staff_capacity||14)+5;log(g,`${base.name} melhorada para o nível ${base.level}.`,'success');
   }
   else if(kind==='toggle_extension'){
     const base=g.bases.find(b=>b.id===data.base_id);requireValue(base,'Base inválida.');
@@ -558,19 +570,19 @@ export function applyAction(input,kind,data={}){
     requireValue((base.level||1)>=definition.level,`Esta extensão requer nível ${definition.level}.`);
     base.extensions=base.extensions||[];const current=base.extensions.find(ext=>ext.id===definition.id);
     if(current){requireValue(!current.completes_at,'A extensão ainda está em construção.');current.active=!current.active;log(g,`${definition.name} ${current.active?'ativada':'desativada'} em ${base.name}.`);}
-    else{const cost=Math.round(definition.cost*.8);payCost(g,cost,{label:'extensão de base',log});base.extensions.push({id:definition.id,active:false,completes_at:g.elapsed+120});log(g,`Obras iniciadas: ${definition.name} em ${base.name}.`,'success');}
+    else{const investment=payCapitalCost(g,definition.cost,{land:base.land,kind:'extension',label:`Extensão ${definition.name}`,log});requireValue(investment.ok,`Orçamento insuficiente para esta extensão (${investment.own.toLocaleString('pt-PT')} € de esforço próprio).`);base.extensions.push({id:definition.id,active:false,completes_at:g.elapsed+120});log(g,`Obras iniciadas: ${definition.name} em ${base.name}.`,'success');}
   }
   else if(kind==='set_specialization'){
     const base=g.bases.find(b=>b.id===data.base_id);requireValue(base,'Base inválida.');
     const definition=SPECIALIZATIONS[base.service]?.find(item=>item.id===data.specialization);requireValue(definition,'Especialização inválida.');requireValue(base.enabled!==false&&(!base.operational_at||base.operational_at<=g.elapsed),'A base tem de estar operacional para mudar de especialização.');
     if(definition.extension)requireValue((base.extensions||[]).some(ext=>ext.id===definition.extension&&ext.active),'Ativa primeiro a extensão necessária.');
     requireValue(g.units.filter(unit=>unit.base_id===base.id).every(unit=>['available','offshift','uncrewed','resting'].includes(unit.status)),'Recolhe primeiro as viaturas desta base.');
-    if(base.specialization!==definition.id){const cost=definition.id==='general'?150:300;payCost(g,cost,{label:'reorganização de especialização',log});base.specialization=definition.id;base.specialization_ready_at=g.elapsed+120;log(g,`${base.name}: reorganização para ${definition.name} iniciada (-${cost} €).`,'success');}
+    if(base.specialization!==definition.id){const cost=definition.id==='general'?5000:15000;requireValue((g.money||0)-cost>=reserveFloor(g),'Orçamento disponível insuficiente para a reorganização.');payCost(g,cost,{label:'reorganização de especialização',log,protectReserve:false});base.specialization=definition.id;base.specialization_ready_at=g.elapsed+120;log(g,`${base.name}: reorganização para ${definition.name} iniciada (-${cost} €).`,'success');}
   }
   else if(kind==='recruit_personnel'){
     const base=g.bases.find(b=>b.id===data.base_id);requireValue(base,'Base inválida.');
     const amount=Math.max(1,Math.min(5,Number(data.amount)||2));requireValue((base.personnel||0)+reservedStaff(g,base.id)+amount<=(base.staff_capacity||14),'Capacidade de pessoal atingida ou já reservada.');
-    const price=amount*450;payCost(g,price,{label:'recrutamento imediato',log});base.personnel=(base.personnel||0)+amount;addPersonnel(g,base,amount);log(g,`${amount} novos elementos recrutados para ${base.name}.`,'success');
+    const price=recruitmentCost(base.service,amount,true);requireValue((g.money||0)-price>=reserveFloor(g),'Orçamento insuficiente para recrutamento e equipamento inicial.');payCost(g,price,{label:'recrutamento imediato',log,protectReserve:false});base.personnel=(base.personnel||0)+amount;addPersonnel(g,base,amount);log(g,`${amount} novos elementos recrutados para ${base.name}.`,'success');
   }
   else if(kind==='dismiss_personnel'){
     const person=g.personnel.find(item=>item.id===data.person_id),base=person&&g.bases.find(item=>item.id===person.base_id);requireValue(person&&base,'Elemento inválido.');requireValue(!person.unit_id&&person.status==='available','Só podes dispensar elementos livres e fora de formação.');requireValue((base.personnel||0)>2,'A base necessita de pelo menos dois elementos.');g.personnel=g.personnel.filter(item=>item.id!==person.id);base.personnel=Math.max(0,(base.personnel||0)-1);log(g,`${person.name} deixou o efetivo de ${base.name}.`,'alert');
@@ -578,15 +590,15 @@ export function applyAction(input,kind,data={}){
   else if(kind==='build_facility'){
     const type=data.type,site=POINTS[data.site_id],definition=FACILITY_CATALOG[type];requireValue(definition&&site,'Seleciona uma instalação e localização válidas.');
     requireValue(!g.facilities.some(facility=>facility.type===type&&facility.node===site.node),'Esta instalação já existe neste local.');
-    const price=Math.round(definition.cost*(1+g.facilities.length*.06));
+    const price=definition.cost;
     const command=commandCenterFor(g,data.command_center_id)||commandCenterFor(g,g.active_command_center_id);requireValue(command,'Cria primeiro um Centro de Comando.');requireValue(withinCommandArea(command,site),'A instalação tem de ficar dentro da área e região do Centro de Comando.');
-    payCost(g,price,{label:'construção de instalação',log});const facility=makeFacility(type,site);facility.command_center_id=command.id;facility.operational_at=g.elapsed+180;g.facilities.push(facility);log(g,`Construção de ${definition.name} iniciada em ${site.name}.`,'success');
+    const investment=payCapitalCost(g,price,{land:site.land,kind:type==='hospital'?'hospital':'facility',label:`Construção de ${definition.name}`,log});requireValue(investment.ok,`Orçamento insuficiente para a componente própria desta instalação (${investment.own.toLocaleString('pt-PT')} €).`);const facility=makeFacility(type,site);facility.command_center_id=command.id;facility.operational_at=g.elapsed+180;g.facilities.push(facility);log(g,`Construção de ${definition.name} iniciada em ${site.name}.`,'success');
   }
   else if(kind==='upgrade_facility'){
-    const facility=g.facilities.find(item=>item.id===data.facility_id);requireValue(facility,'Instalação inválida.');requireValue(operationalFacility(g,facility),'A instalação ainda está em construção.');const price=2200*(facility.level||1);payCost(g,price,{label:'ampliação de instalação',log});facility.level=(facility.level||1)+1;facility.capacity+=facility.type==='academy'?5:3;if(facility.type==='hospital'){facility.specialty_capacity=facility.specialty_capacity||{urgency:facility.capacity};facility.specialty_capacity.urgency=(facility.specialty_capacity.urgency||0)+3;}log(g,`${facility.name} ampliada para o nível ${facility.level}.`,'success');
+    const facility=g.facilities.find(item=>item.id===data.facility_id);requireValue(facility,'Instalação inválida.');requireValue(operationalFacility(g,facility),'A instalação ainda está em construção.');const price=facilityUpgradeNet(facility),investment=payCapitalCost(g,price,{land:facility.land,kind:facility.type==='hospital'?'hospital':'upgrade',label:`Ampliação de ${facility.name}`,log});requireValue(investment.ok,`Orçamento insuficiente para a ampliação (${investment.own.toLocaleString('pt-PT')} € de esforço próprio).`);facility.level=(facility.level||1)+1;facility.capacity+=facility.type==='academy'?5:3;if(facility.type==='hospital'){facility.specialty_capacity=facility.specialty_capacity||{urgency:facility.capacity};facility.specialty_capacity.urgency=(facility.specialty_capacity.urgency||0)+3;}log(g,`${facility.name} ampliada para o nível ${facility.level}.`,'success');
   }
   else if(kind==='add_hospital_specialty'){
-    const hospital=g.facilities.find(item=>item.id===data.facility_id&&item.type==='hospital'),specialty=HOSPITAL_SPECIALTIES.find(item=>item.id===data.specialty_id);requireValue(hospital&&specialty,'Hospital ou especialidade inválida.');requireValue(operationalFacility(g,hospital),'O hospital ainda está em construção.');hospital.specialties=hospital.specialties||['urgency'];requireValue(!hospital.specialties.includes(specialty.id),'Esta especialidade já está disponível.');const specialtyCost=Math.round(specialty.cost*.75);payCost(g,specialtyCost,{label:'nova especialidade hospitalar',log});hospital.specialties.push(specialty.id);hospital.specialty_capacity={urgency:hospital.capacity,...(hospital.specialty_capacity||{}),[specialty.id]:Math.max(2,Math.ceil(hospital.capacity*.45))};log(g,`${specialty.name} inaugurada em ${hospital.name}.`,'success');
+    const hospital=g.facilities.find(item=>item.id===data.facility_id&&item.type==='hospital'),specialty=HOSPITAL_SPECIALTIES.find(item=>item.id===data.specialty_id);requireValue(hospital&&specialty,'Hospital ou especialidade inválida.');requireValue(operationalFacility(g,hospital),'O hospital ainda está em construção.');hospital.specialties=hospital.specialties||['urgency'];requireValue(!hospital.specialties.includes(specialty.id),'Esta especialidade já está disponível.');const specialtyCost=specialty.cost,investment=payCapitalCost(g,specialtyCost,{land:hospital.land,kind:'hospital',label:`Especialidade de ${specialty.name}`,log});requireValue(investment.ok,`Orçamento insuficiente para instalar ${specialty.name}.`);hospital.specialties.push(specialty.id);hospital.specialty_capacity={urgency:hospital.capacity,...(hospital.specialty_capacity||{}),[specialty.id]:Math.max(2,Math.ceil(hospital.capacity*.45))};log(g,`${specialty.name} inaugurada em ${hospital.name}.`,'success');
   }
   else if(kind==='transport_patient'){
     const patient=g.patients.find(item=>item.id===data.patient_id&&item.status==='waiting'),hospital=g.facilities.find(item=>item.id===data.facility_id&&item.type==='hospital');requireValue(patient&&hospital,'Vítima ou hospital inválido.');requireValue(operationalFacility(g,hospital),'O hospital ainda está em construção.');
@@ -612,7 +624,7 @@ export function applyAction(input,kind,data={}){
   else if(kind==='start_training'){
     const base=g.bases.find(item=>item.id===data.base_id),course=TRAINING_CATALOG.find(item=>item.id===data.course);const count=Math.max(1,Math.min(5,Number(data.count)||1));requireValue(base&&course&&base.service===course.service,'Base ou formação inválida.');
     const localAcademy=g.facilities.some(facility=>facility.type==='academy'&&facility.command_center_id===base.command_center_id&&facility.enabled!==false&&operationalFacility(g,facility)),sharedAcademy=(g.cooperation?.support?.academy||0)>0;requireValue(localAcademy||sharedAcademy,'Constrói uma escola de formação ou ativa capacidade académica cooperativa.');const trainees=freePeople(g,base).slice(0,count);requireValue(trainees.length>=count,'Não existem elementos livres suficientes.');const price=Math.round(course.cost*count*(sharedAcademy&&!localAcademy ? .65 : .75)),duration=course.duration*(sharedAcademy&&!localAcademy ? .85 : 1);
-    trainees.forEach(person=>{person.status='training';});payCost(g,price,{label:'formação operacional',log});g.trainings.push({id:uid(),base_id:base.id,course:course.id,count,personnel_ids:trainees.map(person=>person.id),status:'active',started:g.elapsed,completes_at:g.elapsed+duration});log(g,`Formação iniciada: ${course.name} · ${count} elemento(s).`);
+    requireValue((g.money||0)-price>=reserveFloor(g),'Orçamento insuficiente para a formação mantendo a reserva operacional.');trainees.forEach(person=>{person.status='training';});payCost(g,price,{label:'formação operacional',log,protectReserve:false});g.trainings.push({id:uid(),base_id:base.id,course:course.id,count,personnel_ids:trainees.map(person=>person.id),status:'active',started:g.elapsed,completes_at:g.elapsed+duration});log(g,`Formação iniciada: ${course.name} · ${count} elemento(s).`);
   }
   else if(kind==='toggle_patrol'){
     const unit=g.units.find(item=>item.id===data.unit_id&&item.service==='police');requireValue(unit&&['available','patrol'].includes(unit.status),'Viatura policial indisponível.');
@@ -629,7 +641,7 @@ export function applyAction(input,kind,data={}){
   else if(kind==='delete_unit_group'){g.unit_groups=(g.unit_groups||[]).filter(item=>item.id!==data.group_id);}
   else if(kind==='create_command_center'){
     const site=POINTS[data.site_id],name=String(data.name||'').trim().slice(0,48),radius=Math.max(5,Math.min(120,Number(data.radius_km)||35));requireValue(site&&name,'Indica um nome e uma sede válidos.');requireValue(!g.command_centers.some(center=>center.center_node===site.id),'Já existe um Centro de Comando nesta sede.');
-    const price=g.command_centers.length?5000:0;if(price)payCost(g,price,{label:'novo Centro de Comando',log});const center=makeCommandCenter(name,site,radius);g.command_centers.push(center);g.active_command_center_id=center.id;g.city=center.city;log(g,`${center.name} criado com raio operacional de ${radius} km.`,'success');
+    const price=g.command_centers.length?PORTUGAL_ECONOMY.buildings.command_center:0;if(price){const investment=payCapitalCost(g,price,{land:site.land,kind:'command',label:'Novo Centro de Comando',log});requireValue(investment.ok,`Orçamento insuficiente para a componente própria do Centro de Comando (${investment.own.toLocaleString('pt-PT')} €).`);}const center=makeCommandCenter(name,site,radius);g.command_centers.push(center);g.active_command_center_id=center.id;g.city=center.city;log(g,`${center.name} criado com raio operacional de ${radius} km.`,'success');
   }
   else if(kind==='update_command_center'){
     const center=commandCenterFor(g,data.command_center_id)||g.command_centers.find(item=>item.id===data.command_center_id);requireValue(center,'Centro de Comando inválido.');
@@ -664,7 +676,7 @@ export function applyAction(input,kind,data={}){
     const poi=g.player_pois.find(item=>item.id===data.poi_id);requireValue(poi,'PDI inválido.');requireValue(!g.incidents.some(item=>item.node===poi.node)&&!g.planned_missions.some(item=>item.node===poi.node&&['scheduled','active'].includes(item.status)),'Este PDI está a ser usado por uma operação ativa ou planeada.');g.player_pois=g.player_pois.filter(item=>item.id!==poi.id);if(String(poi.node||'').startsWith('custom-'))delete POINTS[poi.node];log(g,`PDI removido: ${poi.name}.`);
   }
   else if(kind==='create_planned_mission'){
-    const center=commandCenterFor(g,data.command_center_id)||commandCenterFor(g,g.active_command_center_id),site=POINTS[data.site_id],scenario=Math.max(0,Math.min(SCENARIOS.length-1,Number(data.scenario)||0)),delay=Math.max(300,Math.min(86400,Number(data.delay)||600)),title=String(data.title||SCENARIOS[scenario].title).trim().slice(0,64);requireValue(center&&site&&title,'Preenche a operação, localização e Centro de Comando.');requireValue(withinCommandArea(center,site),'A operação tem de ficar dentro da área operacional do comando.');g.planned_missions=g.planned_missions||[];requireValue(g.planned_missions.filter(item=>item.player_created&&item.status==='scheduled').length<5,'Já tens cinco operações próprias agendadas.');const planningCost=100;payCost(g,planningCost,{label:'planeamento operacional',log});g.planned_missions.push({id:uid(),title,scenario,node:site.id,command_center_id:center.id,starts_at:g.elapsed+delay,status:'scheduled',created_at:g.elapsed,player_created:true,planning_cost:planningCost});log(g,`Operação planeada: ${title} (-${planningCost} €).`,'success');
+    const center=commandCenterFor(g,data.command_center_id)||commandCenterFor(g,g.active_command_center_id),site=POINTS[data.site_id],scenario=Math.max(0,Math.min(SCENARIOS.length-1,Number(data.scenario)||0)),delay=Math.max(300,Math.min(86400,Number(data.delay)||600)),title=String(data.title||SCENARIOS[scenario].title).trim().slice(0,64);requireValue(center&&site&&title,'Preenche a operação, localização e Centro de Comando.');requireValue(withinCommandArea(center,site),'A operação tem de ficar dentro da área operacional do comando.');g.planned_missions=g.planned_missions||[];requireValue(g.planned_missions.filter(item=>item.player_created&&item.status==='scheduled').length<5,'Já tens cinco operações próprias agendadas.');const planningCost=2500;requireValue((g.money||0)-planningCost>=reserveFloor(g),'Orçamento insuficiente para planear esta operação.');payCost(g,planningCost,{label:'planeamento operacional',log,protectReserve:false});g.planned_missions.push({id:uid(),title,scenario,node:site.id,command_center_id:center.id,starts_at:g.elapsed+delay,status:'scheduled',created_at:g.elapsed,player_created:true,planning_cost:planningCost});log(g,`Operação planeada: ${title} (-${planningCost} €).`,'success');
   }
   else if(kind==='cancel_planned_mission'){
     const planned=(g.planned_missions||[]).find(item=>item.id===data.planned_id);requireValue(planned&&planned.status==='scheduled','Só é possível cancelar operações ainda agendadas.');planned.status='cancelled';log(g,`Operação planeada cancelada: ${planned.title}.`,'alert');
@@ -756,7 +768,7 @@ export function loadLocalGame(){
       const fresh=newGame();
       const stampRecord=item=>item&&({...item,real_time:item.real_time||legacyRealTime(saved.saved_at||new Date().toISOString(),saved.elapsed||0,item.time??saved.elapsed??0)});
       const migratedCenters=saved.command_centers?.length?saved.command_centers:[makeCommandCenter(`Comando Operacional de ${saved.city||'Porto'}`,POINTS['porto-aliados'],35)];
-      const previousDebt=Math.max(0,saved.operating_debt||0);const merged={...fresh,...saved,mode:'portugal-offline-v5',reputation:saved.reputation||0,medals:saved.medals||[],rng_seed:saved.rng_seed||fresh.rng_seed,rng_state:saved.rng_state||saved.rng_seed||fresh.rng_state,rng_counter:saved.rng_counter||0,expenses:saved.expenses||0,public_funding:saved.public_funding||0,task_rewards:saved.task_rewards||0,emergency_aid:saved.emergency_aid||0,debt_relief:(saved.debt_relief||0)+previousDebt,operating_debt:0,next_public_funding:saved.next_public_funding||((saved.elapsed||0)+ECONOMY.fundingInterval),next_crisis_wave:saved.next_crisis_wave||saved.elapsed+900,next_upkeep:saved.next_upkeep||saved.elapsed+ECONOMY.upkeepInterval,conditions:saved.conditions||freshConditions(saved.elapsed||0,null,Math.random,migratedCenters[0]),command_centers:migratedCenters,active_command_center_id:saved.active_command_center_id||migratedCenters[0].id,player_pois:saved.player_pois||[],personnel:saved.personnel||[],facilities:saved.facilities||[],planned_missions:saved.planned_missions||[],staging_areas:saved.staging_areas||[],complexes:saved.complexes||[],tasks:saved.tasks?.length?saved.tasks:makeCareerTasks(saved),achievements:saved.achievements||[],unit_groups:saved.unit_groups||[],patients:saved.patients||[],prisoners:saved.prisoners||[],trainings:saved.trainings||[],arrs:saved.arrs?.length?saved.arrs:clone(DEFAULT_ARRS)};
+      const previousDebt=Math.max(0,saved.operating_debt||0);const merged={...fresh,...saved,mode:'portugal-offline-v5',reputation:saved.reputation||0,medals:saved.medals||[],capital_grants:saved.capital_grants||0,capital_investment:saved.capital_investment||0,vat_paid:saved.vat_paid||0,rng_seed:saved.rng_seed||fresh.rng_seed,rng_state:saved.rng_state||saved.rng_seed||fresh.rng_state,rng_counter:saved.rng_counter||0,expenses:saved.expenses||0,public_funding:saved.public_funding||0,task_rewards:saved.task_rewards||0,emergency_aid:saved.emergency_aid||0,debt_relief:(saved.debt_relief||0)+previousDebt,operating_debt:0,next_public_funding:saved.next_public_funding||((saved.elapsed||0)+ECONOMY.fundingInterval),next_crisis_wave:saved.next_crisis_wave||saved.elapsed+900,next_upkeep:saved.next_upkeep||saved.elapsed+ECONOMY.upkeepInterval,conditions:saved.conditions||freshConditions(saved.elapsed||0,null,Math.random,migratedCenters[0]),command_centers:migratedCenters,active_command_center_id:saved.active_command_center_id||migratedCenters[0].id,player_pois:saved.player_pois||[],personnel:saved.personnel||[],facilities:saved.facilities||[],planned_missions:saved.planned_missions||[],staging_areas:saved.staging_areas||[],complexes:saved.complexes||[],tasks:saved.tasks?.length?saved.tasks:makeCareerTasks(saved),achievements:saved.achievements||[],unit_groups:saved.unit_groups||[],patients:saved.patients||[],prisoners:saved.prisoners||[],trainings:saved.trainings||[],arrs:saved.arrs?.length?saved.arrs:clone(DEFAULT_ARRS)};
       merged.bases=(saved.bases||fresh.bases).map(base=>{const count=(saved.units||fresh.units).filter(unit=>unit.base_id===base.id).length;return {level:1,capacity:Math.max(2,count),staff_capacity:14,personnel:base.service==='fire'?10:6,extensions:[],specialization:'general',qualifications:{},command_center_id:migratedCenters[0].id,...base};});
       merged.facilities=merged.facilities.map(facility=>({command_center_id:migratedCenters[0].id,specialty_capacity:facility.type==='hospital'?Object.fromEntries((facility.specialties||['urgency']).map(id=>[id,id==='urgency'?(facility.capacity||5):Math.max(2,Math.ceil((facility.capacity||5)*.45))])):undefined,...facility}));
       merged.units=(saved.units||fresh.units).map(unit=>{const definition=vehicleDefinition(unit.service,unit.vehicle_type||(unit.advanced?VEHICLE_CATALOG[unit.service]?.[1]?.id:null));return normalizeVehicleUnit({fatigue:0,repair_until:0,rest_until:0,enabled:true,exclude_from_arr:false,response_delay:0,max_crew:definition.crew,vehicle_type:definition.id,crew_required:definition.crew,crew_assigned:definition.crew,training:vehicleTraining(definition.id),...unit},definition,merged.elapsed);});
