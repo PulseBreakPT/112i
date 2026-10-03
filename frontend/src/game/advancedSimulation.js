@@ -192,6 +192,18 @@ export function tickAdvancedState(game,dt,log=()=>{},random=Math.random) {
       const treatmentRate=(patient.severity>=5?.07:patient.severity>=4?.09:patient.severity===3?.12:.25)*care;
       patient.treatment_progress=Math.min(100,(patient.treatment_progress||0)+dt*treatmentRate);
       patient.stability=Math.max(0,patient.stability-dt*(patient.severity||1)*.012/Math.max(.4,care));
+      patient.vitals=patient.vitals||{};
+      const instability=Math.max(0,100-patient.stability)/100,severity=Math.max(1,patient.severity||1),improving=(patient.treatment_progress||0)/100;
+      if(patient.clinical_state==='pcr'){
+        patient.vitals.heart_rate=0;patient.vitals.systolic_bp=0;patient.vitals.respiratory_rate=0;patient.vitals.spo2=Math.max(55,Math.round(68+improving*12));patient.vitals.gcs=3;
+      }else{
+        patient.vitals.heart_rate=Math.round(Math.max(45,Math.min(155,72+severity*8+instability*38-improving*10)));
+        patient.vitals.spo2=Math.round(Math.max(72,Math.min(99,99-severity*2.1-instability*8+improving*4)));
+        patient.vitals.systolic_bp=Math.round(Math.max(55,Math.min(145,132-severity*7-instability*34+improving*14)));
+        patient.vitals.respiratory_rate=Math.round(Math.max(8,Math.min(38,13+severity*2.5+instability*8-improving*3)));
+        patient.vitals.gcs=Math.round(Math.max(3,Math.min(15,16-severity*1.2-instability*3+improving*1.5)));
+      }
+      patient.vitals.updated_at=game.elapsed;
       if(patient.stability<40&&!patient.deteriorated){patient.deteriorated=true;patient.severity=Math.min(5,(patient.severity||1)+1);patient.clinical_state=['','light','moderate','severe','critical','pcr'][patient.severity]||patient.clinical_state;game.trust=Math.max(0,(game.trust||0)-2);log(game,'Uma vítima deteriorou enquanto aguardava estabilização/evacuação.','alert');}
     }
     if(patient.treatment_progress>=100&&!patient.treatment_complete){
