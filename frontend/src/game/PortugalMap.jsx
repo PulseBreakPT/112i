@@ -31,7 +31,7 @@ function calmCartography(map, detailed = false, palette = getMapThemePalette()) 
     } catch (_) {}
   };
   for (const layer of map.getStyle().layers) {
-    if (layer.source === 'operational-routes') continue;
+    if (layer.source === 'operational-routes' || String(layer.source || '').startsWith('realism-')) continue;
     const name = layer.id.toLowerCase();
     const original = map.__distritoLayerState[layer.id] || { visibility: 'visible', minzoom: 0, maxzoom: 24 };
     const isPoi = /poi|housenumber|address|amenity|shop|school|hospital|parking|transit|station|airport|ferry/.test(name);
@@ -270,6 +270,26 @@ export const PortugalMap = ({ world, game, selected, onSelect, focusKey, theme, 
             'text-allow-overlap': true, 'symbol-avoid-edges': true },
           paint: { 'text-color': ['get', 'color'], 'text-halo-color': '#071016',
             'text-halo-width': 1.4, 'text-opacity': ['case', ['get', 'selected'], .95, .58] } });
+        map.addSource('realism-coverage', { type:'geojson', data:EMPTY });
+        map.addLayer({ id:'realism-coverage-halo', type:'circle', source:'realism-coverage',
+          paint:{ 'circle-radius':['interpolate',['linear'],['zoom'],5,14,10,34,15,68],
+            'circle-color':['get','color'], 'circle-opacity':['get','opacity'],
+            'circle-stroke-color':['get','color'], 'circle-stroke-opacity':.38, 'circle-stroke-width':1 } });
+        map.addSource('realism-hospitals', { type:'geojson', data:EMPTY });
+        map.addLayer({ id:'realism-hospital-pressure', type:'circle', source:'realism-hospitals',
+          paint:{ 'circle-radius':['interpolate',['linear'],['zoom'],5,4,10,7,15,11],
+            'circle-color':['get','color'], 'circle-opacity':.82,
+            'circle-stroke-color':'#0a0b0d','circle-stroke-width':2 } });
+        map.addSource('realism-alerts', { type:'geojson', data:EMPTY });
+        map.addLayer({ id:'realism-operational-alerts', type:'circle', source:'realism-alerts',
+          paint:{ 'circle-radius':['case',['==',['get','kind'],'closure'],7,5],
+            'circle-color':['get','color'], 'circle-opacity':.9,
+            'circle-stroke-color':'#0a0b0d','circle-stroke-width':2 } });
+        map.addSource('realism-water', { type:'geojson', data:EMPTY });
+        map.addLayer({ id:'realism-water-supply', type:'circle', source:'realism-water',
+          paint:{ 'circle-radius':['interpolate',['linear'],['zoom'],5,3,12,6,16,9],
+            'circle-color':'#77a8c9','circle-opacity':.78,
+            'circle-stroke-color':'#d8ecf8','circle-stroke-opacity':.55,'circle-stroke-width':1 } });
         setLoaded(true); setError('');
       });
       map.on('zoom', () => syncVehicleMarkerPresentation(map));
@@ -367,6 +387,30 @@ export const PortugalMap = ({ world, game, selected, onSelect, focusKey, theme, 
     }
     markers.current.forEach((marker, id) => { if (!keep.has(id)) { marker.remove(); markers.current.delete(id); } });
     map.getSource('operational-routes')?.setData({ type: 'FeatureCollection', features: game.units.filter(u => u.route?.length > 1 && ['enroute', 'returning', 'base_transfer'].includes(u.status)).map(u => ({ type: 'Feature', properties: { color: theme?.cssVars?.['--service-' + u.service] || SERVICE[u.service].color, service: u.service, status: u.status, selected: u.incident_id === selected }, geometry: { type: 'LineString', coordinates: u.route } })) });
+    const operationalLayers = game.operational_layers || {};
+    const coverageFeatures = operationalLayers.coverage === false ? [] : game.bases.filter(base=>base.enabled!==false).map(base => {
+      const score=game.coverage_state?.by_service?.[base.service]?.bases?.find(item=>item.base_id===base.id)?.coverage ?? 100;
+      const color=score<35?'#d66c68':score<60?'#d3aa63':'#6eaa7e';
+      return {type:'Feature',properties:{kind:'coverage',service:base.service,score,color,opacity:score<35?.17:.09,name:base.name},geometry:{type:'Point',coordinates:[base.lng,base.lat]}};
+    });
+    map.getSource('realism-coverage')?.setData({type:'FeatureCollection',features:coverageFeatures});
+
+    const hospitalFeatures = operationalLayers.hospitals === false ? [] : (game.facilities||[]).filter(item=>item.type==='hospital'&&item.enabled!==false).map(hospital => {
+      const pressure=Number(hospital.ed_pressure)||0,color=pressure>=88?'#d66c68':pressure>=70?'#d3aa63':'#6eaa7e';
+      return {type:'Feature',properties:{kind:'hospital',pressure,color,name:hospital.name,diversion:!!hospital.diversion},geometry:{type:'Point',coordinates:[hospital.lng,hospital.lat]}};
+    });
+    map.getSource('realism-hospitals')?.setData({type:'FeatureCollection',features:hospitalFeatures});
+
+    const alertFeatures = operationalLayers.road_closures === false ? [] : game.incidents.filter(item=>item.road_closure).map(item=>({
+      type:'Feature',properties:{kind:'closure',color:'#d66c68',name:item.title},geometry:{type:'Point',coordinates:[item.lng,item.lat]}
+    }));
+    map.getSource('realism-alerts')?.setData({type:'FeatureCollection',features:alertFeatures});
+
+    const waterFeatures = operationalLayers.hydrants === false ? [] : [
+      ...game.incidents.filter(item=>item.water_supply).map(item=>({type:'Feature',properties:{kind:'water',source:item.water_supply.source,name:item.title},geometry:{type:'Point',coordinates:[item.lng,item.lat]}})),
+      ...game.bases.filter(base=>base.service==='fire'&&base.enabled!==false).map(base=>({type:'Feature',properties:{kind:'water-base',source:'base-reserve',name:base.name},geometry:{type:'Point',coordinates:[base.lng,base.lat]}})),
+    ];
+    map.getSource('realism-water')?.setData({type:'FeatureCollection',features:waterFeatures});
   }, [game, selected, loaded, unitsVisible, theme?.cssVars]);
 
   useEffect(() => {
@@ -407,7 +451,7 @@ export const PortugalMap = ({ world, game, selected, onSelect, focusKey, theme, 
     <div ref={container} className="geographic-canvas" data-testid="portugal-map-canvas" aria-label="Mapa geográfico real de Portugal, navegável" />
     {!loaded && !error && <div className="geo-map-loading" role="status"><span className="geo-loading-dot" />A carregar cartografia de Portugal…</div>}
     {error && <div className="geo-map-error" role="alert" data-testid="map-provider-error"><span>{error}</span><button onClick={() => setRetry(n => n + 1)}>Tentar novamente</button></div>}
-    <div className="map-layer-wrap"><button data-testid="map-layers-button" className={`map-layer-button ${layers ? 'active' : ''}`} aria-label="Regiões e camadas do mapa" aria-expanded={layers} onClick={() => setLayers(!layers)}><Layers3 size={16} /><span>Camadas</span></button>{layers && <div className="layer-menu geo-regions-menu" data-testid="map-layers-menu"><span className="geo-menu-caption">TERRITÓRIO PORTUGUÊS</span>{world.regions.map(region => <button key={region.id} data-testid={`map-region-${region.id}`} onClick={() => navigateRegion(region)}>{region.name}<ArrowUpRight size={13} /></button>)}<div className="geo-style-control"><span>DETALHE DO MAPA</span><div><button className={!detailed ? 'active' : ''} onClick={() => setDetailed(false)}>Simplificado</button><button className={detailed ? 'active' : ''} onClick={() => setDetailed(true)}>Detalhado</button></div></div><label><input type="checkbox" checked={unitsVisible} onChange={event => setUnitsVisible(event.target.checked)} data-testid="layer-unidades" />Viaturas no mapa</label><small>Cartografia OpenStreetMap.<br />Bases e ocorrências de simulação.</small></div>}</div>
+    <div className="map-layer-wrap"><button data-testid="map-layers-button" className={`map-layer-button ${layers ? 'active' : ''}`} aria-label="Regiões e camadas do mapa" aria-expanded={layers} onClick={() => setLayers(!layers)}><Layers3 size={16} /><span>Camadas</span></button>{layers && <div className="layer-menu geo-regions-menu" data-testid="map-layers-menu"><span className="geo-menu-caption">TERRITÓRIO PORTUGUÊS</span>{world.regions.map(region => <button key={region.id} data-testid={`map-region-${region.id}`} onClick={() => navigateRegion(region)}>{region.name}<ArrowUpRight size={13} /></button>)}<div className="geo-style-control"><span>DETALHE DO MAPA</span><div><button className={!detailed ? 'active' : ''} onClick={() => setDetailed(false)}>Simplificado</button><button className={detailed ? 'active' : ''} onClick={() => setDetailed(true)}>Detalhado</button></div></div><label><input type="checkbox" checked={unitsVisible} onChange={event => setUnitsVisible(event.target.checked)} data-testid="layer-unidades" />Viaturas no mapa</label><div className="geo-operational-layer-summary"><span>CAMADAS OPERACIONAIS</span><small>Cobertura {game.operational_layers?.coverage===false?'oculta':'ativa'} · Hospitais {game.operational_layers?.hospitals===false?'ocultos':'ativos'} · Cortes {game.operational_layers?.road_closures===false?'ocultos':'ativos'} · Água {game.operational_layers?.hydrants?'ativa':'oculta'}</small></div><small>Cartografia OpenStreetMap.<br />Camadas estratégicas configuradas em Gestão → Realismo.</small></div>}</div>
     <div className="map-zoom"><IconButton icon={Plus} label="Aproximar mapa" testId="map-zoom-in" onClick={() => mapRef.current?.zoomIn()} /><IconButton icon={Minus} label="Afastar mapa" testId="map-zoom-out" onClick={() => mapRef.current?.zoomOut()} /><span /><IconButton icon={LocateFixed} label="Centrar no Porto" testId="map-reset" onClick={() => navigateRegion(world.regions[0])} /></div>
     {!game.speed && <div className="paused-label" data-testid="game-paused-indicator">SIMULAÇÃO EM PAUSA</div>}
   </section>;
